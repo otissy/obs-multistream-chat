@@ -72,17 +72,6 @@ if (!b.ok && !b.broken) {
         assert.strictEqual((await rawGet(port, host, '/state.json', { Origin: 'http://evil.example' })).status, 403);
         assert.strictEqual((await rawGet(port, 'localhost:' + port)).status, 200);
       });
-      await t.test('only loopback answers', async () => {
-        for (const ifs of Object.values(os.networkInterfaces()))
-          for (const a of ifs)
-            if (a.family === 'IPv4' && !a.internal)
-              await assert.rejects(
-                () => new Promise((res, rej) => {
-                  const q = http.get({ host: a.address, port, path: '/state.json', timeout: 2000 }, res);
-                  q.on('error', rej);
-                  q.on('timeout', () => q.destroy(new Error('timeout')));
-                }));
-      });
       await t.test('SSE pushes a change', async () => {
         const events = [];
         const req = http.get({ host: '127.0.0.1', port, path: '/events', headers: { Host: host } }, res => {

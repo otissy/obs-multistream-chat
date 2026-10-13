@@ -451,43 +451,17 @@ TEST(L3, server_drops_non_loopback_peers_without_a_response)
 	srv.stop();
 }
 
-TEST(L3, server_is_not_reachable_on_other_local_addresses)
+TEST(L3, server_socket_is_bound_to_loopback_only)
 {
-	// Resolve this machine's own non-loopback IPv4 addresses; a socket bound to 127.0.0.1 must refuse them.
-	net_init();
+	// No network probing: ask the OS which address the listening socket is bound to (getsockname)
+	// instead of connecting to any other address.
 	StateHub hub;
 	HttpServer srv(hub, test_assets());
 	std::string err;
 	CHECK(srv.start(err));
-	// Find this machine's outbound IPv4 address without DNS or traffic: connect() on a UDP socket only
-	// selects a route (nothing is sent), then getsockname() tells us the local address it chose.
-	int tested = 0;
-	tsock u = socket(AF_INET, SOCK_DGRAM, 0);
-	if (u != kBadSock) {
-		sockaddr_in far_away;
-		std::memset(&far_away, 0, sizeof far_away);
-		far_away.sin_family = AF_INET;
-		far_away.sin_port = htons(9);
-		inet_pton(AF_INET, "192.0.2.1", &far_away.sin_addr); // TEST-NET-1, never routed
-		if (connect(u, reinterpret_cast<sockaddr *>(&far_away), sizeof far_away) == 0) {
-			sockaddr_in me;
-			socklen_t ml = sizeof me;
-			std::memset(&me, 0, sizeof me);
-			if (getsockname(u, reinterpret_cast<sockaddr *>(&me), &ml) == 0) {
-				char ip[64] = {0};
-				inet_ntop(AF_INET, &me.sin_addr, ip, sizeof ip);
-				if (!is_loopback_ipv4(ip) && std::strcmp(ip, "0.0.0.0") != 0) {
-					tsock s = tconnect(srv.port(), ip);
-					CHECK(s == kBadSock); // nothing listens on the LAN address
-					if (s != kBadSock)
-						tclose(s);
-					++tested;
-				}
-			}
-		}
-		tclose(u);
-	}
-	std::printf("# non-loopback addresses probed: %d\n", tested);
+	CHECK_EQ(srv.bound_address(), std::string("127.0.0.1"));
+	CHECK(srv.bound_address() != "0.0.0.0");
+	CHECK(is_loopback_ipv4(srv.bound_address()));
 	srv.stop();
 }
 

@@ -79,6 +79,8 @@ public:
 	void stop();
 	bool running() const { return running_; }
 	int port() const { return port_; }
+	// Address the listening socket is bound to, as reported by the OS after bind ("127.0.0.1").
+	const std::string &bound_address() const { return bound_address_; }
 	// true when preferred_port was requested but taken, so another port was chosen
 	bool port_fell_back() const { return fell_back_; }
 
@@ -98,6 +100,7 @@ private:
 
 	int64_t listen_sock_;
 	int port_;
+	std::string bound_address_;
 	bool fell_back_;
 	std::atomic<bool> running_;
 	std::thread accept_thread_;

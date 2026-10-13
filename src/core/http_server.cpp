@@ -477,6 +477,15 @@ bool HttpServer::start(std::string &err)
 	}
 	listen_sock_ = s;
 	port_ = actual;
+	{
+		sockaddr_in got;
+		socklen_t gl = sizeof got;
+		std::memset(&got, 0, sizeof got);
+		char ipbuf[64] = {0};
+		if (getsockname(to_native(s), reinterpret_cast<sockaddr *>(&got), &gl) == 0)
+			inet_ntop(AF_INET, &got.sin_addr, ipbuf, sizeof ipbuf);
+		bound_address_ = ipbuf;
+	}
 	running_ = true;
 	accept_thread_ = std::thread(&HttpServer::accept_loop, this);
 	return true;

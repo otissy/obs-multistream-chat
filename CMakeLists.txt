@@ -1,0 +1,62 @@
+cmake_minimum_required(VERSION 3.24)
+project(obs-multistream VERSION 0.1.0 LANGUAGES CXX)
+if(WIN32)
+  enable_language(RC)
+endif()
+
+option(OMS_BUILD_TESTS "Build the portable core tests (no OBS needed)" ON)
+option(OMS_BUILD_PLUGIN "Build the OBS plugin (needs .obs-sdk and .qt-sdk, see PROJECT.md)" ON)
+set(OBS_SDK_DIR "${CMAKE_SOURCE_DIR}/.obs-sdk" CACHE PATH "libobs + frontend-api headers and lib/obs.lib")
+set(QT_SDK_DIR "${CMAKE_SOURCE_DIR}/.qt-sdk" CACHE PATH "Qt 6.11.1 headers and lib/Qt6*.lib from obs-deps")
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if(MSVC)
+  add_compile_options(/W4 /permissive- /Zc:__cplusplus /utf-8 /EHsc /wd4127 /wd4201 /wd4244 /wd4251)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+else()
+  add_compile_options(-Wall -Wextra)
+endif()
+
+# PE version info (company, product, description, version) for every binary we build.
+function(oms_add_version_info target description filetype ext)
+  if(NOT WIN32)
+    return()
+  endif()
+  string(REPLACE "." "," OMS_VER_COMMA "${PROJECT_VERSION},0")
+  set(OMS_DESCRIPTION "${description}")
+  set(OMS_FILETYPE "${filetype}")
+  set(OMS_INTERNAL "${target}")
+  set(OMS_EXT "${ext}")
+  configure_file("${CMAKE_SOURCE_DIR}/cmake/version.rc.in" "${CMAKE_BINARY_DIR}/${target}_version.rc" @ONLY)
+  target_sources(${target} PRIVATE "${CMAKE_BINARY_DIR}/${target}_version.rc")
+endfunction()
+
+add_library(oms_core STATIC
+  src/core/json.cpp src/core/secret.cpp src/core/redact.cpp src/core/destination.cpp
+  src/core/stats.cpp src/core/health.cpp src/core/config.cpp src/core/state_feed.cpp
+  src/core/http_server.cpp)
+target_include_directories(oms_core PUBLIC src/core)
+find_package(Threads REQUIRED)
+target_link_libraries(oms_core PUBLIC Threads::Threads)
+if(WIN32)
+  target_link_libraries(oms_core PUBLIC ws2_32 crypt32)
+endif()
+
+if(OMS_BUILD_TESTS)
+  enable_testing()
+  add_executable(oms_tests .tests/core/cpp/test_main.cpp .tests/core/cpp/test_basics.cpp
+    .tests/core/cpp/test_health.cpp .tests/core/cpp/test_config.cpp .tests/core/cpp/test_http.cpp)
+  target_link_libraries(oms_tests PRIVATE oms_core)
+  oms_add_version_info(oms_tests "obs-multistream core unit tests (not part of the plugin)" VFT_APP .exe)
+  add_executable(oms_fixture_server .tests/core/cpp/fixture_server.cpp)
+  target_link_libraries(oms_fixture_server PRIVATE oms_core)
+  oms_add_version_info(oms_fixture_server "obs-multistream test fixture: local overlay server (not part of the plugin)" VFT_APP .exe)
+  add_test(NAME core COMMAND oms_tests all)
+endif()
+
+if(OMS_BUILD_PLUGIN AND EXISTS "${CMAKE_SOURCE_DIR}/src/obs/plugin-main.cpp")
+  add_subdirectory(src/obs)
+endif()

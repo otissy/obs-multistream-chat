@@ -1,0 +1,31 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "windows-x64",
+      "displayName": "Windows x64 (VS 2022): plugin + tests",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/windows-x64",
+      "cacheVariables": { "OMS_BUILD_PLUGIN": "ON", "OMS_BUILD_TESTS": "ON" }
+    },
+    {
+      "name": "tests",
+      "displayName": "Core tests only (any compiler, no OBS SDK needed)",
+      "binaryDir": "${sourceDir}/build/tests",
+      "cacheVariables": { "OMS_BUILD_PLUGIN": "OFF", "OMS_BUILD_TESTS": "ON" }
+    },
+    {
+      "name": "tests-vs2022",
+      "inherits": "tests",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/tests-vs"
+    }
+  ],
+  "buildPresets": [
+    { "name": "windows-x64", "configurePreset": "windows-x64", "configuration": "Release" },
+    { "name": "tests-vs2022", "configurePreset": "tests-vs2022", "configuration": "Release" }
+  ]
+}

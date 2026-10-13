@@ -17,9 +17,8 @@ Two surfaces:
   the plugin. Shows each platform's icon plus the streamer handle; the icon is lit only while
   that destination is really connected and sending.
 
-Status: see CHANGELOG.md. **Nothing has been compiled yet**: this machine has no C++ compiler
-(see Limits). Overlay JS is tested in Node + headless Chrome; C++ tests are written and are run
-by `scripts/build.ps1 -Test` once the Build Tools exist.
+Status: see CHANGELOG.md. The core compiles. Norton deletes the freshly built test exe during
+long runs (see Limits), so the C++ suite was verified in pieces, not as one green run.
 
 ## How to run and test
 
@@ -225,7 +224,8 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 
 | Limit | What it means |
 |---|---|
-| No C++ compiler on this machine (2026-10-13) | no `cl`, `g++`, `clang`, Docker engine off, no WSL distro. Nothing in `src/` has been compiled. Needs "Build Tools 2022, Desktop development with C++" (user step, admin, about 5 GB). |
+| Compiler (found later on 2026-10-13) | `vswhere` reports Visual Studio 2022 Community (and a "18" install) with the C++ tools; the VS 2022 generator works. At the start of the task there was none; the user installed it meanwhile. Core compiles at /W4 with zero warnings. |
+| Norton IDP.Generic | Norton flags freshly built unsigned test executables (heuristic) and deletes them mid-run. Not evaded. All build output lives under ONE folder, `build/` (gitignored), so the user can exclude that folder. Test/DLL binaries carry PE version info. |
 | OBS 32.2.2 (`obs64.exe` ProductVersion) | libobs API 32.2.2. Source tarball sha-256 `35d3cd0979d65664fada7119fdb612eca7c34b61a1623a330caec74bf72626c4` (GitHub archive of tag 32.2.2) |
 | obs-deps prebuilt 2026-07-15 | pinned by 32.2.2's `CMakePresets.json`; windows-x64 sha-256 `6f90e9598fa10cff5ad23cdcfae49b87868c07bf896b02cd464582b4ce2f2ba9` (not needed to build this plugin; recorded for completeness) |
 | Qt 6.11.1 (installed `Qt6Core.dll` 6.11.1.0) | obs-deps qt6 2026-07-15 windows-x64 zip contains Qt 6.11.1; sha-256 `7c7f985711d80467bdc1795b6592275a27d5b0e5a2c7a61db1f2c1d08d6a5579` **downloaded and verified equal to the pin** |
@@ -247,7 +247,7 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 
 ## Known problems
 
-- **2026-10-13** - nothing compiled; C++ is unverified until the Build Tools are installed. Test: `.tests/core` layers report SKIPPED.
+- **2026-10-13** - full `oms_tests all` run could not complete: Norton (IDP.Generic) removed the exe mid-run. Verified: L2 73/73 in one process; each L3 test passes alone except one that failed once (431 reset, fixed with a drain, not re-run after the fix) and the LAN-probe test was rewritten after a stall and not re-run. The user must exclude `build/` in Norton and run `scripts/build.ps1 -Test`.
 - **2026-10-13** - real platforms and a real OBS load are unverified (not allowed to start OBS or stream).
 - **2026-10-13** - recommended RTMP URLs in the docs come from memory of the platforms' public help pages and could not be re-fetched in this task (only OBS/obs-deps/Qt/icon sources were allowed). Treat them as defaults to double-check on the platform's dashboard.
 

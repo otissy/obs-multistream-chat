@@ -1,0 +1,14 @@
+build/
+dist/
+.obs-sdk/
+.qt-sdk/
+*.obj
+*.dll
+*.lib
+*.exp
+*.pdb
+*.exe
+*.ilk
+*.log
+.zvec-grep/
+.tokensave/

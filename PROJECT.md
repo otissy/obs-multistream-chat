@@ -251,6 +251,8 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 - **2026-10-13** - real platforms and a real OBS load are unverified (not allowed to start OBS or stream).
 - **2026-10-13** - recommended RTMP URLs in the docs come from memory of the platforms' public help pages and could not be re-fetched in this task (only OBS/obs-deps/Qt/icon sources were allowed). Treat them as defaults to double-check on the platform's dashboard.
 
+- **2026-10-14** - overlay L2 has no hostile-handle / path-trick test: the Norton agent hook blocked writing the first version of that test file. Covered only by L1 static checks (no innerHTML, textContent, fixed platform list) and one benign markup-characters test. Not evaded.
+
 ## Dropped approaches
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.

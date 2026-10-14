@@ -1,0 +1,26 @@
+obs-multistream
+Copyright (C) 2026 otissy. Licensed GPL-2.0-or-later (see LICENSE), because it links libobs.
+
+Third-party material bundled in data/overlay/icons/
+---------------------------------------------------
+twitch.svg, youtube.svg, kick.svg, facebook.svg, tiktok.svg
+  Source: Simple Icons 16.35.0, https://github.com/simple-icons/simple-icons (tag 16.35.0,
+          files icons/<name>.svg)
+  Licence of the files: CC0 1.0 Universal (packaging/simple-icons-LICENSE.md, copied from the repo)
+  sha-256 of the bundled files:
+    twitch.svg   dbe27bc02a01b8d89b6259cacef328c9fa70bb13c29f38c36eb1421863f6f0b6
+    youtube.svg  5038808acbbc4e6edda16cbeb1cc6dec80e4e4ee4e227e039c41229fa222aa8c
+    kick.svg     ef6002e2eedaeb685a23ccabcafa970f04b53f109bf931d6c645fc1957a0d135
+    facebook.svg b06d18d844ed621b89faffb1a33440cc0ec4f1ffea9f36191f50db19a47c59a6
+    tiktok.svg   6f54ac8d325faacea8935bdc44cbed60206a6b408641799e5fea1cba7c1a0af7
+  The CC0 dedication covers the SVG files, not the brands. Twitch, YouTube, Kick, Facebook and
+  TikTok names and logos are trademarks of their owners; they are used here only to identify
+  the service a stream is going to (nominative use). No endorsement is implied. Remove or replace
+  any icon you are not comfortable showing; the page falls back to generic.svg.
+
+generic.svg
+  Original work for this project, CC0 1.0. Used for Trovo and custom RTMP.
+
+No other third-party code or artwork is bundled. Build-time SDK headers (OBS Studio 32.2.2,
+GPL-2.0-or-later; Qt 6.11.1 from obs-deps, LGPL-3.0) are fetched by scripts/fetch-sdks.ps1 and are
+not redistributed in the release zip.

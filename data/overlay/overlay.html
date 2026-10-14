@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>obs-multistream overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  OBS Browser Source page. Reads only /state.json and /events from the plugin's local server.
+  Query: theme=dark|light|transparent  layout=h|v  size=16..256 (icon px)  accent=RRGGBB
+         names=1|0 (show handles)  hide_idle=1 (hide icons that are not connected)
+-->
+<style>
+  :root {
+    --size: 48px;
+    --accent: #7c5cff;
+    --fg: #f2f2f5;
+    --card: rgba(18, 18, 24, 0.82);
+    --dim: #6b6b78;
+    --warn: #ffb020;
+    --bad: #ff4d4f;
+    --gap: 14px;
+  }
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--fg); }
+  body[data-theme="light"] { --fg: #15151c; --card: rgba(255, 255, 255, 0.9); --dim: #a2a2ae; }
+  body[data-theme="transparent"] { --card: transparent; text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 2px rgba(0,0,0,.8); }
+  #bar { display: inline-flex; gap: var(--gap); padding: calc(var(--size) * .22); align-items: center; }
+  body[data-layout="v"] #bar { flex-direction: column; align-items: flex-start; }
+  body[data-theme="dark"] #bar, body[data-theme="light"] #bar { background: var(--card); border-radius: calc(var(--size) * .4); }
+  .dest { display: flex; align-items: center; gap: calc(var(--size) * .2); transition: opacity .3s, filter .3s; }
+  .icon { position: relative; width: var(--size); height: var(--size); flex: none; }
+  .glyph { position: absolute; inset: 12%; background-color: var(--dim); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; transition: background-color .3s; }
+  .dot { position: absolute; right: -2px; bottom: -2px; width: calc(var(--size) * .26); height: calc(var(--size) * .26); border-radius: 50%; background: var(--dim); border: 2px solid var(--card); box-sizing: border-box; display: none; }
+  .name { font-size: calc(var(--size) * .42); font-weight: 600; letter-spacing: .01em; white-space: nowrap; max-width: calc(var(--size) * 7); overflow: hidden; text-overflow: ellipsis; }
+  body[data-names="0"] .name { display: none; }
+
+  /* states */
+  .dest[data-state="idle"] .glyph, .dest[data-state="idle"] .name, .dest[data-state="failed"] .glyph, .dest[data-state="failed"] .name, .dest[data-state="connecting"] .glyph, .dest[data-state="connecting"] .name { opacity: .42; filter: grayscale(1); }
+  .dest[data-state="failed"] .dot { display: block; background: var(--bad); }
+  .dest[data-state="connecting"] .glyph { animation: breathe 2.4s ease-in-out infinite; }
+  .dest[data-state="live"] .glyph { background-color: var(--brand, var(--accent)); }
+  .dest[data-state="live"] .dot { display: block; background: #3ddc84; }
+  .dest[data-state="degraded"] .glyph { background-color: var(--brand, var(--accent)); }
+  .dest[data-state="degraded"] .dot { display: block; background: var(--warn); }
+  .dest[data-state="reconnecting"] { opacity: .85; }
+  .dest[data-state="reconnecting"] .glyph { background-color: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .dest[data-state="reconnecting"] .dot { display: block; background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  body[data-stale="1"] .dest .glyph, body[data-stale="1"] .dest .name { opacity: .3; filter: grayscale(1); }
+  body[data-stale="1"] .dot { display: none; }
+  body[data-hide-idle="1"] .dest[data-state="idle"], body[data-hide-idle="1"] .dest[data-state="failed"], body[data-hide-idle="1"] .dest[data-state="connecting"] { display: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.88); } }
+  @keyframes breathe { 0%, 100% { opacity: .25; } 50% { opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { .glyph, .dot { animation: none !important; } }
+</style>
+</head>
+<body data-theme="dark" data-layout="h" data-names="1">
+<div id="bar" aria-live="polite"></div>
+<script src="/overlay.js"></script>
+</body>
+</html>

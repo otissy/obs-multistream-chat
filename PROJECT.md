@@ -256,6 +256,8 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 - **2026-10-14** - plugin DLL not linked: generating `.obs-sdk/lib/obs.lib` and `obs-frontend-api.lib` needs `dumpbin /exports` on the installed obs.dll; the Norton agent hook blocked that command, so it was not retried or worked around. The plugin sources compile at /W4 with zero warnings against the real 32.2.2 and Qt 6.11.1 headers (object files only). To get the DLL: `powershell -File scripts/make-import-lib.ps1 ...` (see README), or let `scripts/build.ps1` do it.
 - **2026-10-14** - glue logic against a real OBS is unverified (not allowed to load OBS). Reasoned from 32.2.2 source: rtmp stop can join the connect thread, so every output stop runs on a worker thread; one output object per connection attempt; own reconnect (libobs reconnect off).
 
+- **2026-10-14** - smoke test (portable OBS 32.2.2 + two local RTMP sinks) not done: it needs a visible OBS window and a built DLL. Needs the user's go-ahead and the import libs. Plan is in docs/limits.md-adjacent notes: portable zip sha-256 above, `--portable`, throwaway profile, `ffmpeg -listen 1` sinks on 127.0.0.1 only, closed afterwards.
+
 ## Dropped approaches
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.

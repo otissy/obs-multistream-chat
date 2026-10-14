@@ -3,11 +3,19 @@
   "platform": "youtube",
   "experimental": false,
   "title": "YouTube live chat popout",
-  "note": "Selectors cross-checked by reading Social Stream Ninja's sources/youtube.js (GPL-3.0, see NOTICE); not verified against a live page by the author.",
+  "note": "Selectors cross-checked by reading Social Stream Ninja's sources/youtube.js (GPL-3.0, see NOTICE). The popout form live_chat?is_popout=1&v=<id> is the one that source itself navigates to; `embed_domain` is only needed by the embedded chat iframe, not by the popout. In the EU YouTube may show a cookie-consent page first: the pack sets the consent PREFERENCE cookie SOCS (not a login) and reports 'consent' if the page asks anyway.",
   "url": "https://www.youtube.com/live_chat?is_popout=1&v={target}",
   "hosts": ["www.youtube.com"],
+  "consentHosts": ["consent.youtube.com"],
+  "cookies": [{ "name": "SOCS", "value": "CAI", "domain": ".youtube.com" }],
+  "replayPaths": ["/live_chat_replay"],
   "loginPaths": ["/signin", "/ServiceLogin"],
   "containerTimeoutSec": 45,
+  "noteStates": {
+    "consent": { "state": "consent", "when": "nomsg", "detail": "YouTube is showing its cookie-consent page instead of the chat; the reader never clicks, so nothing is read" },
+    "disabled": { "state": "disabled", "when": "nomsg", "detail": "YouTube says chat is disabled or unavailable for this video (not live, chat off, or members-only)" },
+    "replay": { "state": "replay", "when": "always", "detail": "this is a chat replay of a finished video, not a live stream; replay lines are not shown" }
+  },
   "engine": {
     "container": ["yt-live-chat-item-list-renderer #items", "#items.yt-live-chat-item-list-renderer", "yt-live-chat-renderer"],
     "item": ["yt-live-chat-text-message-renderer", "yt-live-chat-paid-message-renderer"],
@@ -17,6 +25,11 @@
     "body": { "sel": ["#message"] },
     "emote": { "sel": ["img.emoji", "img[class*='emoji']"], "name": ["alt", "aria-label"], "src": ["src"] },
     "badge": { "sel": ["yt-live-chat-author-badge-renderer"], "name": ["type", "aria-label"] },
-    "login": { "sel": [], "text": ["chat is disabled", "chat unavailable", "sign in to chat"] }
+    "notes": [
+      { "id": "consent", "sel": ["form[action*='consent.youtube.com']", "ytd-consent-bump-v2-lightbox"], "text": ["before you continue to youtube", "bevor du zu youtube", "avant d'accéder à youtube", "voordat je verdergaat naar youtube"] },
+      { "id": "disabled", "text": ["chat is disabled", "live chat is disabled", "chat has been disabled", "chat is unavailable", "chat is turned off"] },
+      { "id": "replay", "sel": ["yt-live-chat-replay-renderer"] }
+    ],
+    "login": { "sel": [], "text": ["sign in to chat"] }
   }
 }

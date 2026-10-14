@@ -16,12 +16,19 @@ const MEDIA_BLOCK = ['*.mp4*', '*.m3u8*', '*.webm*', '*.mpd*', '*.flv*', '*.ts?*
 // Pure: what state does the evidence say? (unit tested without a browser)
 //   e = { now, loadedAt, tick:{container,login,seen,sinceFound}|null, containerTimeoutMs, quietMs,
 //         seenTotal, loginRedirect }
+//   plus: forced {state,detail} (e.g. the consent host), notes [{state,detail,when}] resolved from the pack
 function evaluateHealth(e) {
+  if (e.forced) return e.forced;
+  const notes = e.notes || [];
+  const always = notes.find(n => n.when === 'always');
+  if (always && e.loadedAt && e.now - e.loadedAt >= 3000) return { state: always.state, detail: always.detail };
   if (e.loginRedirect) return { state: 'login', detail: 'the platform sent the page to a login; nothing can be read without one' };
   if (!e.loadedAt) return { state: 'starting', detail: 'loading the page' };
   const elapsed = e.now - e.loadedAt;
   const t = e.tick;
   if (!t || !t.container) {
+    const nochat = notes.find(n => n.when === 'nochat' || (n.when === 'nomsg' && e.seenTotal === 0));
+    if (nochat && elapsed >= 4000) return { state: nochat.state, detail: nochat.detail };
     if (t && t.login && elapsed >= 8000) return { state: 'login', detail: 'the page asks for a login or a human check; the reader never logs in' };
     if (elapsed >= e.containerTimeoutMs) {
       return { state: 'layout', detail: 'page layout changed or login needed: the chat list was not found after ' + Math.round(elapsed / 1000) + ' s' };
@@ -29,6 +36,8 @@ function evaluateHealth(e) {
     return { state: 'starting', detail: 'waiting for the chat list to appear' };
   }
   if (e.seenTotal > 0) return { state: 'reading', detail: '' };
+  const nomsg = notes.find(n => n.when === 'nomsg');
+  if (nomsg && t.sinceFound >= 6000) return { state: nomsg.state, detail: nomsg.detail };
   if (t.sinceFound >= e.quietMs) {
     return { state: 'quiet', detail: 'no messages for ' + Math.round(t.sinceFound / 60000) + ' min: chat may just be empty, or the page layout changed or login is needed' };
   }
@@ -59,6 +68,7 @@ class Source extends EventEmitter {
     this.state = 'starting';
     this.detail = 'starting';
     this.timers = new Set();
+    this.forced = null;
     this.url = pageUrl(this.pack, this.src.target, this.testOrigin);
     this.hosts = allowedHosts(this.pack, this.testOrigin);
   }
@@ -113,6 +123,11 @@ class Source extends EventEmitter {
       await s('Runtime.enable');
       await s('Network.enable');
       await s('Network.setBlockedURLs', { urls: MEDIA_BLOCK });
+      // consent PREFERENCE cookie (not a login): the pack names it; see docs/security.md
+      for (const c of this.pack.cookies || []) {
+        const r = await s('Network.setCookie', { name: c.name, value: c.value, domain: c.domain, path: '/', secure: true, sameSite: 'None', expires: Math.floor(Date.now() / 1000) + 86400 * 365 });
+        if (!r.success) this.log.warn('source ' + this.src.id + ': cookie ' + c.name + ' was not accepted');
+      }
       await s('Emulation.setDeviceMetricsOverride', { width: 900, height: 1000, deviceScaleFactor: 1, mobile: false });
       await s('Runtime.addBinding', { name: this.binding, executionContextName: 'omsc' });
       const engineCfg = Object.assign({}, this.pack.engine);
@@ -142,7 +157,19 @@ class Source extends EventEmitter {
     let u;
     try { u = new URL(f.url); } catch (e) { return; }
     if (u.protocol === 'about:' || u.protocol === 'chrome-error:') return;
-    if (!this.hosts.includes(u.hostname)) {
+    const kind = classifyNavigation(this.pack, u.hostname, this.hosts);
+    if (kind === 'consent') {
+      this.forced = { state: 'consent', detail: 'the platform is showing its cookie-consent page instead of the chat (the consent preference cookie was set, but the page asked anyway)' };
+      this._evaluate();
+      return;
+    }
+    this.forced = null;
+    if ((this.pack.replayPaths || []).some(x => u.pathname.startsWith(x))) {
+      this.forced = { state: 'replay', detail: 'this is a chat replay of a finished video, not a live stream; replay lines are not shown' };
+      this._evaluate();
+      return;
+    }
+    if (kind === 'foreign') {
       this.log.warn('source ' + this.src.id + ' was redirected to ' + u.hostname + ' (not allowed): stopped');
       this._closeTab();
       this.stopped = true;
@@ -164,9 +191,10 @@ class Source extends EventEmitter {
       m = JSON.parse(p.payload);
     } catch (e) { return; }
     if (m.t === 'tick') {
-      this.tick = { container: !!m.container, login: !!m.login, seen: Number(m.seen) || 0, sinceFound: Number(m.sinceFound) || 0 };
+      this.tick = { container: !!m.container, login: !!m.login, notes: Array.isArray(m.notes) ? m.notes.slice(0, 10).map(String) : [], seen: Number(m.seen) || 0, sinceFound: Number(m.sinceFound) || 0 };
       this._evaluate();
     } else if (m.t === 'msgs' && Array.isArray(m.items)) {
+      if (this.forced || this._notes().some(n => n.when === 'always')) return; // a replay or a consent page: nothing live to report
       const out = [];
       for (const it of m.items.slice(0, 50)) {
         if (!it || typeof it !== 'object' || !Array.isArray(it.parts)) continue;
@@ -193,9 +221,16 @@ class Source extends EventEmitter {
     const r = evaluateHealth({
       now: Date.now(), loadedAt: this.loadedAt, tick: this.tick,
       containerTimeoutMs: (this.pack.containerTimeoutSec || 45) * 1000, quietMs: this.quietMs,
-      seenTotal: this.seenTotal, loginRedirect: this.loginRedirect,
+      seenTotal: this.seenTotal, loginRedirect: this.loginRedirect, forced: this.forced,
+      notes: this._notes(),
     });
     this._set(r.state, r.detail);
+  }
+
+  _notes() {
+    const ns = this.pack.noteStates || {};
+    const ids = (this.tick && this.tick.notes) || [];
+    return ids.filter(i => ns[i]).map(i => ns[i]);
   }
 
   _fail(reason) {
@@ -244,9 +279,16 @@ class Source extends EventEmitter {
   }
 }
 
+// 'ok' | 'consent' (the platform's own cookie-consent host) | 'foreign' (anywhere else)
+function classifyNavigation(pack, hostname, allowedHosts) {
+  if (allowedHosts.includes(hostname)) return 'ok';
+  if ((pack.consentHosts || []).includes(hostname)) return 'consent';
+  return 'foreign';
+}
+
 // The engine runs only in the top frame of the page (ad and tracker iframes get nothing).
 function guardTop(src) {
   return 'if (window.top === window) { ' + src + ' }';
 }
 
-module.exports = { Source, evaluateHealth, MAX_ATTEMPTS };
+module.exports = { Source, evaluateHealth, classifyNavigation, MAX_ATTEMPTS };

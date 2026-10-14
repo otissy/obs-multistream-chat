@@ -90,6 +90,16 @@ function page(variant, key) {
       return shell('tiktok live fixture', `<div data-e2e="live-chat-container"><div data-e2e="chat-room" class="css-1a-DivChatRoomContent e1">${hist.tiktok.join('')}</div></div>${feed('[data-e2e="chat-room"]')}`);
     case 'x':
       return shell('x broadcast fixture', `<div data-testid="chatContainer"><div class="css-175oi2r">${hist.x.join('')}</div></div>${feed('[data-testid="chatContainer"] > div')}`);
+    case 'youtube-consent': // what a visitor in the EU may get instead of the chat
+      return shell('youtube consent fixture', `<div><h1>Before you continue to YouTube</h1><form action="https://consent.youtube.com/save" method="post"><button type="button">Accept all</button></form></div>`);
+    case 'youtube-disabled':
+      return shell('youtube chat disabled fixture', `<yt-live-chat-app><yt-live-chat-renderer><div id="empty-state">Chat is disabled for this live stream.</div></yt-live-chat-renderer></yt-live-chat-app>`);
+    case 'youtube-replay': // a replay renderer: rows exist but they are history
+      return shell('youtube replay fixture', `<yt-live-chat-app><yt-live-chat-replay-renderer><yt-live-chat-item-list-renderer><div id="items">${hist.youtube.join('')}</div></yt-live-chat-item-list-renderer></yt-live-chat-replay-renderer></yt-live-chat-app>${feed('#items')}`);
+    case 'kick-offline': // chat list present and empty, page says the channel is not live
+      return shell('kick offline fixture', `<div id="chatroom"><div id="chatroom-messages" class="overflow-y-scroll"></div></div><aside><h2>The channel is offline</h2></aside>`);
+    case 'kick-index': // rows that only carry data-index (virtualised list), no data-chat-entry
+      return shell('kick data-index fixture', `<div id="chatroom"><div id="chatroom-messages" class="overflow-y-scroll">${hist.kick.map(h => h.replace(/data-chat-entry="[^"]*"/, '')).join('')}</div></div>${feed('#chatroom-messages')}`);
     case 'x-login': // what X shows without an account: no chat, a sign-in wall
       return shell('x login wall fixture', `<div><h1>Sign in to X</h1><a href="/i/flow/login" data-testid="loginButton">Log in</a></div>`);
     default:

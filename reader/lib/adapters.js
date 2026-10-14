@@ -30,6 +30,27 @@ function validatePack(pack, expectedPlatform) {
   if (pack.containerTimeoutSec !== undefined && !(Number.isInteger(pack.containerTimeoutSec) && pack.containerTimeoutSec >= 10 && pack.containerTimeoutSec <= 300)) {
     bad('"containerTimeoutSec" must be a whole number from 10 to 300');
   }
+  if (pack.consentHosts !== undefined) {
+    const own = pack.hosts.map(h => h.replace(/^www\./, ''));
+    if (!isStrList(pack.consentHosts, 5) || !pack.consentHosts.every(h => /^[a-z0-9.-]+$/.test(h) && own.some(b => h.endsWith('.' + b)))) {
+      bad('"consentHosts" must be lower-case hosts under the platform\'s own domain');
+    }
+  }
+  if (pack.replayPaths !== undefined && !(isStrList(pack.replayPaths, 5) && pack.replayPaths.every(p => p.startsWith('/')))) bad('"replayPaths" must be a list of paths');
+  if (pack.cookies !== undefined) {
+    if (!Array.isArray(pack.cookies) || pack.cookies.length > 3) bad('"cookies" must be a short list');
+    for (const c of pack.cookies) {
+      if (!c || !['SOCS', 'CONSENT'].includes(c.name)) bad('only the consent preference cookies SOCS and CONSENT may be set');
+      if (typeof c.value !== 'string' || !/^[A-Za-z0-9+_.-]{1,64}$/.test(c.value)) bad('cookie value has odd characters');
+      if (typeof c.domain !== 'string' || !c.domain.startsWith('.') || c.domain.split('.').length < 3 || !pack.hosts.some(h => ('.' + h).endsWith(c.domain))) bad('cookie domain must be a parent of one of "hosts"');
+    }
+  }
+  if (pack.noteStates !== undefined) {
+    if (typeof pack.noteStates !== 'object' || pack.noteStates === null || Array.isArray(pack.noteStates)) bad('"noteStates" must be an object');
+    for (const [id, v] of Object.entries(pack.noteStates)) {
+      if (!v || !['consent', 'disabled', 'replay', 'offline', 'login'].includes(v.state) || !['always', 'nochat', 'nomsg'].includes(v.when) || !isStr(v.detail)) bad('"noteStates.' + id + '" needs a known state, when and detail');
+    }
+  }
   const e = pack.engine;
   if (!e || typeof e !== 'object') bad('"engine" is missing');
   if (!isStrList(e.container, 10) || !e.container.length) bad('"engine.container" must list at least one selector');
@@ -51,6 +72,13 @@ function validatePack(pack, expectedPlatform) {
   if (e.id !== undefined) {
     if (typeof e.id !== 'object' || (e.id.attrs !== undefined && !(Array.isArray(e.id.attrs) && e.id.attrs.length <= 6 && e.id.attrs.every(isStr)))) {
       bad('"engine.id.attrs" must be a list of attribute names');
+    }
+  }
+  if (e.notes !== undefined) {
+    if (!Array.isArray(e.notes) || e.notes.length > 10) bad('"engine.notes" must be a short list');
+    for (const n of e.notes) {
+      if (!n || !isStr(n.id) || (n.sel !== undefined && !isStrList(n.sel, 10)) || (n.text !== undefined && !isStrList(n.text, 20))) bad('every note needs an id and selector or text lists');
+      if (!pack.noteStates || !pack.noteStates[n.id]) bad('note "' + n.id + '" has no entry in "noteStates"');
     }
   }
   if (e.login !== undefined) {

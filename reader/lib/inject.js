@@ -252,6 +252,25 @@ function omscEngine(cfg, bindingName) {
     return false;
   }
 
+  // page states a pack names (consent page, chat disabled, replay, channel offline): by selector or by words
+  function noteIds() {
+    var out = [];
+    var notes = cfg.notes || [];
+    var t = null;
+    for (var i = 0; i < notes.length; i++) {
+      var n = notes[i];
+      var hit = !!(n.sel && n.sel.length && qs(document, n.sel));
+      if (!hit && n.text && n.text.length) {
+        if (t === null) {
+          try { t = (document.body && document.body.innerText || '').slice(0, 6000).toLowerCase(); } catch (e) { t = ''; }
+        }
+        for (var k = 0; k < n.text.length && !hit; k++) hit = t.indexOf(String(n.text[k]).toLowerCase()) >= 0;
+      }
+      if (hit) out.push(String(n.id));
+    }
+    return out;
+  }
+
   function tick() {
     if (container && !container.isConnected) { // the page rebuilt its list: attach to the new one
       try { observer.disconnect(); } catch (e) { /* ignore */ }
@@ -261,7 +280,7 @@ function omscEngine(cfg, bindingName) {
       var el = qs(document, cfg.container);
       if (el) attach(el);
     }
-    send({ t: 'tick', container: !!container, login: loginSeen(), seen: seenCount, sinceFound: container ? Date.now() - foundAt : 0 });
+    send({ t: 'tick', container: !!container, login: loginSeen(), notes: noteIds(), seen: seenCount, sinceFound: container ? Date.now() - foundAt : 0 });
   }
 
   send({ t: 'hello', href: String(location.href).slice(0, 200) });

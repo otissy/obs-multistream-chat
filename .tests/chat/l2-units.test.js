@@ -425,6 +425,149 @@ if (!chromeAvailable()) {
   });
 }
 
+// ---- page states: consent, disabled, replay, offline; consent cookie; diagnose -----------------------
+const { classifyNavigation } = require('../../reader/lib/source');
+const { diagnose } = require('../../reader/lib/diagnose');
+
+test('states: notes decide consent / disabled / replay / offline, and only under their own conditions', () => {
+  const base = { now: 100000, loadedAt: 90000, containerTimeoutMs: 45000, quietMs: 300000, seenTotal: 0, loginRedirect: false };
+  const ev = o => evaluateHealth(Object.assign({}, base, o));
+  const none = { container: false, login: false, seen: 0, sinceFound: 0 };
+  const consent = { state: 'consent', when: 'nochat', detail: 'consent page' };
+  assert.strictEqual(ev({ now: 90000 + 2000, tick: none, notes: [consent] }).state, 'starting', 'give the page a moment first');
+  assert.strictEqual(ev({ now: 90000 + 5000, tick: none, notes: [consent] }).state, 'consent');
+  assert.strictEqual(ev({ now: 90000 + 5000, tick: { container: true, login: false, seen: 0, sinceFound: 1000 }, notes: [consent] }).state, 'reading', 'a nochat note is moot once the chat list exists');
+  const replay = { state: 'replay', when: 'always', detail: 'replay' };
+  assert.strictEqual(ev({ now: 90000 + 5000, tick: { container: true, login: false, seen: 4, sinceFound: 9000 }, seenTotal: 4, notes: [replay] }).state, 'replay');
+  const offline = { state: 'offline', when: 'nomsg', detail: 'offline' };
+  const there = s => ({ container: true, login: false, seen: 0, sinceFound: s });
+  assert.strictEqual(ev({ tick: there(3000), notes: [offline] }).state, 'reading');
+  assert.strictEqual(ev({ tick: there(7000), notes: [offline] }).state, 'offline');
+  assert.strictEqual(ev({ tick: there(7000), seenTotal: 2, notes: [offline] }).state, 'reading', 'a channel that has spoken is not offline');
+  assert.strictEqual(ev({ tick: there(400000), notes: [] }).state, 'quiet', 'without the offline words it stays the old quiet state');
+  assert.strictEqual(ev({ forced: { state: 'consent', detail: 'x' }, tick: there(1000) }).state, 'consent');
+  assert.strictEqual(ev({ loadedAt: 0, forced: { state: 'replay', detail: 'x' } }).state, 'replay');
+});
+
+test('states: navigation to the consent host is its own kind, an unknown host is still foreign', () => {
+  const p = packs.youtube;
+  assert.strictEqual(classifyNavigation(p, 'www.youtube.com', ['www.youtube.com']), 'ok');
+  assert.strictEqual(classifyNavigation(p, 'consent.youtube.com', ['www.youtube.com']), 'consent');
+  assert.strictEqual(classifyNavigation(p, 'consent.youtube.com.evil.example', ['www.youtube.com']), 'foreign');
+  assert.strictEqual(classifyNavigation(p, 'evil.example', ['www.youtube.com']), 'foreign');
+  assert.strictEqual(classifyNavigation(packs.kick, 'consent.youtube.com', ['kick.com']), 'foreign');
+});
+
+test('states: cookies, consent hosts and notes in a pack are validated tightly', () => {
+  const good = clone(packs.youtube);
+  assert.doesNotThrow(() => validatePack(clone(good), 'youtube'));
+  const bad = (mut, re) => { const p = clone(good); mut(p); assert.throws(() => validatePack(p, 'youtube'), re); };
+  bad(p => { p.cookies = [{ name: 'LOGIN_INFO', value: 'abc', domain: '.youtube.com' }]; }, /consent preference cookies/);
+  bad(p => { p.cookies = [{ name: 'SOCS', value: 'a;b', domain: '.youtube.com' }]; }, /odd characters/);
+  bad(p => { p.cookies = [{ name: 'SOCS', value: 'CAI', domain: '.evil.example' }]; }, /parent/);
+  bad(p => { p.cookies = [{ name: 'SOCS', value: 'CAI', domain: '.com' }]; }, /parent|domain/);
+  bad(p => { p.consentHosts = ['consent.evil.example']; }, /own domain/);
+  bad(p => { p.noteStates.consent.state = 'hacked'; }, /noteStates/);
+  bad(p => { p.noteStates.consent.when = 'sometimes'; }, /noteStates/);
+  bad(p => { delete p.noteStates.disabled; }, /no entry in "noteStates"/);
+  bad(p => { p.replayPaths = ['live_chat_replay']; }, /replayPaths/);
+  assert.deepStrictEqual(packs.youtube.cookies, [{ name: 'SOCS', value: 'CAI', domain: '.youtube.com' }]);
+  assert.ok(packs.youtube.url.includes('live_chat?is_popout=1&v='), 'the popout form');
+  assert.ok(!packs.youtube.url.includes('embed_domain'), 'embed_domain belongs to the embedded iframe, not the popout');
+});
+
+if (chromeAvailable()) {
+  const { launch: launch2 } = require('../../reader/lib/chrome');
+  let b2, f2;
+  test.before(async () => { f2 = await startFake(); b2 = await launch2({}); });
+  test.after(async () => { if (b2) await b2.close(); if (f2) f2.close(); });
+  const log2 = { info() {}, warn() {}, error() {} };
+  async function stateOf(platform, target, variant, want, ms = 20000, feed = []) {
+    f2.register(platform, target, variant);
+    const src = new Source({ cdp: b2.cdp, pack: packs[platform], src: { id: 'c1', platform, target }, testOrigin: f2.origin, quietMs: 600000, log: log2 });
+    const got = [];
+    src.on('messages', m => got.push(...m));
+    await src.start();
+    try {
+      await waitFor(() => src.state === want, ms);
+      for (const h of feed) { f2.append(platform, target, h); await sleep(80); }
+      await sleep(800);
+      return { src, got, detail: src.detail, state: src.state };
+    } finally { await src.stop(); }
+  }
+
+  test('states in Chrome: YouTube consent page, disabled chat and replay each get their own state', async () => {
+    assert.match((await stateOf('youtube', 'consent1111', 'youtube-consent', 'consent')).detail, /cookie-consent page/);
+    assert.match((await stateOf('youtube', 'disabled111', 'youtube-disabled', 'disabled')).detail, /disabled or unavailable/);
+    const r = await stateOf('youtube', 'replay11111', 'youtube-replay', 'replay', 20000, [BUILD.youtube({ id: 'rp-1', author: 'Replayer', segments: ['old line'] })]);
+    assert.strictEqual(r.got.length, 0, 'replay lines are never forwarded as live chat');
+  });
+
+  test('states in Chrome: Kick chat list present but channel offline -> offline; an empty list without those words stays reading', async () => {
+    const r = await stateOf('kick', 'offlinechan', 'kick-offline', 'offline');
+    assert.match(r.detail, /channel is offline/);
+    const q = await stateOf('kick', 'emptychan', 'kick-empty', 'reading');
+    assert.strictEqual(q.state === 'offline', false);
+  });
+
+  test('states in Chrome: Kick rows that only carry data-index are read, with synthesised ids', async () => {
+    const row = BUILD.kick({ id: 'x', author: 'IdxUser', segments: ['via data-index'] }).replace(/data-chat-entry="[^"]*"/, '');
+    const r = await stateOf('kick', 'indexchan', 'kick-index', 'reading', 20000, [row]);
+    assert.strictEqual(r.got.length, 1);
+    assert.strictEqual(r.got[0].author, 'IdxUser');
+    assert.match(r.got[0].id, /^s[0-9a-f]+-\d+$/);
+  });
+
+  test('consent cookie: SOCS is set through CDP before the page loads, secure, scoped to .youtube.com, only in that tab context', async () => {
+    f2.register('youtube', 'cookie11111', 'youtube');
+    const src = new Source({ cdp: b2.cdp, pack: packs.youtube, src: { id: 'c1', platform: 'youtube', target: 'cookie11111' }, testOrigin: f2.origin, quietMs: 600000, log: log2 });
+    await src.start();
+    try {
+      await waitFor(() => src.sessionId, 5000);
+      const r = await b2.cdp.send('Network.getCookies', { urls: ['https://www.youtube.com/'] }, src.sessionId);
+      const c = r.cookies.find(x => x.name === 'SOCS');
+      assert.ok(c, JSON.stringify(r.cookies.map(x => x.name)));
+      assert.strictEqual(c.value, 'CAI');
+      assert.strictEqual(c.domain, '.youtube.com');
+      assert.strictEqual(c.secure, true);
+      assert.deepStrictEqual(r.cookies.map(x => x.name), ['SOCS'], 'nothing else is set');
+      f2.register('kick', 'cookie22222', 'kick');
+      const k = new Source({ cdp: b2.cdp, pack: packs.kick, src: { id: 'c2', platform: 'kick', target: 'cookie22222' }, testOrigin: f2.origin, quietMs: 600000, log: log2 });
+      await k.start();
+      try {
+        await waitFor(() => k.sessionId, 5000);
+        const kc = await b2.cdp.send('Network.getCookies', { urls: ['https://www.youtube.com/'] }, k.sessionId);
+        assert.strictEqual(kc.cookies.length, 0);
+      } finally { await k.stop(); }
+    } finally { await src.stop(); }
+  });
+
+  test('diagnose prints structure only: counts, tags, class names, attribute NAMES; never text, names or values', async () => {
+    f2.register('kick', 'diagchan', 'kick');
+    f2.append('kick', 'diagchan', BUILD.kick({ id: 'secret-id-9f8e7d', author: 'SecretAuthorXYZ', color: 'rgb(1, 2, 3)', segments: ['SecretTextQWE ', { emote: 'SecretEmote', url: EMOTES.KICK_EMOTE }] }));
+    f2.register('youtube', 'diagyt11111', 'youtube-consent');
+    const lines = [];
+    await diagnose({ sources: [{ id: 'c1', platform: 'kick', target: 'diagchan' }, { id: 'c2', platform: 'youtube', target: 'diagyt11111' }] }, packs, {},
+      { testOrigin: f2.origin, waitSec: 5, env: Object.assign({}, process.env) }, o => lines.push(o));
+    const text = JSON.stringify(lines);
+    for (const secret of ['SecretAuthorXYZ', 'SecretTextQWE', 'SecretEmote', 'secret-id-9f8e7d', 'rgb(1, 2, 3)', 'history one', 'OldTimer', 'hist-1']) assert.ok(!text.includes(secret), 'leaked: ' + secret);
+    const kick = lines.find(l => l.platform === 'kick');
+    const snap = kick.snapshots[kick.snapshots.length - 1].facts;
+    assert.strictEqual(snap.container.found, true);
+    assert.ok(snap.container.path[0].startsWith('div#chatroom-messages'));
+    assert.ok(snap.counts.item.find(c => c.sel === '[data-chat-entry]').n >= 3, JSON.stringify(snap.counts.item));
+    assert.ok(snap.counts.author.some(c => c.n >= 1));
+    assert.ok(snap.first_item.attribute_names.includes('data-chat-entry'));
+    assert.ok(snap.first_item.shape.kids.length >= 1);
+    assert.strictEqual(snap.notes[0].id, 'offline');
+    const yt = lines.find(l => l.platform === 'youtube');
+    const ysnap = yt.snapshots[yt.snapshots.length - 1].facts;
+    assert.strictEqual(ysnap.container.found, false);
+    assert.strictEqual(ysnap.notes.find(n => n.id === 'consent').words_hit[0], true, 'which state words appear is reported as yes/no');
+    assert.deepStrictEqual(yt.cookies_set, [{ name: 'SOCS', accepted: true }]);
+  });
+}
+
 // ---- the C++ units: sanitiser, targets, hub, config, routes ------------------------------------
 const CPP_L2 = 'chat_|emote_|hub_|ingest_|reader_config|config_v2_migrates|config_chat|config_node';
 const cpp = runCppSafe('L2', CPP_L2);

@@ -30,6 +30,8 @@ function parseArgs(argv) {
     else if (a === '--chrome') o.chrome = argv[++i];
     else if (a === '--test-origin') o.testOrigin = argv[++i]; // tests only: http://127.0.0.1:<port>
     else if (a === '--exit-on-stdin-close') o.exitOnStdinClose = true;
+    else if (a === '--diagnose') o.diagnose = true; // prints structural facts about each page, then exits
+    else if (a === '--wait') o.waitSec = parseInt(argv[++i], 10);
     else throw new Error('unknown argument: ' + a);
   }
   if (!o.config) throw new Error('--config <file> is required');
@@ -125,9 +127,21 @@ async function start(opts, env, hooks = {}) {
   return { shutdown, done, sources, poster };
 }
 
+async function runDiagnose(opts) {
+  const { diagnose } = require('./lib/diagnose');
+  const cfg = loadReaderConfig(opts.config);
+  const { packs, errors } = loadAdapters(opts.adapters || path.join(__dirname, 'adapters'));
+  const env = Object.assign({}, process.env);
+  delete env.OMSC_CHAT_TOKEN;
+  await diagnose(cfg, packs, errors, { chrome: opts.chrome, testOrigin: opts.testOrigin, waitSec: opts.waitSec, env }, o => process.stdout.write(JSON.stringify(o) + '\n'));
+}
+
 async function main() {
   let opts;
   try { opts = parseArgs(process.argv.slice(2)); } catch (e) { process.stderr.write(e.message + '\n'); process.exit(2); }
+  if (opts.diagnose) {
+    try { await runDiagnose(opts); process.exit(0); } catch (e) { process.stderr.write(String(e.message) + '\n'); process.exit(2); }
+  }
   let ctl;
   try { ctl = await start(opts, process.env); } catch (e) { process.stderr.write(e.message + '\n'); process.exit(e.exitCode || 2); }
   delete process.env.OMSC_CHAT_TOKEN;
@@ -142,4 +156,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { start, parseArgs };
+module.exports = { start, parseArgs, runDiagnose };

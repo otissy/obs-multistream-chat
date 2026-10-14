@@ -565,6 +565,15 @@ TEST(L2, hub_tracks_source_status_and_rejects_junk_states)
 	std::vector<SourceStatus> s = hub.sources();
 	CHECK_EQ(s.size(), static_cast<size_t>(1));
 	CHECK_EQ(s[0].state, S("layout"));
+	const char *extra[] = {"consent", "disabled", "replay", "offline"};
+	for (size_t i = 0; i < 4; ++i) {
+		std::string st = std::string("{\"v\":1,\"sources\":[{\"id\":\"c9\",\"platform\":\"kick\",\"state\":\"") + extra[i] + "\"}]}";
+		CHECK_EQ(hub.ingest(st).http_status, 200);
+		std::vector<SourceStatus> all = hub.sources();
+		for (size_t k = 0; k < all.size(); ++k)
+			if (all[k].id == "c9")
+				CHECK_EQ(all[k].state, S(extra[i]));
+	}
 	CHECK(s[0].detail.find('<') == std::string::npos);
 	json::ParseResult pr = json::parse(hub.status_json());
 	CHECK(pr.ok);

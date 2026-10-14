@@ -19,6 +19,7 @@ const { Source } = require('./lib/source');
 const { Poster } = require('./lib/poster');
 const { makeLogger } = require('./lib/log');
 const { delayMs } = require('./lib/backoff');
+const { computeUserAgent } = require('./lib/useragent');
 
 function parseArgs(argv) {
   const o = { exitOnStdinClose: false };
@@ -84,6 +85,8 @@ async function start(opts, env, hooks = {}) {
   async function openBrowser() {
     cleanStaleProfiles();
     const b = await launch({ chrome: opts.chrome, images: cfg.images, env: browserEnv });
+    try { uaInfo = computeUserAgent(await b.cdp.send('Browser.getVersion'), cfg.userAgent); } catch (e) { uaInfo = null; }
+    log.info('user agent mode: ' + cfg.userAgent + (uaInfo ? ' (Chrome ' + uaInfo.version + ', "Headless" removed)' : ' (Chrome default)'));
     if (shuttingDown) { await b.close(); return false; } // asked to stop while Chrome was starting
     browser = b;
     browser.cdp.onclose = () => { if (!shuttingDown) onBrowserLost(); };
@@ -91,6 +94,7 @@ async function start(opts, env, hooks = {}) {
     return true;
   }
   let relaunches = 0;
+  let uaInfo = null;
   async function onBrowserLost() {
     log.error('the browser went away');
     for (const s of sources) { try { await s.stop(); } catch (e) { /* ignore */ } }
@@ -104,7 +108,7 @@ async function start(opts, env, hooks = {}) {
   async function startSources() {
     for (const s of wanted) {
       if (shuttingDown) return;
-      const src = new Source({ cdp: browser.cdp, pack: packs[s.platform], src: s, testOrigin: opts.testOrigin, quietMs: cfg.quietMs, log });
+      const src = new Source({ cdp: browser.cdp, pack: packs[s.platform], src: s, testOrigin: opts.testOrigin, quietMs: cfg.quietMs, log, userAgent: uaInfo });
       src.on('status', st => poster.setStatus(st));
       src.on('messages', msgs => poster.enqueue(msgs));
       sources.push(src);
@@ -133,7 +137,7 @@ async function runDiagnose(opts) {
   const { packs, errors } = loadAdapters(opts.adapters || path.join(__dirname, 'adapters'));
   const env = Object.assign({}, process.env);
   delete env.OMSC_CHAT_TOKEN;
-  await diagnose(cfg, packs, errors, { chrome: opts.chrome, testOrigin: opts.testOrigin, waitSec: opts.waitSec, env }, o => process.stdout.write(JSON.stringify(o) + '\n'));
+  await diagnose(cfg, packs, errors, { chrome: opts.chrome, testOrigin: opts.testOrigin, waitSec: opts.waitSec, env, userAgentMode: cfg.userAgent }, o => process.stdout.write(JSON.stringify(o) + '\n'));
 }
 
 async function main() {

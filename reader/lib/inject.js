@@ -280,7 +280,7 @@ function omscEngine(cfg, bindingName) {
       var el = qs(document, cfg.container);
       if (el) attach(el);
     }
-    send({ t: 'tick', container: !!container, login: loginSeen(), notes: noteIds(), seen: seenCount, sinceFound: container ? Date.now() - foundAt : 0 });
+    send({ t: 'tick', container: !!container, login: loginSeen(), notes: noteIds(), elements: document.getElementsByTagName('*').length, seen: seenCount, sinceFound: container ? Date.now() - foundAt : 0 });
   }
 
   send({ t: 'hello', href: String(location.href).slice(0, 200) });

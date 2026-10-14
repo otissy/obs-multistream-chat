@@ -22,7 +22,9 @@ function parseReaderConfig(text) {
     if (!n.ok || n.target !== s.target) throw new Error('reader config: source ' + s.id + ': ' + (n.error || 'target is not normalized'));
     return { id: s.id, platform: s.platform, target: s.target };
   });
-  return { port: c.port, quietMs: quiet * 60000, images: c.images === true, sources };
+  const ua = c.user_agent === undefined ? 'chrome' : c.user_agent;
+  if (ua !== 'chrome' && ua !== 'headless') throw new Error('reader config: "user_agent" must be "chrome" or "headless"');
+  return { port: c.port, quietMs: quiet * 60000, images: c.images === true, userAgent: ua, sources };
 }
 
 function loadReaderConfig(file) {

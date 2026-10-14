@@ -30,6 +30,9 @@ function evaluateHealth(e) {
     const nochat = notes.find(n => n.when === 'nochat' || (n.when === 'nomsg' && e.seenTotal === 0));
     if (nochat && elapsed >= 4000) return { state: nochat.state, detail: nochat.detail };
     if (t && t.login && elapsed >= 8000) return { state: 'login', detail: 'the page asks for a login or a human check; the reader never logs in' };
+    if (t && typeof t.elements === 'number' && t.elements < 20 && elapsed >= 8000) {
+      return { state: 'stub', detail: 'platform served an empty page: likely automation detection or an unavailable stream (' + t.elements + ' elements)' };
+    }
     if (elapsed >= e.containerTimeoutMs) {
       return { state: 'layout', detail: 'page layout changed or login needed: the chat list was not found after ' + Math.round(elapsed / 1000) + ' s' };
     }
@@ -53,6 +56,7 @@ class Source extends EventEmitter {
     this.src = opts.src;
     this.testOrigin = opts.testOrigin || '';
     this.quietMs = opts.quietMs || 5 * 60000;
+    this.ua = opts.userAgent || null; // from useragent.computeUserAgent, or null = Chrome's own headless agent
     this.log = opts.log;
     this.binding = 'omsc_' + crypto.randomBytes(6).toString('hex');
     this.sessionId = null;
@@ -123,6 +127,7 @@ class Source extends EventEmitter {
       await s('Runtime.enable');
       await s('Network.enable');
       await s('Network.setBlockedURLs', { urls: MEDIA_BLOCK });
+      if (this.ua) await s('Emulation.setUserAgentOverride', { userAgent: this.ua.userAgent, userAgentMetadata: this.ua.userAgentMetadata });
       // consent PREFERENCE cookie (not a login): the pack names it; see docs/security.md
       for (const c of this.pack.cookies || []) {
         const r = await s('Network.setCookie', { name: c.name, value: c.value, domain: c.domain, path: '/', secure: true, sameSite: 'None', expires: Math.floor(Date.now() / 1000) + 86400 * 365 });
@@ -191,7 +196,7 @@ class Source extends EventEmitter {
       m = JSON.parse(p.payload);
     } catch (e) { return; }
     if (m.t === 'tick') {
-      this.tick = { container: !!m.container, login: !!m.login, notes: Array.isArray(m.notes) ? m.notes.slice(0, 10).map(String) : [], seen: Number(m.seen) || 0, sinceFound: Number(m.sinceFound) || 0 };
+      this.tick = { container: !!m.container, login: !!m.login, elements: Number.isFinite(m.elements) ? m.elements : undefined, notes: Array.isArray(m.notes) ? m.notes.slice(0, 10).map(String) : [], seen: Number(m.seen) || 0, sinceFound: Number(m.sinceFound) || 0 };
       this._evaluate();
     } else if (m.t === 'msgs' && Array.isArray(m.items)) {
       if (this.forced || this._notes().some(n => n.when === 'always')) return; // a replay or a consent page: nothing live to report

@@ -9,6 +9,7 @@
 const { launch } = require('./chrome');
 const { pageUrl, allowedHosts } = require('./adapters');
 const { classifyNavigation } = require('./source');
+const { computeUserAgent } = require('./useragent');
 
 // Runs inside the page (read-only). cfg = the pack's engine block.
 function probe(cfg) {
@@ -67,6 +68,10 @@ async function diagnose(cfg, packs, errors, opts, print) {
   for (const s of cfg.sources) if (!packs[s.platform]) print({ source: s.id, platform: s.platform, error: errors[s.platform] || 'no adapter' });
   if (!sources.length) return;
   const browser = await launch({ chrome: opts.chrome, images: false, env: opts.env });
+  const mode = opts.userAgentMode || 'chrome';
+  let ua = null;
+  try { ua = computeUserAgent(await browser.cdp.send('Browser.getVersion'), mode); } catch (e) { ua = null; }
+  print({ user_agent_mode: mode, user_agent_applied: !!ua, chrome_version: ua ? ua.version : undefined });
   const wait = Math.max(5, Math.min(120, opts.waitSec || 25)) * 1000;
   try {
     for (const s of sources) {
@@ -88,6 +93,7 @@ async function diagnose(cfg, packs, errors, opts, print) {
       try {
         await c('Page.enable'); await c('Runtime.enable'); await c('Network.enable');
         await c('Emulation.setDeviceMetricsOverride', { width: 900, height: 1000, deviceScaleFactor: 1, mobile: false });
+        if (ua) await c('Emulation.setUserAgentOverride', { userAgent: ua.userAgent, userAgentMetadata: ua.userAgentMetadata });
         const cookies = [];
         for (const ck of pack.cookies || []) {
           const r = await c('Network.setCookie', { name: ck.name, value: ck.value, domain: ck.domain, path: '/', secure: true, sameSite: 'None' });
@@ -100,7 +106,12 @@ async function diagnose(cfg, packs, errors, opts, print) {
         for (const at of [Math.round(wait * 0.4), wait]) {
           await new Promise(res => setTimeout(res, Math.max(0, at - (Date.now() - t0))));
           const ev = await c('Runtime.evaluate', { expression: '(' + probe.toString() + ')(' + JSON.stringify(pack.engine) + ')', returnByValue: true });
-          snaps.push({ after_s: Math.round((Date.now() - t0) / 1000), facts: ev.result && ev.result.value, error: ev.exceptionDetails ? 'probe failed' : undefined });
+          const facts = ev.result && ev.result.value;
+          if (facts) {
+            facts.stub = facts.elements < 20 && !facts.container.found; // an empty page: see docs/limits.md
+            if (facts.stub) facts.state_guess = 'stub: platform served an empty page: likely automation detection or an unavailable stream';
+          }
+          snaps.push({ after_s: Math.round((Date.now() - t0) / 1000), facts, error: ev.exceptionDetails ? 'probe failed' : undefined });
         }
         print({ source: s.id, platform: s.platform, navigate_error: r.errorText || null, cookies_set: cookies, main_frame_navigations: nav, snapshots: snaps });
       } catch (e) {

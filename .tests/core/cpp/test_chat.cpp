@@ -609,7 +609,7 @@ TEST(L2, config_chat_block_round_trips_and_validates)
 {
 	InsecureTestProtector p;
 	std::string text = "{\"schema\":3,\"chat\":{\"start_with_obs\":true,\"node_path\":\"C:\\\\Program Files\\\\nodejs\\\\node.exe\","
-			   "\"quiet_minutes\":9,\"hide_commands\":true,\"hide_bots\":true,\"blocked_words\":[\"spam\",\"\",5,\"x\\u0001y\"],"
+			   "\"quiet_minutes\":9,\"user_agent\":\"headless\",\"hide_commands\":true,\"hide_bots\":true,\"blocked_words\":[\"spam\",\"\",5,\"x\\u0001y\"],"
 			   "\"blocked_users\":[\"troll\"],\"sources\":["
 			   "{\"id\":\"c1\",\"platform\":\"twitch\",\"target\":\"shroud\",\"enabled\":true},"
 			   "{\"id\":\"c2\",\"platform\":\"twitch\",\"target\":\"https://evil.example/\",\"enabled\":true},"
@@ -621,6 +621,12 @@ TEST(L2, config_chat_block_round_trips_and_validates)
 	CHECK(r.status == LoadStatus::Ok);
 	CHECK(r.config.chat.start_with_obs);
 	CHECK_EQ(r.config.chat.quiet_minutes, 9);
+	CHECK_EQ(r.config.chat.user_agent, S("headless"));
+	LoadResult badua = parse_config("{\"schema\":3,\"chat\":{\"user_agent\":\"Mozilla/5.0 evil\"}}", p);
+	CHECK_EQ(badua.config.chat.user_agent, S("chrome")); // anything else falls back to the default
+	CHECK_FALSE(badua.warnings.empty());
+	CHECK_EQ(parse_config("{\"schema\":3,\"chat\":{}}", p).config.chat.user_agent, S("chrome"));
+	CHECK(build_reader_config(r.config, 51734).find("\"user_agent\": \"headless\"") != std::string::npos);
 	CHECK_EQ(r.config.chat.sources.size(), static_cast<size_t>(2)); // evil target, unknown platform, unnormalized target and non-object skipped
 	CHECK_EQ(r.config.chat.sources[0].target, S("shroud"));
 	CHECK(r.config.chat.sources[1].id != S("c1")); // duplicate id was replaced
@@ -634,6 +640,7 @@ TEST(L2, config_chat_block_round_trips_and_validates)
 	CHECK(again.status == LoadStatus::Ok);
 	CHECK_EQ(again.config.chat.sources.size(), static_cast<size_t>(2));
 	CHECK_EQ(again.config.chat.node_path, r.config.chat.node_path);
+	CHECK_EQ(again.config.chat.user_agent, S("headless"));
 	CHECK(again.config.chat.hide_bots);
 }
 

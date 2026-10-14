@@ -568,6 +568,138 @@ if (chromeAvailable()) {
   });
 }
 
+// ---- user agent compatibility setting and the stub page state -----------------------------------------
+const { computeUserAgent } = require('../../reader/lib/useragent');
+
+test('user agent: version comes from the browser, only the Headless token goes, mode headless changes nothing', () => {
+  const win = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/126.0.6478.127 Safari/537.36';
+  const r = computeUserAgent({ product: 'HeadlessChrome/126.0.6478.127', userAgent: win }, 'chrome');
+  assert.strictEqual(r.userAgent, win.replace('HeadlessChrome/', 'Chrome/'));
+  assert.strictEqual(r.userAgent.replace('Chrome/', 'HeadlessChrome/'), win, 'nothing but the token differs');
+  assert.ok(!/headless/i.test(r.userAgent));
+  assert.strictEqual(r.version, '126.0.6478.127');
+  assert.strictEqual(r.major, '126');
+  const md = r.userAgentMetadata;
+  assert.ok(md.brands.some(b => b.brand === 'Google Chrome' && b.version === '126'));
+  assert.ok(md.brands.some(b => b.brand === 'Chromium' && b.version === '126'));
+  assert.ok(!JSON.stringify(md).toLowerCase().includes('headless'));
+  assert.strictEqual(md.fullVersionList.find(b => b.brand === 'Google Chrome').version, '126.0.6478.127');
+  assert.strictEqual(md.platform, 'Windows');
+  assert.strictEqual(md.platformVersion, '10.0.0');
+  assert.strictEqual(md.mobile, false);
+  // another version number is followed, not remembered
+  const other = computeUserAgent({ userAgent: win.replace(/126\.0\.6478\.127/, '141.0.7390.55') }, 'chrome');
+  assert.strictEqual(other.version, '141.0.7390.55');
+  assert.ok(other.userAgent.includes('Chrome/141.0.7390.55 '));
+  // an agent that is already a normal Chrome is left byte for byte as it is
+  const normal = win.replace('HeadlessChrome/', 'Chrome/');
+  assert.strictEqual(computeUserAgent({ userAgent: normal }, 'chrome').userAgent, normal);
+  assert.strictEqual(computeUserAgent({ userAgent: win }, 'headless'), null);
+  for (const junk of [null, undefined, {}, { userAgent: '' }, { userAgent: 'curl/8.0' }, { userAgent: 42 }]) assert.strictEqual(computeUserAgent(junk, 'chrome'), null, JSON.stringify(junk));
+  assert.strictEqual(computeUserAgent({ userAgent: 'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/120.0.1.2 Safari/537.36' }, 'chrome').userAgentMetadata.platform, 'Linux');
+});
+
+test('user agent: the reader config accepts only chrome or headless, default chrome', () => {
+  const base = { v: 1, port: 51734, sources: [] };
+  assert.strictEqual(parseReaderConfig(JSON.stringify(base)).userAgent, 'chrome');
+  assert.strictEqual(parseReaderConfig(JSON.stringify({ ...base, user_agent: 'headless' })).userAgent, 'headless');
+  for (const bad of ['firefox', '', 'Mozilla/5.0 custom', 1, null]) assert.throws(() => parseReaderConfig(JSON.stringify({ ...base, user_agent: bad })), /user_agent/);
+});
+
+test('states: an almost empty page with no chat list is "stub", but a login wall or a redesigned page is not', () => {
+  const base = { now: 100000, loadedAt: 90000, containerTimeoutMs: 45000, quietMs: 300000, seenTotal: 0, loginRedirect: false };
+  const ev = o => evaluateHealth(Object.assign({}, base, o));
+  const t = (elements, login) => ({ container: false, login: !!login, elements, seen: 0, sinceFound: 0 });
+  assert.strictEqual(ev({ now: 90000 + 3000, tick: t(11) }).state, 'starting', 'give the page time first');
+  const s = ev({ now: 90000 + 9000, tick: t(11) });
+  assert.strictEqual(s.state, 'stub');
+  assert.match(s.detail, /platform served an empty page: likely automation detection or an unavailable stream/);
+  assert.strictEqual(ev({ now: 90000 + 9000, tick: t(19) }).state, 'stub');
+  assert.strictEqual(ev({ now: 90000 + 9000, tick: t(20) }).state, 'starting', 'a real page that is simply still loading');
+  assert.strictEqual(ev({ now: 90000 + 9000, tick: t(11, true) }).state, 'login');
+  assert.strictEqual(ev({ now: 90000 + 46000, tick: t(300) }).state, 'layout');
+  assert.strictEqual(ev({ now: 90000 + 9000, tick: { container: true, login: false, elements: 11, seen: 0, sinceFound: 100 } }).state, 'reading', 'a chat list wins');
+});
+
+if (chromeAvailable()) {
+  const { launch: launch3 } = require('../../reader/lib/chrome');
+  let b3, f3;
+  test.before(async () => { f3 = await startFake(); b3 = await launch3({}); });
+  test.after(async () => { if (b3) await b3.close(); if (f3) f3.close(); });
+  const log3 = { info() {}, warn() {}, error() {} };
+
+  test('user agent in Chrome: the request carries the installed Chrome\'s own agent minus Headless; headless mode leaves it alone', async () => {
+    const ver = await b3.cdp.send('Browser.getVersion');
+    const ua = computeUserAgent(ver, 'chrome');
+    assert.ok(ver.userAgent.includes('HeadlessChrome/'), 'this Chrome really advertises Headless by default');
+    f3.register('youtube', 'uatest11111', 'youtube');
+    const a = new Source({ cdp: b3.cdp, pack: packs.youtube, src: { id: 'c1', platform: 'youtube', target: 'uatest11111' }, testOrigin: f3.origin, quietMs: 600000, log: log3, userAgent: ua });
+    await a.start();
+    await waitFor(() => a.state === 'reading', 20000);
+    await a.stop();
+    const seen = f3.uas.filter(u => u.path === '/live_chat').pop();
+    assert.strictEqual(seen.ua, ver.userAgent.replace('HeadlessChrome/', 'Chrome/'));
+    assert.ok(seen.ua.includes('Chrome/' + ver.product.split('/')[1].split('.')[0] + '.'), 'major version taken from the browser');
+    assert.strictEqual(ua.version, ver.product.split('/')[1], 'full version for the client hints comes from the browser');
+    assert.ok(!/headless/i.test(seen.ua + seen.chua), 'no Headless token in the agent or the client hints: ' + seen.chua);
+    assert.ok(/Google Chrome/.test(seen.chua) || seen.chua === '', 'brands follow the installed Chrome: ' + seen.chua);
+    f3.register('youtube', 'uatest22222', 'youtube');
+    const b = new Source({ cdp: b3.cdp, pack: packs.youtube, src: { id: 'c2', platform: 'youtube', target: 'uatest22222' }, testOrigin: f3.origin, quietMs: 600000, log: log3, userAgent: computeUserAgent(ver, 'headless') });
+    await b.start();
+    await waitFor(() => b.state === 'reading', 20000);
+    await b.stop();
+    assert.ok(f3.uas.filter(u => u.path === '/live_chat').pop().ua.includes('HeadlessChrome/'), 'headless mode: Chrome is not touched');
+  });
+
+  test('YouTube adapter: with the Chrome agent and a chat list present the state is reading, and lines flow', async () => {
+    const ver = await b3.cdp.send('Browser.getVersion');
+    f3.register('youtube', 'yt-read1111', 'youtube');
+    const src = new Source({ cdp: b3.cdp, pack: packs.youtube, src: { id: 'c1', platform: 'youtube', target: 'yt-read1111' }, testOrigin: f3.origin, quietMs: 600000, log: log3, userAgent: computeUserAgent(ver, 'chrome') });
+    const got = [];
+    src.on('messages', m => got.push(...m));
+    await src.start();
+    try {
+      await waitFor(() => src.state === 'reading', 20000);
+      assert.strictEqual(src.state, 'reading');
+      f3.append('youtube', 'yt-read1111', BUILD.youtube({ id: 'ua-1', author: 'Yui', segments: ['hello'] }));
+      await waitFor(() => got.length === 1, 8000);
+      assert.strictEqual(got[0].id, 'ua-1');
+    } finally { await src.stop(); }
+  });
+
+  test('stub page in Chrome: an empty document is reported as stub, not as layout changed', async () => {
+    f3.register('youtube', 'stubpage111', 'youtube-stub');
+    const src = new Source({ cdp: b3.cdp, pack: packs.youtube, src: { id: 'c1', platform: 'youtube', target: 'stubpage111' }, testOrigin: f3.origin, quietMs: 600000, log: log3 });
+    await src.start();
+    try {
+      await waitFor(() => src.state === 'stub', 25000);
+      assert.match(src.detail, /platform served an empty page/);
+    } finally { await src.stop(); }
+  });
+
+  test('diagnose reports the user agent mode and flags a stub page', async () => {
+    f3.register('youtube', 'diagstub111', 'youtube-stub');
+    f3.register('youtube', 'diagfull111', 'youtube');
+    const lines = [];
+    await diagnose({ sources: [{ id: 'c1', platform: 'youtube', target: 'diagstub111' }, { id: 'c2', platform: 'youtube', target: 'diagfull111' }] }, packs, {},
+      { testOrigin: f3.origin, waitSec: 5, env: Object.assign({}, process.env), userAgentMode: 'chrome' }, o => lines.push(o));
+    const head = lines.find(l => l.user_agent_mode);
+    assert.strictEqual(head.user_agent_mode, 'chrome');
+    assert.strictEqual(head.user_agent_applied, true);
+    assert.match(head.chrome_version, /^\d+\.\d+\.\d+\.\d+$/);
+    const last = l => l.snapshots[l.snapshots.length - 1].facts;
+    const stub = last(lines.find(l => l.source === 'c1'));
+    assert.strictEqual(stub.stub, true);
+    assert.match(stub.state_guess, /^stub: platform served an empty page/);
+    const full = last(lines.find(l => l.source === 'c2'));
+    assert.strictEqual(full.stub, false);
+    assert.strictEqual(full.container.found, true);
+    const off = [];
+    await diagnose({ sources: [{ id: 'c1', platform: 'youtube', target: 'diagfull111' }] }, packs, {}, { testOrigin: f3.origin, waitSec: 5, env: Object.assign({}, process.env), userAgentMode: 'headless' }, o => off.push(o));
+    assert.strictEqual(off[0].user_agent_applied, false);
+  });
+}
+
 // ---- the C++ units: sanitiser, targets, hub, config, routes ------------------------------------
 const CPP_L2 = 'chat_|emote_|hub_|ingest_|reader_config|config_v2_migrates|config_chat|config_node';
 const cpp = runCppSafe('L2', CPP_L2);

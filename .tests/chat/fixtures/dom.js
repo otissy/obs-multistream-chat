@@ -79,7 +79,7 @@ function page(variant, key) {
     case 'twitch':
       return shell('twitch popout fixture', `<div class="chat-room__content"><div class="chat-list--default"><div class="chat-scrollable-area__message-container" role="log">${hist.twitch.join('')}</div></div></div>${feed('.chat-scrollable-area__message-container')}`);
     case 'twitch-layout-changed': // same page after a redesign: none of the pack's selectors exist any more
-      return shell('twitch layout changed', `<main class="stream-chat-v9"><ol class="msgs-v9" role="log"><li class="m9"><b class="u9">OldTimer</b><i class="t9">history</i></li></ol></main>`);
+      return shell('twitch layout changed', `<header><nav><a>one</a><a>two</a><a>three</a></nav></header><main class="stream-chat-v9"><section><ol class="msgs-v9" role="log"><li class="m9"><b class="u9">OldTimer</b><i class="t9">history</i></li><li class="m9"><b class="u9">Other</b><i class="t9">more</i></li></ol></section><footer><p>footer</p><p>text</p></footer></main>`);
     case 'youtube':
       return shell('youtube live_chat fixture', `<yt-live-chat-app><yt-live-chat-renderer><yt-live-chat-item-list-renderer><div id="item-scroller"><div id="item-offset"><div id="items" class="style-scope yt-live-chat-item-list-renderer">${hist.youtube.join('')}</div></div></div></yt-live-chat-item-list-renderer></yt-live-chat-renderer></yt-live-chat-app>${feed('#items')}`);
     case 'kick':
@@ -100,6 +100,8 @@ function page(variant, key) {
       return shell('kick offline fixture', `<div id="chatroom"><div id="chatroom-messages" class="overflow-y-scroll"></div></div><aside><h2>The channel is offline</h2></aside>`);
     case 'kick-index': // rows that only carry data-index (virtualised list), no data-chat-entry
       return shell('kick data-index fixture', `<div id="chatroom"><div id="chatroom-messages" class="overflow-y-scroll">${hist.kick.map(h => h.replace(/data-chat-entry="[^"]*"/, '')).join('')}</div></div>${feed('#chatroom-messages')}`);
+    case 'youtube-stub': // what YouTube serves to a browser it dislikes: an almost empty document
+      return `<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>`;
     case 'x-login': // what X shows without an account: no chat, a sign-in wall
       return shell('x login wall fixture', `<div><h1>Sign in to X</h1><a href="/i/flow/login" data-testid="loginButton">Log in</a></div>`);
     default:

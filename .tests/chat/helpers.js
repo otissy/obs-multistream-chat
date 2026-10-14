@@ -25,11 +25,13 @@ async function startFake() {
   const routes = new Map(); // "platform:target" -> {variant, key}
   const feeds = new Map();  // key -> {items:[]}
   const requests = [];
+  const uas = [];
   let seq = 0;
   const server = http.createServer((req, res) => {
     const port = server.address().port;
     const u = new URL(req.url, 'http://x');
     requests.push(u.pathname + u.search);
+    uas.push({ path: u.pathname, ua: req.headers['user-agent'] || '', chua: req.headers['sec-ch-ua'] || '', platform: req.headers['sec-ch-ua-platform'] || '' });
     if (req.headers.host !== '127.0.0.1:' + port) { res.writeHead(403); return res.end('host'); }
     if (u.pathname === '/__feed') {
       const f = feeds.get(u.searchParams.get('key'));
@@ -49,7 +51,7 @@ async function startFake() {
   });
   const port = await listen(server);
   return {
-    port, origin: 'http://127.0.0.1:' + port, requests,
+    port, origin: 'http://127.0.0.1:' + port, requests, uas,
     register(platform, target, variant = platform) {
       const key = 'k' + (++seq);
       routes.set(platform + ':' + target, { variant, key });

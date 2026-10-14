@@ -1,0 +1,22 @@
+{
+  "adapter": 1,
+  "platform": "youtube",
+  "experimental": false,
+  "title": "YouTube live chat popout",
+  "note": "Selectors cross-checked by reading Social Stream Ninja's sources/youtube.js (GPL-3.0, see NOTICE); not verified against a live page by the author.",
+  "url": "https://www.youtube.com/live_chat?is_popout=1&v={target}",
+  "hosts": ["www.youtube.com"],
+  "loginPaths": ["/signin", "/ServiceLogin"],
+  "containerTimeoutSec": 45,
+  "engine": {
+    "container": ["yt-live-chat-item-list-renderer #items", "#items.yt-live-chat-item-list-renderer", "yt-live-chat-renderer"],
+    "item": ["yt-live-chat-text-message-renderer", "yt-live-chat-paid-message-renderer"],
+    "ignore": [],
+    "id": { "attrs": ["id"] },
+    "author": { "sel": ["#author-name"], "color": "none" },
+    "body": { "sel": ["#message"] },
+    "emote": { "sel": ["img.emoji", "img[class*='emoji']"], "name": ["alt", "aria-label"], "src": ["src"] },
+    "badge": { "sel": ["yt-live-chat-author-badge-renderer"], "name": ["type", "aria-label"] },
+    "login": { "sel": [], "text": ["chat is disabled", "chat unavailable", "sign in to chat"] }
+  }
+}

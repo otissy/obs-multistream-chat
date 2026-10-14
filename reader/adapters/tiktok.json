@@ -1,0 +1,22 @@
+{
+  "adapter": 1,
+  "platform": "tiktok",
+  "experimental": true,
+  "title": "TikTok LIVE page",
+  "note": "EXPERIMENTAL. Selectors cross-checked by reading Social Stream Ninja's sources/tiktok.js (GPL-3.0, see NOTICE); never verified against a live page by the author. TikTok may ask for a login, show a captcha or refuse automated browsers; none of that is worked around.",
+  "url": "https://www.tiktok.com/@{target}/live",
+  "hosts": ["www.tiktok.com"],
+  "loginPaths": ["/login", "/signup"],
+  "containerTimeoutSec": 60,
+  "engine": {
+    "container": ["[data-e2e='chat-room']", "[data-e2e='live-chat-container']", "[class*='DivChatRoomContent']", ".live-shared-ui-chat-list-scrolling-list"],
+    "item": ["[data-e2e='chat-message']"],
+    "ignore": [],
+    "id": { "attrs": [] },
+    "author": { "sel": ["[data-e2e='message-owner-name']"], "color": "none" },
+    "body": { "sel": ["[class*='-DivComment']", ".break-words.align-middle", ".break-words"], "rest": true, "remove": ["img[class*='Badge']", "img[src*='_badge_']"] },
+    "emote": { "sel": ["img[class*='Emote']", "img[class*='emoji']"], "name": ["alt", "title"], "src": ["src"] },
+    "badge": { "sel": ["img[class*='ImgBadgeChatMessage']", "img[src*='_badge_']"], "name": ["alt", "title"] },
+    "login": { "sel": ["[id*='captcha']", "[class*='captcha']", "iframe[src*='captcha']", "button[data-e2e*='login']"], "text": ["log in to tiktok", "verify to continue", "drag the slider", "log in to follow creators"] }
+  }
+}

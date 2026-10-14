@@ -1,5 +1,8 @@
 #include "config.hpp"
+#include "chat_targets.hpp"
 #include "json.hpp"
+
+#include <cctype>
 
 #include <filesystem>
 #include <fstream>
@@ -97,10 +100,108 @@ void read_server(const json::Value &root, LoadResult &r)
 		r.warnings.push_back("server port out of range: using automatic port");
 }
 
+std::string clean_list_entry(const std::string &s)
+{
+	std::string o;
+	for (size_t i = 0; i < s.size() && o.size() < 60; ++i) {
+		unsigned char c = static_cast<unsigned char>(s[i]);
+		if (c >= 0x20 && c != 0x7f)
+			o.push_back(static_cast<char>(c));
+	}
+	size_t a = 0, b = o.size();
+	while (a < b && o[a] == ' ')
+		++a;
+	while (b > a && o[b - 1] == ' ')
+		--b;
+	return o.substr(a, b - a);
+}
+
+void read_string_list(const json::Value &obj, const char *key, std::vector<std::string> &out, LoadResult &r)
+{
+	const json::Value *v = obj.find(key);
+	if (!v)
+		return;
+	if (!v->is_array()) {
+		r.warnings.push_back(std::string("chat.") + key + " is not a list: ignored");
+		return;
+	}
+	for (size_t i = 0; i < v->size() && out.size() < kMaxChatListEntries; ++i) {
+		if (!v->at(i).is_string())
+			continue;
+		std::string e = clean_list_entry(v->at(i).as_string());
+		if (!e.empty())
+			out.push_back(e);
+	}
+}
+
+void read_chat(const json::Value &root, LoadResult &r)
+{
+	const json::Value *c = root.find("chat");
+	if (!c)
+		return;
+	if (!c->is_object()) {
+		r.warnings.push_back("\"chat\" is not an object: ignored");
+		return;
+	}
+	ChatConfig &cc = r.config.chat;
+	cc.start_with_obs = bool_of(*c, "start_with_obs", false);
+	cc.hide_commands = bool_of(*c, "hide_commands", false);
+	cc.hide_bots = bool_of(*c, "hide_bots", false);
+	cc.quiet_minutes = int_of(*c, "quiet_minutes", 5, 1, 120);
+	std::string np = str_of(*c, "node_path");
+	if (valid_node_path(np))
+		cc.node_path = np;
+	else
+		r.warnings.push_back("chat.node_path is not an absolute path to node.exe: ignored");
+	read_string_list(*c, "blocked_words", cc.blocked_words, r);
+	read_string_list(*c, "blocked_users", cc.blocked_users, r);
+	const json::Value *arr = c->find("sources");
+	if (!arr)
+		return;
+	if (!arr->is_array()) {
+		r.warnings.push_back("chat.sources is not a list: ignored");
+		return;
+	}
+	std::set<std::string> ids;
+	for (size_t i = 0; i < arr->size(); ++i) {
+		const json::Value &o = arr->at(i);
+		if (!o.is_object()) {
+			r.warnings.push_back("chat source #" + std::to_string(i + 1) + " skipped: not an object");
+			continue;
+		}
+		ChatSource s;
+		s.id = str_of(o, "id");
+		s.platform = str_of(o, "platform");
+		s.enabled = bool_of(o, "enabled", true);
+		std::string target = str_of(o, "target");
+		std::string norm, err;
+		if (!normalize_chat_target(s.platform, target, norm, err) || norm != target) {
+			r.warnings.push_back("chat source #" + std::to_string(i + 1) + " skipped: " +
+					     (err.empty() ? std::string("target is not normalized") : err));
+			continue;
+		}
+		s.target = norm;
+		if (!is_valid_id(s.id) || ids.count(s.id)) {
+			unsigned seed = static_cast<unsigned>(i + 1);
+			do {
+				s.id = "c" + std::to_string(seed++);
+			} while (ids.count(s.id));
+		}
+		if (r.config.chat.sources.size() >= static_cast<size_t>(kMaxChatSources)) {
+			r.warnings.push_back("chat source #" + std::to_string(i + 1) + " skipped: more than " +
+					     std::to_string(kMaxChatSources) + " chat sources");
+			continue;
+		}
+		ids.insert(s.id);
+		r.config.chat.sources.push_back(s);
+	}
+}
+
 void parse_v2(const json::Value &root, const SecretProtector &p, LoadResult &r)
 {
 	r.config.auto_start_with_stream = bool_of(root, "auto_start_with_stream", true);
 	read_server(root, r);
+	read_chat(root, r);
 	const json::Value *arr = root.find("destinations");
 	if (!arr)
 		return;
@@ -204,8 +305,60 @@ LoadResult parse_config(const std::string &text, const SecretProtector &protecto
 		return r;
 	}
 	parse_v2(pr.value, protector, r);
+	if (schema == 2) {
+		// schema 3 only adds the "chat" block (read from a v2 file it is simply absent): defaults, saved as 3
+		r.status = LoadStatus::Migrated;
+		r.needs_save = true;
+		return r;
+	}
 	r.status = LoadStatus::Ok;
 	return r;
+}
+
+bool valid_node_path(const std::string &p)
+{
+	if (p.empty())
+		return true;
+	if (p.size() > 260)
+		return false;
+	for (size_t i = 0; i < p.size(); ++i) {
+		unsigned char c = static_cast<unsigned char>(p[i]);
+		if (c < 0x20 || c == 0x7f || c == '"' || c == '<' || c == '>' || c == '|' || c == '*' || c == '?')
+			return false;
+	}
+	bool drive = p.size() > 3 && std::isalpha(static_cast<unsigned char>(p[0])) && p[1] == ':' && (p[2] == '\\' || p[2] == '/');
+	bool unc = p.compare(0, 2, "\\\\") == 0;
+	if (!drive && !unc)
+		return false;
+	std::string lower;
+	for (size_t i = 0; i < p.size(); ++i)
+		lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(p[i]))));
+	const std::string tail = "node.exe";
+	if (lower.size() < tail.size() + 1 || lower.compare(lower.size() - tail.size(), tail.size(), tail) != 0)
+		return false;
+	char before = lower[lower.size() - tail.size() - 1];
+	return before == '\\' || before == '/';
+}
+
+std::string build_reader_config(const Config &cfg, int port)
+{
+	json::Value root = json::Value::object();
+	root.set("v", json::Value::number(1));
+	root.set("port", json::Value::number(port));
+	root.set("quiet_minutes", json::Value::number(cfg.chat.quiet_minutes));
+	json::Value arr = json::Value::array();
+	for (size_t i = 0; i < cfg.chat.sources.size(); ++i) {
+		const ChatSource &s = cfg.chat.sources[i];
+		if (!s.enabled)
+			continue;
+		json::Value o = json::Value::object();
+		o.set("id", json::Value::string(s.id));
+		o.set("platform", json::Value::string(s.platform));
+		o.set("target", json::Value::string(s.target));
+		arr.push(o);
+	}
+	root.set("sources", arr);
+	return json::dump(root, true) + "\n";
 }
 
 bool read_file(const std::string &path, std::string &out)
@@ -328,6 +481,31 @@ bool serialize_config(const Config &cfg, std::string &out, std::string &err)
 		arr.push(o);
 	}
 	root.set("destinations", arr);
+	json::Value chat = json::Value::object();
+	chat.set("start_with_obs", json::Value::boolean(cfg.chat.start_with_obs));
+	chat.set("node_path", json::Value::string(cfg.chat.node_path));
+	chat.set("quiet_minutes", json::Value::number(cfg.chat.quiet_minutes));
+	chat.set("hide_commands", json::Value::boolean(cfg.chat.hide_commands));
+	chat.set("hide_bots", json::Value::boolean(cfg.chat.hide_bots));
+	json::Value words = json::Value::array();
+	for (size_t i = 0; i < cfg.chat.blocked_words.size(); ++i)
+		words.push(json::Value::string(cfg.chat.blocked_words[i]));
+	chat.set("blocked_words", words);
+	json::Value users = json::Value::array();
+	for (size_t i = 0; i < cfg.chat.blocked_users.size(); ++i)
+		users.push(json::Value::string(cfg.chat.blocked_users[i]));
+	chat.set("blocked_users", users);
+	json::Value srcs = json::Value::array();
+	for (size_t i = 0; i < cfg.chat.sources.size(); ++i) {
+		json::Value o = json::Value::object();
+		o.set("id", json::Value::string(cfg.chat.sources[i].id));
+		o.set("platform", json::Value::string(cfg.chat.sources[i].platform));
+		o.set("target", json::Value::string(cfg.chat.sources[i].target));
+		o.set("enabled", json::Value::boolean(cfg.chat.sources[i].enabled));
+		srcs.push(o);
+	}
+	chat.set("sources", srcs);
+	root.set("chat", chat);
 	out = json::dump(root, true) + "\n";
 	return true;
 }

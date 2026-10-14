@@ -1,0 +1,22 @@
+{
+  "adapter": 1,
+  "platform": "x",
+  "experimental": true,
+  "title": "X broadcast chat",
+  "note": "EXPERIMENTAL. X broadcasts usually need a logged-in account to show chat. Without a login the reader reports 'needs login' and shows nothing; it never logs in. Structure guessed from Social Stream Ninja's sources/x.js (GPL-3.0, see NOTICE); never verified against a live page by the author.",
+  "url": "https://x.com/i/broadcasts/{target}",
+  "hosts": ["x.com"],
+  "loginPaths": ["/i/flow/login", "/login", "/i/flow/signup", "/account/access"],
+  "containerTimeoutSec": 60,
+  "engine": {
+    "container": ["[data-testid='chatContainer']"],
+    "anchor": ["[data-testid^='UserAvatar-Container-']"],
+    "ignore": [],
+    "id": { "attrs": [] },
+    "author": { "sel": ["a[href^='/'] span"], "color": "none" },
+    "body": { "rest": true, "remove": ["[data-testid^='UserAvatar-Container-']", "a[href^='/']", "time", "[data-testid='icon-verified']"] },
+    "emote": { "sel": ["img[src*='twimg.com/emoji']"], "name": ["alt"], "src": ["src"] },
+    "badge": { "sel": [], "name": ["aria-label"] },
+    "login": { "sel": ["[data-testid='loginButton']", "a[href='/login']", "a[href*='/i/flow/login']"], "text": ["sign in to x", "log in to x", "sign in to twitter", "log in to twitter"] }
+  }
+}

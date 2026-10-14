@@ -1,5 +1,7 @@
 #include "http_server.hpp"
 
+#include "chat_targets.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -66,7 +68,11 @@ const char *reason_for(int status)
 	case 400: return "Bad Request";
 	case 403: return "Forbidden";
 	case 404: return "Not Found";
+	case 401: return "Unauthorized";
 	case 405: return "Method Not Allowed";
+	case 411: return "Length Required";
+	case 413: return "Payload Too Large";
+	case 415: return "Unsupported Media Type";
 	case 431: return "Request Header Fields Too Large";
 	case 503: return "Service Unavailable";
 	default: return "Error";
@@ -173,6 +179,7 @@ ParseStatus parse_request(const std::string &buf, HttpRequest &out, size_t max_h
 			return ParseStatus::Malformed; // two Host headers: ambiguous, refuse
 		req.headers[lname] = value;
 	}
+	req.header_bytes = end + 4;
 	out = req;
 	return ParseStatus::Ok;
 }
@@ -223,8 +230,122 @@ bool origin_allowed(const std::string &origin, int port)
 	return o == "http://127.0.0.1:" + p || o == "http://localhost:" + p;
 }
 
+namespace {
+
+bool starts_with_ci(const std::string &s, const char *prefix)
+{
+	size_t n = std::strlen(prefix);
+	if (s.size() < n)
+		return false;
+	for (size_t i = 0; i < n; ++i)
+		if (std::tolower(static_cast<unsigned char>(s[i])) != std::tolower(static_cast<unsigned char>(prefix[i])))
+			return false;
+	return true;
+}
+
+// parses a Content-Length value: digits only, no sign, no spaces, at most 10 digits
+bool parse_length(const std::string &v, size_t &out)
+{
+	if (v.empty() || v.size() > 10)
+		return false;
+	size_t n = 0;
+	for (size_t i = 0; i < v.size(); ++i) {
+		if (v[i] < '0' || v[i] > '9')
+			return false;
+		n = n * 10 + static_cast<size_t>(v[i] - '0');
+	}
+	out = n;
+	return true;
+}
+
+HttpResponse json_response(int status, const std::string &body)
+{
+	HttpResponse r;
+	r.status = status;
+	r.reason = reason_for(status);
+	add_common_headers(r);
+	r.headers.push_back(std::make_pair("Content-Type", "application/json; charset=utf-8"));
+	r.body = body;
+	return r;
+}
+
+} // namespace
+
+bool ingest_precheck(const HttpRequest &req, int port, ChatHub &chat, HttpResponse &early)
+{
+	if (req.method != "POST") {
+		early = make_error(405, "method not allowed");
+		early.headers.push_back(std::make_pair("Allow", "POST"));
+		return false;
+	}
+	if (!req.has_header("host") || !host_allowed(req.header("host"), port)) {
+		early = make_error(403, "forbidden host");
+		return false;
+	}
+	// The reader is a local program, not a web page: any Origin or fetch metadata means a browser
+	if (req.has_header("origin") || req.has_header("sec-fetch-site") || req.has_header("sec-fetch-mode")) {
+		early = make_error(403, "forbidden origin");
+		return false;
+	}
+	std::string auth = req.header("authorization");
+	if (!starts_with_ci(auth, "bearer ") || !chat.token_ok(auth.substr(7))) {
+		early = make_error(401, "unauthorized");
+		early.headers.push_back(std::make_pair("WWW-Authenticate", "Bearer"));
+		return false;
+	}
+	if (!starts_with_ci(req.header("content-type"), "application/json")) {
+		early = make_error(415, "content type must be application/json");
+		return false;
+	}
+	if (req.has_header("transfer-encoding") || req.has_header("expect")) {
+		early = make_error(400, "chunked or expect requests are not accepted");
+		return false;
+	}
+	size_t len = 0;
+	if (!req.has_header("content-length")) {
+		early = make_error(411, "content-length required");
+		return false;
+	}
+	if (!parse_length(req.header("content-length"), len)) {
+		early = make_error(400, "bad content-length");
+		return false;
+	}
+	if (len > chat.limits().max_body) {
+		early = make_error(413, "body too large");
+		return false;
+	}
+	return true;
+}
+
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub)
 {
+	return handle_request(req, port, assets, hub, nullptr);
+}
+
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat)
+{
+	if (chat && req.path == "/chat/ingest") {
+		HttpResponse early;
+		if (!ingest_precheck(req, port, *chat, early))
+			return early;
+		size_t len = 0;
+		parse_length(req.header("content-length"), len);
+		if (req.body.size() != len)
+			return make_error(400, "body length does not match content-length");
+		IngestResult ir = chat->ingest(req.body);
+		json::Value o = json::Value::object();
+		o.set("ok", json::Value::boolean(ir.http_status == 200));
+		if (ir.http_status != 200) {
+			o.set("error", json::Value::string(ir.error));
+		} else {
+			o.set("accepted", json::Value::number(ir.accepted));
+			o.set("duplicates", json::Value::number(ir.duplicates));
+			o.set("blocked", json::Value::number(ir.blocked));
+			o.set("rate_limited", json::Value::number(ir.rate_limited));
+			o.set("invalid", json::Value::number(ir.invalid));
+		}
+		return json_response(ir.http_status, json::dump(o, false));
+	}
 	if (req.method != "GET" && req.method != "HEAD") {
 		HttpResponse r = make_error(405, "method not allowed");
 		r.headers.push_back(std::make_pair("Allow", "GET, HEAD"));
@@ -239,7 +360,8 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 	if (path == "/")
 		path = "/overlay.html";
 
-	bool is_data = (path == "/state.json" || path == "/events");
+	bool is_chat_data = chat && (path == "/chat/events" || path == "/chat/status.json");
+	bool is_data = (path == "/state.json" || path == "/events" || is_chat_data);
 	if (is_data && req.has_header("sec-fetch-site")) {
 		std::string site = lower(req.header("sec-fetch-site"));
 		if (site != "same-origin" && site != "none")
@@ -261,11 +383,49 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 		r.sse = true;
 		return r;
 	}
+	if (is_chat_data && path == "/chat/status.json") {
+		HttpResponse r;
+		add_common_headers(r);
+		r.headers.push_back(std::make_pair("Content-Type", "application/json; charset=utf-8"));
+		r.body = chat->status_json();
+		return r;
+	}
+	if (is_chat_data && path == "/chat/events") {
+		HttpResponse r;
+		add_common_headers(r);
+		r.headers.push_back(std::make_pair("Content-Type", "text/event-stream; charset=utf-8"));
+		r.headers.push_back(std::make_pair("X-Accel-Buffering", "no"));
+		r.sse = true;
+		r.sse_kind = 1;
+		std::string last = req.header("last-event-id");
+		size_t n = 0;
+		if (parse_length(last, n) && n > 0) {
+			r.chat_resume = true;
+			r.chat_after = n;
+		}
+		size_t q = req.query.find("backlog=");
+		if (q != std::string::npos && (q == 0 || req.query[q - 1] == '&')) {
+			size_t v = 0;
+			size_t end = req.query.find('&', q);
+			if (parse_length(req.query.substr(q + 8, end == std::string::npos ? std::string::npos : end - q - 8), v))
+				r.chat_backlog = std::min<size_t>(v, 200);
+		}
+		return r;
+	}
 	AssetMap::const_iterator it = assets.find(path);
 	if (it == assets.end())
 		return make_error(404, "not found");
 	HttpResponse r;
 	add_common_headers(r);
+	if (chat && path == "/chat.html") {
+		// emote images may come from the platforms' own CDNs and nowhere else
+		for (size_t i = 0; i < r.headers.size(); ++i) {
+			if (r.headers[i].first == "Content-Security-Policy")
+				r.headers[i].second = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src " +
+						      chat_img_src_csp() +
+						      "; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+		}
+	}
 	r.headers.push_back(std::make_pair("Content-Type", it->second.content_type));
 	r.body = it->second.body;
 	return r;
@@ -431,8 +591,9 @@ int64_t bind_loopback(int port, int &actual_port)
 
 } // namespace
 
-HttpServer::HttpServer(StateHub &hub, const AssetMap &assets, const ServerOptions &opts)
+HttpServer::HttpServer(StateHub &hub, const AssetMap &assets, const ServerOptions &opts, ChatHub *chat)
 	: hub_(hub),
+	  chat_(chat),
 	  assets_(assets),
 	  opts_(opts),
 	  listen_sock_(kNoSock),
@@ -526,6 +687,8 @@ void HttpServer::accept_loop()
 		tv.tv_sec = 0;
 		tv.tv_usec = 200000;
 		int n = select(static_cast<int>(listen_sock_) + 1, &rf, nullptr, nullptr, &tv);
+		if (chat_)
+			chat_->flush(); // releases messages whose reordering window has passed
 		if (n <= 0)
 			continue;
 		sockaddr_in peer;
@@ -585,14 +748,38 @@ void HttpServer::serve_connection(int64_t sock)
 		st = parse_request(buf, req);
 	}
 	if (st == ParseStatus::Ok) {
-		HttpResponse r = handle_request(req, port_, assets_, hub_);
+		HttpResponse r;
+		bool have_response = false;
+		if (chat_ && req.path == "/chat/ingest") {
+			if (!ingest_precheck(req, port_, *chat_, r)) {
+				have_response = true; // refused before reading any body
+			} else {
+				size_t need = 0;
+				need = static_cast<size_t>(std::strtoull(req.header("content-length").c_str(), nullptr, 10));
+				std::string body = buf.size() > req.header_bytes ? buf.substr(req.header_bytes) : std::string();
+				while (body.size() < need && running_ && std::chrono::steady_clock::now() <= deadline) {
+					int n = static_cast<int>(recv(to_native(sock), chunk, sizeof chunk, 0));
+					if (n <= 0)
+						break;
+					body.append(chunk, static_cast<size_t>(n));
+				}
+				if (body.size() > need)
+					body.resize(need); // pipelined extra bytes are ignored; the connection closes after one reply
+				req.body = body;
+			}
+		}
+		if (!have_response)
+			r = handle_request(req, port_, assets_, hub_, chat_);
 		if (r.sse) {
 			if (sse_clients_.load() >= opts_.max_sse) {
 				HttpResponse busy = make_error(503, "too many event streams");
 				send_all(sock, serialize_response(busy, false));
 			} else if (send_all(sock, serialize_response(r, false))) {
 				++sse_clients_;
-				serve_sse(sock);
+				if (r.sse_kind == 1)
+					serve_chat_sse(sock, r);
+				else
+					serve_sse(sock);
 				--sse_clients_;
 			}
 		} else {
@@ -613,6 +800,49 @@ void HttpServer::serve_connection(int64_t sock)
 		clients_.erase(sock);
 		--active_conns_;
 		conn_cv_.notify_all();
+	}
+}
+
+void HttpServer::serve_chat_sse(int64_t sock, const HttpResponse &r)
+{
+	if (!chat_ || !send_all(sock, "retry: 2000\n\n"))
+		return;
+	std::vector<ChatMessage> first = chat_->backlog(r.chat_resume ? chat_->limits().ring : r.chat_backlog);
+	uint64_t cursor = 0;
+	bool sent_any = false;
+	for (size_t i = 0; i < first.size(); ++i) {
+		if (r.chat_resume && first[i].seq <= r.chat_after)
+			continue;
+		if (!send_all(sock, "id: " + std::to_string(first[i].seq) + "\ndata: " + chat_message_json(first[i]) + "\n\n"))
+			return;
+		sent_any = true;
+	}
+	if (!first.empty())
+		cursor = first.back().seq;
+	else
+		cursor = chat_->last_seq();
+	if (r.chat_resume && !sent_any && cursor < r.chat_after)
+		cursor = r.chat_after;
+	if (r.chat_backlog == 0 && !r.chat_resume)
+		cursor = chat_->last_seq();
+	int waited = 0;
+	while (running_ && !chat_->is_shutdown()) {
+		std::vector<ChatMessage> next;
+		if (chat_->wait_for(cursor, 250, next, 100)) {
+			waited = 0;
+			for (size_t i = 0; i < next.size(); ++i) {
+				cursor = next[i].seq;
+				if (!send_all(sock, "id: " + std::to_string(next[i].seq) + "\ndata: " + chat_message_json(next[i]) + "\n\n"))
+					return;
+			}
+		} else {
+			waited += 250;
+			if (waited >= opts_.heartbeat_ms) {
+				waited = 0;
+				if (!send_all(sock, ": hb\n\n"))
+					return;
+			}
+		}
 	}
 }
 

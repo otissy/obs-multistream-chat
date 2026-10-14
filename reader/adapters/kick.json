@@ -1,0 +1,22 @@
+{
+  "adapter": 1,
+  "platform": "kick",
+  "experimental": false,
+  "title": "Kick popout chat",
+  "note": "Selectors cross-checked by reading Social Stream Ninja's sources/kick.js (GPL-3.0, see NOTICE); not verified against a live page by the author. Kick changes its markup often.",
+  "url": "https://kick.com/popout/{target}/chat",
+  "hosts": ["kick.com"],
+  "loginPaths": ["/login"],
+  "containerTimeoutSec": 45,
+  "engine": {
+    "container": ["#chatroom-messages", "#chatroom"],
+    "item": ["[data-chat-entry]"],
+    "ignore": [".chatroom-banner", "[class^='deleted-message']"],
+    "id": { "attrs": ["data-chat-entry"] },
+    "author": { "sel": ["button.font-bold[title]", ".chat-entry-username", "button[title]", "button.font-bold"], "color": "inline" },
+    "body": { "sel": [".chat-entry-content", "[class*='break-all']", "span[class*='font-normal']"], "rest": true, "remove": ["button", ".chat-message-identity"] },
+    "emote": { "sel": [".chat-emote-container img", "img[src*='/emotes/']", "img[class*='emote']"], "name": ["alt", "data-emote-name", "title"], "src": ["src"] },
+    "badge": { "sel": [".chat-message-identity img", "[data-state] img"], "name": ["alt", "title", "aria-label"] },
+    "login": { "sel": [], "text": ["verify you are human", "attention required"] }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "obs-multistream-chat-reader",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Reads the public chat pages of the channels you add, in a headless Chrome of its own, and posts the messages to the OBS Multistream Chat plugin on 127.0.0.1. No platform API, no login.",
+  "license": "GPL-2.0-or-later",
+  "main": "index.js",
+  "engines": { "node": ">=22" },
+  "bin": {}
+}

@@ -6,6 +6,7 @@
 // The request handling (parse_request, handle_request, host_allowed...) is pure and unit tested
 // without sockets; HttpServer is the thin socket layer around it.
 #pragma once
+#include "chat_hub.hpp"
 #include "state_feed.hpp"
 
 #include <atomic>
@@ -34,6 +35,8 @@ struct HttpRequest {
 	std::string query;
 	std::string version;
 	std::map<std::string, std::string> headers; // lower-case names
+	std::string body;                           // POST /chat/ingest only, filled by the socket layer
+	size_t header_bytes = 0;                    // length of request line + headers incl. the blank line
 	std::string header(const std::string &lower_name) const
 	{
 		std::map<std::string, std::string>::const_iterator it = headers.find(lower_name);
@@ -53,6 +56,10 @@ struct HttpResponse {
 	std::vector<std::pair<std::string, std::string> > headers;
 	std::string body;
 	bool sse = false; // headers only; the socket layer then streams /events
+	int sse_kind = 0; // 0: /events (overlay state), 1: /chat/events (chat messages)
+	bool chat_resume = false; // chat SSE: Last-Event-ID given, resume after chat_after
+	uint64_t chat_after = 0;
+	size_t chat_backlog = 50; // chat SSE without Last-Event-ID: send this many recent messages first
 };
 
 bool is_loopback_ipv4(const std::string &dotted); // 127.0.0.0/8 only
@@ -60,19 +67,26 @@ bool host_allowed(const std::string &host_header, int port);
 bool origin_allowed(const std::string &origin, int port);
 
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub);
+// With chat != nullptr the server also answers GET /chat/events, GET /chat/status.json and
+// POST /chat/ingest (bearer token, JSON body, loopback only).
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat);
+// Header-only checks for POST /chat/ingest, run BEFORE the body is read so an unauthenticated
+// client costs nothing. true: the body may be read (req.body must then hold exactly
+// Content-Length bytes). false: `early` is the final response.
+bool ingest_precheck(const HttpRequest &req, int port, ChatHub &chat, HttpResponse &early);
 std::string serialize_response(const HttpResponse &r, bool head_only);
 
 struct ServerOptions {
 	int preferred_port = 0;       // 0 = any free port. Tried first when non-zero.
 	int max_connections = 8;
-	int max_sse = 4;
+	int max_sse = 8;
 	int read_timeout_ms = 5000;
 	int heartbeat_ms = 15000;
 };
 
 class HttpServer {
 public:
-	HttpServer(StateHub &hub, const AssetMap &assets, const ServerOptions &opts = ServerOptions());
+	HttpServer(StateHub &hub, const AssetMap &assets, const ServerOptions &opts = ServerOptions(), ChatHub *chat = nullptr);
 	~HttpServer();
 
 	bool start(std::string &err);
@@ -92,8 +106,10 @@ private:
 	void accept_loop();
 	void serve_connection(int64_t sock);
 	void serve_sse(int64_t sock);
+	void serve_chat_sse(int64_t sock, const HttpResponse &r);
 
 	StateHub &hub_;
+	ChatHub *chat_;
 	AssetMap assets_;
 	ServerOptions opts_;
 	std::string peer_override_;

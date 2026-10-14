@@ -4,7 +4,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 // Sandboxes do not carry the gitignored SDK dirs: fall back to the real repo's.
 function sdk(name) {
-  for (const base of [ROOT, path.join(ROOT, '..', '..', 'obs-multistream')]) {
+  for (const base of [ROOT, path.join(ROOT, '..', '..', 'obs-multistream-chat')]) {
     const p = path.join(base, name);
     if (fs.existsSync(p)) return p;
   }

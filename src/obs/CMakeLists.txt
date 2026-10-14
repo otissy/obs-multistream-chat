@@ -14,21 +14,21 @@ foreach(req "${OBS_SDK_DIR}/lib/obs.lib" "${OBS_SDK_DIR}/lib/obs-frontend-api.li
 endforeach()
 
 if(OMS_HAVE_IMPORT_LIBS)
-  add_library(obs-multistream MODULE plugin-main.cpp output_manager.cpp dock.cpp)
+  add_library(obs-multistream-chat MODULE plugin-main.cpp output_manager.cpp dock.cpp)
 else()
   message(WARNING "obs.lib / obs-frontend-api.lib not found in ${OBS_SDK_DIR}/lib: compiling the plugin sources only "
                   "(no DLL). Run scripts/make-import-lib.ps1 to produce the DLL.")
-  add_library(obs-multistream OBJECT plugin-main.cpp output_manager.cpp dock.cpp)
+  add_library(obs-multistream-chat OBJECT plugin-main.cpp output_manager.cpp dock.cpp)
 endif()
-target_include_directories(obs-multistream PRIVATE
+target_include_directories(obs-multistream-chat PRIVATE
   "${OBS_SDK_DIR}/libobs" "${OBS_SDK_DIR}/frontend-api"
   "${QT_SDK_DIR}/include" "${QT_SDK_DIR}/include/QtCore" "${QT_SDK_DIR}/include/QtGui" "${QT_SDK_DIR}/include/QtWidgets")
-target_link_libraries(obs-multistream PRIVATE oms_core)
+target_link_libraries(obs-multistream-chat PRIVATE oms_core)
 if(OMS_HAVE_IMPORT_LIBS)
-  target_link_libraries(obs-multistream PRIVATE
+  target_link_libraries(obs-multistream-chat PRIVATE
     "${OBS_SDK_DIR}/lib/obs.lib" "${OBS_SDK_DIR}/lib/obs-frontend-api.lib"
     "${QT_SDK_DIR}/lib/Qt6Core.lib" "${QT_SDK_DIR}/lib/Qt6Gui.lib" "${QT_SDK_DIR}/lib/Qt6Widgets.lib")
   endif()
-target_compile_definitions(obs-multistream PRIVATE PLUGIN_VERSION="${PROJECT_VERSION}" QT_NO_DEBUG QT_NO_KEYWORDS)
-set_target_properties(obs-multistream PROPERTIES PREFIX "" AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-oms_add_version_info(obs-multistream "Multistream to several RTMP(S) destinations for OBS Studio (no platform APIs)" VFT_DLL .dll)
+target_compile_definitions(obs-multistream-chat PRIVATE PLUGIN_VERSION="${PROJECT_VERSION}" QT_NO_DEBUG QT_NO_KEYWORDS)
+set_target_properties(obs-multistream-chat PROPERTIES PREFIX "" AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+oms_add_version_info(obs-multistream-chat "Multistream to several RTMP(S) destinations for OBS Studio (no platform APIs)" VFT_DLL .dll)

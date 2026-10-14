@@ -187,7 +187,7 @@ LoadResult parse_config(const std::string &text, const SecretProtector &protecto
 	if (schema > kConfigSchema) {
 		r.status = LoadStatus::TooNew;
 		r.read_only = true;
-		r.message = "config.json was written by a newer obs-multistream (schema " + std::to_string(schema) +
+		r.message = "config.json was written by a newer obs-multistream-chat (schema " + std::to_string(schema) +
 			    "); it is loaded read-only and will not be overwritten";
 		return r;
 	}

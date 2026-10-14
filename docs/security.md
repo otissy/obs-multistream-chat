@@ -4,7 +4,7 @@
 
 | Data | Location | Protection |
 |---|---|---|
-| Destinations, handles, URLs, settings | `%APPDATA%\obs-studio\plugin_config\obs-multistream\config.json` | plain JSON, no secrets in it |
+| Destinations, handles, URLs, settings | `%APPDATA%\obs-studio\plugin_config\obs-multistream-chat\config.json` | plain JSON, no secrets in it |
 | Stream keys | the same file, field `key_enc` | Windows DPAPI (`CryptProtectData`), current-user scope, app-specific entropy, token `dpapi:v1:<base64>` |
 | Overlay port | `config.json` (`server.port`, `server.last_port`) | none needed |
 | Nothing else | no registry keys, no startup entries, no scheduled tasks, no cloud | n/a |

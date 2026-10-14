@@ -18,7 +18,7 @@ BEGIN
       VALUE "InternalName", "@OMS_INTERNAL@"
       VALUE "LegalCopyright", "GPL-2.0-or-later"
       VALUE "OriginalFilename", "@OMS_INTERNAL@@OMS_EXT@"
-      VALUE "ProductName", "obs-multistream"
+      VALUE "ProductName", "OBS Multistream Chat"
       VALUE "ProductVersion", "@PROJECT_VERSION@"
     END
   END

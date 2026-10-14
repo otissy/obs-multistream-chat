@@ -1,4 +1,6 @@
-# obs-multistream
+# OBS Multistream Chat
+
+Plugin id / folder / DLL name: `obs-multistream-chat`. (Renamed from `obs-multistream`; there is no chat feature, the name is only a name.)
 
 Send the one stream OBS already encodes to several RTMP(S) destinations at once, with a dock for you
 and a browser-source overlay for your viewers. **No platform APIs, no OAuth, no relay service:** each
@@ -22,9 +24,9 @@ real platform yet; read [docs/limits.md](docs/limits.md) first.
 
 You need either a release zip or a build from source.
 
-**Release zip:** close OBS, extract `obs-multistream-<version>-windows-x64.zip` so that the
-`obs-multistream` folder ends up in `C:\ProgramData\obs-studio\plugins\`. Check the zip against its
-`.sha256` file first. Start OBS, then **View > Docks > Multistream**.
+**Release zip:** close OBS, extract `obs-multistream-chat-<version>-windows-x64.zip` so that the
+`obs-multistream-chat` folder ends up in `C:\ProgramData\obs-studio\plugins\`. Check the zip against its
+`.sha256` file first. Start OBS, then **View > Docks > OBS Multistream Chat**.
 
 **From source** (needs Visual Studio Build Tools 2022 with *Desktop development with C++*; CMake is
 already enough, you do not need the CMake component of the installer):
@@ -32,7 +34,7 @@ already enough, you do not need the CMake component of the installer):
 ```
 powershell -File scripts\build.ps1 -Test      # fetches pinned SDKs, builds, runs the core tests
 powershell -File scripts\install.ps1          # only when YOU run it; refuses while OBS is open
-powershell -File scripts\package.ps1          # dist\obs-multistream-<ver>-windows-x64.zip + .sha256
+powershell -File scripts\package.ps1          # dist\obs-multistream-chat-<ver>-windows-x64.zip + .sha256
 ```
 
 `scripts\install.ps1 -Uninstall` removes it again. Nothing is installed, scheduled or added to startup
@@ -40,7 +42,7 @@ by anything else.
 
 ## Setup
 
-1. Dock **Multistream** > **Add...**
+1. Dock **OBS Multistream Chat** > **Add...**
 2. Pick the platform. The URL is filled in where the platform has one fixed ingest; otherwise paste
    the URL from the platform's dashboard.
 3. Paste the stream key (masked; **Reveal** shows what you typed). Type the handle you want shown on
@@ -82,8 +84,8 @@ answering, the overlay dims everything instead of showing a stale "live".
 
 ## Troubleshooting
 
-- **Dock missing:** View > Docks > Multistream. Check OBS's log (Help > Log Files) for lines starting
-  `[obs-multistream]`. Keys never appear there.
+- **Dock missing:** View > Docks > OBS Multistream Chat. Check OBS's log (Help > Log Files) for lines starting
+  `[obs-multistream-chat]`. Keys never appear there.
 - **Start is greyed out:** in *Shared* mode a destination can only start while the main stream is
   live. Start the main stream, or switch that destination to the x264 encoder.
 - **Stays "Connecting" then "Reconnecting":** wrong URL, wrong key, blocked port (RTMP uses 1935,
@@ -109,7 +111,7 @@ under one folder, `build\`, so you can exclude just that folder. This is your de
 - To restore a blocked file in Norton: open Norton, **Security > History**, show the protection or
   quarantine history, select the item, and choose **Restore & Exclude** (menu names vary by version).
 - To exclude a folder without a detection: Norton **Settings > Antivirus > Scans and Risks > Items to
-  Exclude from Scans** (and *Exclude from Auto-Protect*), then add `...\obs-multistream\build`.
+  Exclude from Scans** (and *Exclude from Auto-Protect*), then add `...\obs-multistream-chat\build`.
 - The built binaries carry version information (company, product, description, version) to make them
   easier to recognise. A release zip is not code-signed.
 

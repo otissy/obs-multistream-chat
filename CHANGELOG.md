@@ -1,5 +1,9 @@
 # Changelog
 
+## Rename (unreleased)
+
+Project renamed from `obs-multistream` to **OBS Multistream Chat** (`obs-multistream-chat`): plugin id, DLL, dock id, install and config folders, CMake project/target and zip name. Rename only: there is no chat feature. `install.ps1` detects an old `obs-multistream` plugin folder and offers to remove it (`-RemoveOld`).
+
 ## 0.1.0 (unreleased)
 
 First complete draft.

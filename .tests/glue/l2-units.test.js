@@ -38,7 +38,7 @@ test('plugin sources compile (needs MSVC + SDKs)', t => {
   let r = spawnSync('cmake', ['-S', ROOT, '-B', dir, '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DOMS_BUILD_TESTS=OFF',
     '-DOBS_SDK_DIR=' + fwd(obs), '-DQT_SDK_DIR=' + fwd(qt)], { encoding: 'utf8' });
   assert.strictEqual(r.status, 0, r.stdout + r.stderr);
-  r = spawnSync('cmake', ['--build', dir, '--config', 'Release', '--target', 'obs-multistream'], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  r = spawnSync('cmake', ['--build', dir, '--config', 'Release', '--target', 'obs-multistream-chat'], { encoding: 'utf8', maxBuffer: 1 << 26 });
   assert.strictEqual(r.status, 0, r.stdout.slice(-3000) + r.stderr.slice(-1000));
   assert.ok(!/warning C\d+/.test(r.stdout), 'warnings:\n' + (r.stdout.match(/.*warning C\d+.*/g) || []).slice(0, 5).join('\n'));
 });

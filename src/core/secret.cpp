@@ -68,7 +68,7 @@ public:
 		ent.pbData = const_cast<BYTE *>(kEntropy);
 		ent.cbData = static_cast<DWORD>(sizeof kEntropy);
 		DATA_BLOB out = {0, nullptr};
-		if (!CryptProtectData(&in, L"obs-multistream stream key", &ent, nullptr, nullptr,
+		if (!CryptProtectData(&in, L"obs-multistream-chat stream key", &ent, nullptr, nullptr,
 				      CRYPTPROTECT_UI_FORBIDDEN, &out))
 			return false;
 		std::string blob(reinterpret_cast<const char *>(out.pbData), out.cbData);

@@ -19,7 +19,7 @@ void log_line(int level, const std::string &msg)
 {
 	// Nothing reaches the OBS log without passing through redact().
 	std::vector<std::string> none;
-	blog(level, "[obs-multistream] %s", redact(msg, none).c_str());
+	blog(level, "[obs-multistream-chat] %s", redact(msg, none).c_str());
 }
 
 // Stops an output without ever blocking the UI thread: obs_output_stop/force_stop can join the

@@ -1,5 +1,5 @@
 <#
- Builds obs-multistream (plugin DLL + core tests) with Visual Studio 2022 / Build Tools 2022.
+ Builds obs-multistream-chat (plugin DLL + core tests) with Visual Studio 2022 / Build Tools 2022.
    powershell -File scripts\build.ps1            # plugin + tests
    powershell -File scripts\build.ps1 -Test      # ... then run the core tests
  All output goes under build\ (one folder, gitignored): exclude that folder in your antivirus if it
@@ -26,8 +26,8 @@ if ($LASTEXITCODE -ne 0) { throw 'cmake configure failed' }
 cmake --build --preset windows-x64
 if ($LASTEXITCODE -ne 0) { throw 'build failed' }
 
-$dll = Get-ChildItem build\windows-x64 -Recurse -Filter obs-multistream.dll | Select-Object -First 1
-if (-not $dll) { throw 'obs-multistream.dll was not produced' }
+$dll = Get-ChildItem build\windows-x64 -Recurse -Filter obs-multistream-chat.dll | Select-Object -First 1
+if (-not $dll) { throw 'obs-multistream-chat.dll was not produced' }
 Write-Host "built $($dll.FullName)"
 
 if ($Test) {

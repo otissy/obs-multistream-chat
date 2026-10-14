@@ -1,5 +1,5 @@
 /*
- * obs-multistream: send the stream OBS already encodes to several RTMP(S) destinations, with a
+ * obs-multistream-chat: send the stream OBS already encodes to several RTMP(S) destinations, with a
  * dock for the streamer and a browser-source overlay for the audience. No platform APIs.
  */
 #include "dock.hpp"
@@ -15,7 +15,7 @@
 #include <QWidget>
 
 OBS_DECLARE_MODULE()
-OBS_MODULE_USE_DEFAULT_LOCALE("obs-multistream", "en-US")
+OBS_MODULE_USE_DEFAULT_LOCALE("obs-multistream-chat", "en-US")
 
 #ifndef PLUGIN_VERSION
 #define PLUGIN_VERSION "0.0.0"
@@ -29,7 +29,7 @@ MODULE_EXPORT const char *obs_module_description(void)
 
 MODULE_EXPORT const char *obs_module_name(void)
 {
-	return "Multistream (no APIs)";
+	return "OBS Multistream Chat";
 }
 
 namespace oms {
@@ -42,7 +42,7 @@ MultistreamDock *g_dock = nullptr;
 void log_safe(int level, const std::string &msg)
 {
 	std::vector<std::string> none;
-	blog(level, "[obs-multistream] %s", redact(msg, none).c_str());
+	blog(level, "[obs-multistream-chat] %s", redact(msg, none).c_str());
 }
 
 std::string module_file(const char *rel)
@@ -148,7 +148,7 @@ bool plugin_save_config(std::string &err)
 {
 	PluginState &st = *g_state;
 	if (st.read_only) {
-		err = "config.json was written by a newer obs-multistream and is read-only";
+		err = "config.json was written by a newer obs-multistream-chat and is read-only";
 		return false;
 	}
 	if (!st.protector) {
@@ -221,7 +221,7 @@ bool obs_module_load(void)
 	}
 
 	g_dock = new MultistreamDock(static_cast<QWidget *>(obs_frontend_get_main_window()));
-	obs_frontend_add_dock_by_id("obs-multistream", obs_module_text("Dock.Title"), g_dock);
+	obs_frontend_add_dock_by_id("obs-multistream-chat", obs_module_text("Dock.Title"), g_dock);
 
 	st.timer = new QTimer(g_dock);
 	QObject::connect(st.timer, &QTimer::timeout, []() { on_tick(); });
@@ -229,7 +229,7 @@ bool obs_module_load(void)
 
 	obs_frontend_add_event_callback(on_frontend_event, nullptr);
 	publish_state();
-	blog(LOG_INFO, "[obs-multistream] version %s loaded", PLUGIN_VERSION);
+	blog(LOG_INFO, "[obs-multistream-chat] version %s loaded", PLUGIN_VERSION);
 	return true;
 }
 

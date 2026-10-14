@@ -1,7 +1,11 @@
-# PROJECT.md - obs-multistream
+# PROJECT.md - obs-multistream-chat
 
 The map of the ground. Read before any task; update at the end of every task.
 Only verified facts go in "Limits"; everything else is marked as design or unverified.
+
+> **Rename (2026-10-14):** formerly `obs-multistream`; now display name "OBS Multistream Chat", slug
+> `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
+> test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
 ## Current state (2026-10-13)
 
@@ -28,7 +32,7 @@ long runs (see Limits), so the C++ suite was verified in pieces, not as one gree
   SKIPPED, not passed, when no compiler is found)
 - build plugin: `powershell -File scripts/build.ps1`  (preset `windows-x64`, VS 2022 generator)
 - install (only when the user runs it): `powershell -File scripts/install.ps1`
-- package: `powershell -File scripts/package.ps1` -> `dist/obs-multistream-<ver>-windows-x64.zip` + `.sha256`
+- package: `powershell -File scripts/package.ps1` -> `dist/obs-multistream-chat-<ver>-windows-x64.zip` + `.sha256`
 
 ## Modules
 
@@ -95,7 +99,7 @@ docs/                security.md, limits.md
 
 ## Config file format
 
-`%APPDATA%\obs-studio\plugin_config\obs-multistream\config.json` (OBS's own per-user plugin
+`%APPDATA%\obs-studio\plugin_config\obs-multistream-chat\config.json` (OBS's own per-user plugin
 config location, via `obs_module_get_config_path`). Schema version 2:
 
 ```json
@@ -143,7 +147,7 @@ config location, via `obs_module_get_config_path`). Schema version 2:
 
 Reference only; no code was copied from either.
 
-| | obs-multi-rtmp (GPL-2.0) | Aitum Multistream | obs-multistream (this) |
+| | obs-multi-rtmp (GPL-2.0) | Aitum Multistream | obs-multistream-chat (this) |
 |---|---|---|---|
 | Overlay for viewers | none | none known | browser source with icons and handles, lit only while genuinely sending |
 | Stream keys at rest | plain text in OBS profile JSON | stored by the plugin/account (not verified here) | DPAPI-encrypted, per Windows user |

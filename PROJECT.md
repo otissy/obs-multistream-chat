@@ -16,6 +16,81 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 Version 0.2.0 adds the chat half (see "Chat (0.2.0)" below): reader, adapters, merge server, overlay
 page, dock tab. Built and tested offline; no real platform page was ever loaded.
 
+## 0.3.0 spec (2026-10-15): audio track, canvas, Aitum settings (SPEC FIRST, then built)
+
+Why: Aitum Stream Suite provides the vertical canvas and scenes but crashes when it hosts more than 2
+simultaneous streams. So THIS plugin runs the outputs (any number), optionally taking the *configuration*
+from Aitum's output entries. Win conditions (each becomes a test):
+
+1. A destination picks mixer track 1-6 (0 = "as the main stream"). Shared video + a track the main stream
+   already encodes -> the main audio encoder is reused; any other track -> an own AAC encoder
+   (`obs_audio_encoder_create(..., mixer_idx)`), selectable bitrate. Tracks are 1-based in the UI and config,
+   0-based in libobs (`mixer_idx = track - 1`). Names come from `[AdvOut] Track<N>Name` of the profile.
+2. A destination picks `canvas` ("" = main canvas, else the canvas NAME). A non-main canvas always uses an own
+   video encoder (resolution differs), chosen by encoder id (default `obs_x264`; any installed h264/hevc/av1
+   video encoder id), bitrate, keyframe interval, preset, profile, rate control, optional rescale, fps divisor.
+   Canvas missing -> clear status "canvas X is not available", never a crash, retried at next start.
+3. "Use Aitum Stream Suite output settings": per destination `aitum.mode` = `off | copy | follow` and
+   `aitum.output` = the Aitum output's name. `copy` imports once (key sealed with DPAPI at once). `follow`
+   re-reads the ACTIVE profile's `aitum.json` at every start; URL/key from Aitum are held in memory only for the
+   launch, then wiped, never written to our config, log or dock. Unknown/missing/malformed file or a shape that
+   is not the inspected one -> soft failure with a clear message, the destination keeps its own settings.
+   Aitum's own outputs are never started, stopped or modified; our plugin only READS `aitum.json`.
+4. Double-streaming warning: the same server+key enabled in two places (our destinations, Aitum's file, any
+   other active libobs output incl. Aitum's own and the main stream) shows a dock warning. Never auto-stops.
+5. More than 2 outputs: per-destination state only (no shared global), tested with 8 mock outputs through the
+   output backend abstraction (`src/core/fleet.*`), including start/stop ordering and error isolation.
+
+Config schema 4 (3 -> 4 is a migration, saved as 4; an older plugin reads 4 as "too new", read-only):
+per destination `encoder` `"shared"|"own"` (`"x264"` -> `"own"`, `video_encoder:"obs_x264"`, preset
+`veryfast`, keyint 2, i.e. exactly what 0.2.0 did), `video_encoder`, `bitrate_kbps`, `keyint_sec`, `preset`,
+`profile`, `rate_control`, `out_width`, `out_height` (0 = canvas size), `scale_type`, `fps_div`, `venc_extra`
+(flat list of encoder settings imported from Aitum), `canvas`, `audio_track`, `audio_bitrate_kbps`, `delay_sec`,
+`delay_preserve`, `aitum:{mode,output}`.
+
+### Aitum Stream Suite 1.2.4: where its settings live (inspected read-only, keys only)
+
+- Not in `plugin_config\aitum-stream-suite` (does not exist). The file is `<profile folder>\aitum.json`, one
+  per OBS profile (`%APPDATA%\obs-studio\basic\profiles\<ProfileDir>\aitum.json`, plus `.bak`). The plugin binary
+  is under `C:\ProgramData\obs-studio\plugins\aitum-stream-suite\` and has no data folder of its own. The log line
+  "[Aitum Stream Suite] Loaded configuration file" is that file. The file has NO version or schema field, so the
+  gate is structural plus the plugin version (1.2.4).
+- Top level keys of interest: `canvas[]` ({name, width, height, color, uuid, ...ui state}) and `outputs[]`.
+  Everything else is UI state (dock layouts, hotkeys) and ignored.
+- `outputs[]` common: `enabled`, `type` (`stream`, `backtrack`, `virtual_cam`; `record` expected), `name`, `canvas`
+  (canvas NAME), `start_hotkey`, `stop_hotkey`, `expanded`, `audio_encoder` (`ffmpeg_aac`),
+  `audio_encoder_settings.bitrate`, `audio_tracks` (bit mask, bit 0 = track 1; seen on backtrack/record),
+  `vod_track` (-1), `video_encoders[]`.
+- `video_encoders[0]`: `enabled`, `type`, `name`, `canvas`, `video_encoder` (encoder id, e.g. `obs_nvenc_h264_tex`),
+  `video_encoder_settings` (flat map of that encoder's settings: `bitrate`, `max_bitrate`, `keyint_sec`, `rate_control`,
+  `preset`, `profile`, `tune`, `multipass`, `bf`, `lookahead`, `adaptive_quantization`, `cqp`, `target_quality`, `device`,
+  ...), `scale` (bool), `width`, `height`, `scale_type` (obs_scale_type number), `output_video_encoder` (name of another
+  Aitum output whose encoder to share; "" = none).
+- Seen as strings in `aitum-stream-suite.dll` but NOT present in any inspected file (the user never set them):
+  `stream_server`, `stream_key`, `custom_delay`, `delay_sec`, `delay_preserve`, `audio_track`. The importer reads
+  them if present (looked up on the output and on `video_encoders[0]`) and marks the mapping UNVERIFIED; an
+  `audio_track` single number is NOT mapped (base unknown). The DLL also imports `obs_output_set_delay` and
+  `obs_frontend_get_streaming_service`: a stream output without `stream_server` presumably falls back to the
+  profile's OBS service, which is the MAIN stream's destination. We never read `service.json`; such an output
+  imports encoder/canvas/track settings only and the user supplies URL + key in our dock.
+- Inspected (counts only): 9 profiles, 2 `stream` outputs in 2 profiles (one `Vertical Stream` on canvas `Vertical`
+  1080x1920, one `GAMEPLAY ONLY` 1920x1080), 0 with `stream_server`/`stream_key`.
+
+Mapping (Aitum -> ours): `name`->name hint, `canvas`->canvas (the NAME; resolved at launch, missing = status), `video_encoder`->video_encoder, settings `bitrate`->bitrate_kbps (`max_bitrate` kept as
+extra), `keyint_sec`->keyint_sec (0 = encoder default -> 2 s for x264), `preset`/`profile`/`rate_control`, every other
+scalar setting -> `venc_extra`, `scale`+`width`+`height`->out_width/out_height, `scale_type`, `audio_encoder_settings.
+bitrate`->audio_bitrate_kbps, lowest set bit of `audio_tracks`->audio_track, delay keys->delay_sec/delay_preserve,
+`stream_server`/`stream_key`->url/key (follow: memory only; copy: key sealed). Not mapped, said in the UI:
+`vod_track`, hotkeys, `output_video_encoder` sharing (becomes an own encoder), non-`stream` types.
+
+Red team (hits): stream key in aitum.json is plaintext (never printed, tested with a fake key through every
+message path); file missing / empty / huge (size cap 4 MB) / not JSON / `outputs` not an array / output not an
+object / unknown `type` / negative or fractional numbers / hostile strings (control chars, 10 kB names) -> soft
+fail with notes, no crash; Aitum rewrites the file while we read (read whole file once, parse from memory); canvas
+renamed or gone; audio track outside 1-6; track name empty; encoder id not installed (checked at launch with
+`obs_get_encoder_codec`); 8 outputs failing together (isolated per output); main stream stops while own-encoder
+outputs on a non-main canvas run (they keep running, only shared ones stop).
+
 ## Earlier state (2026-10-13)
 
 A native C++ plugin for OBS Studio 32.2.2 (Windows x64) that sends the one stream OBS already
@@ -273,7 +348,8 @@ Deviations from the brief and why:
 | SSN is MIT | its LICENSE is GPL-3.0 | read from the archive; nothing copied, recorded in NOTICE |
 | simple-icons X in NOTICE with source | `x.svg` written from the known geometry, not downloaded | no network allowed; flagged in NOTICE to verify |
 | headless Chrome "via plain WebSocket" | yes, `--remote-debugging-port=0` on loopback | per brief; the DevTools pipe would avoid a port and is a possible later hardening |
-| `node reader\index.js` | resolved through `obs_module_file("reader/index.js")` = `<plugin>\dataeader\index.js` | the plugin data folder is where OBS finds module files; zip and install.ps1 copy `reader/` there |
+| `node reader\index.js` | resolved through `obs_module_file("reader/index.js")` = `<plugin>\data
+eader\index.js` | the plugin data folder is where OBS finds module files; zip and install.ps1 copy `reader/` there |
 | per-source status "needs login" etc. | states `starting reading quiet layout login error stopped` | `quiet` = container found, zero messages for `quiet_minutes` (default 5) |
 
 Live check (coordinator, 2026-10-14, counts only): Twitch worked (79 lines, 19 authors, 0 duplicates in 150 s); Kick found the chat

@@ -322,6 +322,7 @@ OBS browser source.
 - **2026-10-14** - chat (0.2.0): none of the five platform adapters has been run against a live page (forbidden while building); fixtures only. TikTok and X are experimental by design. Live checklist in README.
 - **2026-10-14** - chat: the overlay's emote images are fetched by the OBS browser source from the platforms' CDNs (allow-listed by CSP and by the hub); this is the only network traffic the overlay itself makes.
 - **2026-10-14** - chat: the reader's Chrome exposes a loopback DevTools port while it runs (brief asked for WebSocket CDP).
+- **2026-10-14** - 0.2.0 built with `scriptsuild.ps1 -Test`: core suite 122/122 in one process; obs-multistream-chat.dll 537,088 bytes, sha-256 b5344f902067e7fc2a572c9c9380c52983b8eee5ecc35a3f382036b456bc82aa; zip dist\obs-multistream-chat-0.2.0-windows-x64.zip sha-256 e6c79fc231e3255fc2acd0488e9513b2614658eab21bc9a34e55bc1cea5358c1. Still never loaded into OBS; the dock Chat tab and the child-process code compile and link but were not run.
 
 ## Dropped approaches
 

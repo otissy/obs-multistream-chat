@@ -52,6 +52,8 @@ StateLook look_for(const std::string &state)
 		return {"Needs login", "#ff4d4f"};
 	if (state == "error")
 		return {"Error", "#ff4d4f"};
+	if (state == "stub")
+		return {"Empty page served (automation detection or unavailable stream)", "#ff4d4f"};
 	if (state == "consent")
 		return {"Blocked by the platform's cookie-consent page", "#ff4d4f"};
 	if (state == "disabled")

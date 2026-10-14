@@ -110,3 +110,11 @@ the platform's own host; nothing else can be set. The context is discarded with 
 
 **Diagnose mode.** `--diagnose` needs no token, posts nothing, and its output is structural by construction (a test plants a fake
 author, text, emote and message id in a fixture and asserts none of them appears in the output).
+
+**User agent.** With `chat.user_agent = "chrome"` (default) the reader tells the sites it reads the installed Chrome's own version
+instead of `HeadlessChrome`: `Emulation.setUserAgentOverride` with the agent string and client-hint brands taken from
+`Browser.getVersion`, only the `Headless` token removed, per source (per tab). It exists because YouTube serves an empty page to the
+headless agent. Nothing else is altered (no `navigator.webdriver`, plugin, WebGL or fingerprint changes), the reader still has no login and
+sends nothing, and a site can still detect automation. It is a compatibility setting that you can switch to `"headless"`; it is not
+meant to evade a block, and the reader does not try to get past captchas, logins or consent pages beyond presetting the consent
+preference cookie described above. Terms of service: see docs/limits.md.

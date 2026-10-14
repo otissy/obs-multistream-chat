@@ -15,6 +15,8 @@
 - New: page states *consent*, *disabled*, *replay* and *offline* (selector-pack `notes` + `noteStates`), YouTube consent cookie
   `SOCS` preset through CDP, `replayPaths`, Kick rows also matched by `[data-index]`, and `node reader\index.js --diagnose`
   (structure-only facts about a page).
+- New: `chat.user_agent` (`"chrome"` default | `"headless"`): the installed Chrome's own user agent minus `Headless` (YouTube serves an
+  empty stub page to the headless agent); state `stub` for an empty page; `--diagnose` prints the agent mode and the stub guess.
 - Not verified: any real platform page (not allowed while building); see README "Live checklist".
 
 ## Central build folder (unreleased)

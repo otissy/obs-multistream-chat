@@ -145,6 +145,11 @@ Nothing here was run against a real platform. For each platform you use:
 For YouTube in the EU the reader sets YouTube's consent *preference* cookie (`SOCS`, not a login, see docs/security.md) in
 its own throw-away browser before loading the chat page; it never clicks anything.
 
+**User agent:** by default the hidden Chrome presents itself as the installed Chrome (its own version, without the word `Headless`),
+because YouTube serves an empty page to the headless agent. Set `"user_agent": "headless"` in the `chat` block of the plugin's
+`config.json` to turn that off. Nothing else about the browser is disguised; see docs/limits.md. A page that loads empty shows as
+*Empty page served*.
+
 **Seeing what a page looks like, without sharing chat:** `node reader\index.js --diagnose --config <reader-config.json>`
 loads each configured page once (about 25 s, `--wait <seconds>` to change) and prints JSON lines with **structure only**:
 selector match counts, the tag/class path of the chat list, the tag/class shape of the first message row, data-attribute

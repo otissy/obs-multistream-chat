@@ -148,6 +148,11 @@ void read_chat(const json::Value &root, LoadResult &r)
 	cc.hide_commands = bool_of(*c, "hide_commands", false);
 	cc.hide_bots = bool_of(*c, "hide_bots", false);
 	cc.quiet_minutes = int_of(*c, "quiet_minutes", 5, 1, 120);
+	std::string ua = str_of(*c, "user_agent", "chrome");
+	if (ua == "chrome" || ua == "headless")
+		cc.user_agent = ua;
+	else
+		r.warnings.push_back("chat.user_agent must be \"chrome\" or \"headless\": using \"chrome\"");
 	std::string np = str_of(*c, "node_path");
 	if (valid_node_path(np))
 		cc.node_path = np;
@@ -346,6 +351,7 @@ std::string build_reader_config(const Config &cfg, int port)
 	root.set("v", json::Value::number(1));
 	root.set("port", json::Value::number(port));
 	root.set("quiet_minutes", json::Value::number(cfg.chat.quiet_minutes));
+	root.set("user_agent", json::Value::string(cfg.chat.user_agent));
 	json::Value arr = json::Value::array();
 	for (size_t i = 0; i < cfg.chat.sources.size(); ++i) {
 		const ChatSource &s = cfg.chat.sources[i];
@@ -485,6 +491,7 @@ bool serialize_config(const Config &cfg, std::string &out, std::string &err)
 	chat.set("start_with_obs", json::Value::boolean(cfg.chat.start_with_obs));
 	chat.set("node_path", json::Value::string(cfg.chat.node_path));
 	chat.set("quiet_minutes", json::Value::number(cfg.chat.quiet_minutes));
+	chat.set("user_agent", json::Value::string(cfg.chat.user_agent));
 	chat.set("hide_commands", json::Value::boolean(cfg.chat.hide_commands));
 	chat.set("hide_bots", json::Value::boolean(cfg.chat.hide_bots));
 	json::Value words = json::Value::array();

@@ -31,6 +31,7 @@ struct ChatConfig {
 	bool start_with_obs = false;      // start the reader when OBS starts (default: only on the button)
 	std::string node_path;            // "" = look for node.exe on PATH
 	int quiet_minutes = 5;            // zero messages for this long -> "quiet, layout changed or login needed"
+	std::string user_agent = "chrome"; // reader.userAgent: "chrome" (installed Chrome's own, minus "Headless") | "headless"
 	bool hide_commands = false;
 	bool hide_bots = false;
 	std::vector<std::string> blocked_words;

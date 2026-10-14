@@ -280,6 +280,9 @@ Live check (coordinator, 2026-10-14, counts only): Twitch worked (79 lines, 19 a
 list but no lines in 150 s (maybe offline, maybe selectors); YouTube (EU) stayed on `layout`, likely the consent page. Reaction: states
 consent/disabled/replay/offline (pack `notes`/`noteStates`), consent cookie via CDP, `--diagnose`. Kick still needs a live look.
 
+Live finding (coordinator): with the HeadlessChrome agent YouTube's `live_chat` popout returns a stub (11 elements); with Chrome's own
+agent (no `Headless`) the full page. Reaction: `chat.user_agent` (default "chrome", `reader/lib/useragent.js`), state `stub`.
+
 Known weak spots (also in docs/limits.md): all five platform packs unverified live; X rows are found by
 avatar anchor (a guess); YouTube members-only/ad rows are not special-cased; Kick virtualised lists may
 re-create rows (ids from `data-chat-entry` guard that; Twitch/TikTok/X ids are synthetic, so a row that

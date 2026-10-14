@@ -83,3 +83,16 @@ Each x264-mode destination adds a CPU encode and no NVENC session, but costs CPU
 - **Kick:** when the chat list is there but no row ever matches and the page says the channel is offline, the state is *Channel
   offline*; if the channel is live and the state is still *Quiet*, the row selectors are wrong: run `--diagnose` and fix
   `reader\adapters\kick.json`.
+
+- **User agent (compatibility setting).** Chrome in headless mode announces itself as `HeadlessChrome/<version>`, and YouTube's
+  `live_chat` popout answers that with an almost empty stub page (found in a live check: 11 elements, 103 characters; the same URL with a
+  normal Chrome agent returns the full chat page). The setting `chat.user_agent` in the plugin's `config.json` (the reader sees it as
+  `reader.userAgent`) is `"chrome"` (the default) or `"headless"`. `"chrome"` sends the installed Chrome's **own** user agent and client
+  hints, with the version read from the browser (`Browser.getVersion`) and **only the word `Headless` removed**; `"headless"` leaves
+  Chrome untouched. It applies to every platform. **That is all it does**: no `navigator.webdriver` patch, no plugin, WebGL, canvas or
+  font spoofing, no other fingerprint change. It is a compatibility measure, not a disguise, and a site can still recognise automated
+  reading. Platforms may treat automated reading of their pages as against their terms of service whatever the agent says; that was true
+  before and this setting does not change it. You decide whether to use the reader at all.
+- **Empty pages are reported, not guessed.** When a page loads but has fewer than 20 elements and no chat list the state is *Empty page
+  served (automation detection or unavailable stream)*: the platform served an empty page, which can mean it dislikes the browser or that
+  the stream does not exist or is not available to you.

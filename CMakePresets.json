@@ -7,13 +7,13 @@
       "displayName": "Windows x64 (VS 2022): plugin + tests",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/build/windows-x64",
+      "binaryDir": "D:/builds/obs-multistream-chat/windows-x64",
       "cacheVariables": { "OMS_BUILD_PLUGIN": "ON", "OMS_BUILD_TESTS": "ON" }
     },
     {
       "name": "tests",
       "displayName": "Core tests only (any compiler, no OBS SDK needed)",
-      "binaryDir": "${sourceDir}/build/tests",
+      "binaryDir": "D:/builds/obs-multistream-chat/tests",
       "cacheVariables": { "OMS_BUILD_PLUGIN": "OFF", "OMS_BUILD_TESTS": "ON" }
     },
     {
@@ -21,7 +21,7 @@
       "inherits": "tests",
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/build/tests-vs"
+      "binaryDir": "D:/builds/obs-multistream-chat/tests-vs"
     }
   ],
   "buildPresets": [

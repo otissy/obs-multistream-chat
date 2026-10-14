@@ -3,6 +3,10 @@
 The map of the ground. Read before any task; update at the end of every task.
 Only verified facts go in "Limits"; everything else is marked as design or unverified.
 
+> **Build output (2026-10-14):** all compiled output is under one central folder, default
+> `D:\builds\obs-multistream-chat\`, chosen by `-BuildRoot`, else env `OMSC_BUILD_ROOT` (`Get-BuildRoot` in
+> `scripts/vsenv.ps1`, mirrored in `.tests/core/helpers.js` and CMake `OMS_IMPORT_LIB_DIR`).
+
 > **Rename (2026-10-14):** formerly `obs-multistream`; now display name "OBS Multistream Chat", slug
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
@@ -27,12 +31,12 @@ long runs (see Limits), so the C++ suite was verified in pieces, not as one gree
 ## How to run and test
 
 - JS tests (overlay, packaging): `node ~/.claude/skills/plan/ladder.js .tests/<feature>`
-- C++ tests (core, no OBS needed): `powershell -File scripts/build.ps1 -Test`
+- C++ tests (core, no OBS needed): `powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -Test`
   (needs MSVC; the ladder files under `.tests/core` call the same build and mark the layer
   SKIPPED, not passed, when no compiler is found)
-- build plugin: `powershell -File scripts/build.ps1`  (preset `windows-x64`, VS 2022 generator)
-- install (only when the user runs it): `powershell -File scripts/install.ps1`
-- package: `powershell -File scripts/package.ps1` -> `dist/obs-multistream-chat-<ver>-windows-x64.zip` + `.sha256`
+- build plugin: `powershell -ExecutionPolicy Bypass -File scripts/build.ps1`  (VS 2022 generator; tree `<build root>\windows-x64`, import libs `<build root>\import-libs`; build root default `D:\builds\obs-multistream-chat`)
+- install (only when the user runs it): `powershell -ExecutionPolicy Bypass -File scripts/install.ps1`
+- package: `powershell -ExecutionPolicy Bypass -File scripts/package.ps1` -> `dist/obs-multistream-chat-<ver>-windows-x64.zip` + `.sha256`
 
 ## Modules
 
@@ -229,7 +233,7 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 | Limit | What it means |
 |---|---|
 | Compiler (found later on 2026-10-13) | `vswhere` reports Visual Studio 2022 Community (and a "18" install) with the C++ tools; the VS 2022 generator works. At the start of the task there was none; the user installed it meanwhile. Core compiles at /W4 with zero warnings. |
-| Norton IDP.Generic | Norton flags freshly built unsigned test executables (heuristic) and deletes them mid-run. Not evaded. All build output lives under ONE folder, `build/` (gitignored), so the user can exclude that folder. Test/DLL binaries carry PE version info. |
+| Norton IDP.Generic | Norton flags freshly built unsigned test executables (heuristic) and deletes them mid-run. Not evaded. All build output lives under ONE central folder, `D:\builds\obs-multistream-chat\` (override `-BuildRoot` / `OMSC_BUILD_ROOT`; the repo `build/` only keeps the SDK download cache, archives only), so the user can exclude that one folder. Tradeoff: excluded means unscanned, so build only reviewed code there. Never read or list the rest of `D:\builds`. Test/DLL binaries carry PE version info. |
 | OBS 32.2.2 (`obs64.exe` ProductVersion) | libobs API 32.2.2. Source tarball sha-256 `35d3cd0979d65664fada7119fdb612eca7c34b61a1623a330caec74bf72626c4` (GitHub archive of tag 32.2.2) |
 | obs-deps prebuilt 2026-07-15 | pinned by 32.2.2's `CMakePresets.json`; windows-x64 sha-256 `6f90e9598fa10cff5ad23cdcfae49b87868c07bf896b02cd464582b4ce2f2ba9` (not needed to build this plugin; recorded for completeness) |
 | Qt 6.11.1 (installed `Qt6Core.dll` 6.11.1.0) | obs-deps qt6 2026-07-15 windows-x64 zip contains Qt 6.11.1; sha-256 `7c7f985711d80467bdc1795b6592275a27d5b0e5a2c7a61db1f2c1d08d6a5579` **downloaded and verified equal to the pin** |
@@ -257,7 +261,7 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 
 - **2026-10-14** - overlay L2 has no hostile-handle / path-trick test: the Norton agent hook blocked writing the first version of that test file. Covered only by L1 static checks (no innerHTML, textContent, fixed platform list) and one benign markup-characters test. Not evaded.
 
-- **2026-10-14** - plugin DLL not linked: generating `.obs-sdk/lib/obs.lib` and `obs-frontend-api.lib` needs `dumpbin /exports` on the installed obs.dll; the Norton agent hook blocked that command, so it was not retried or worked around. The plugin sources compile at /W4 with zero warnings against the real 32.2.2 and Qt 6.11.1 headers (object files only). To get the DLL: `powershell -File scripts/make-import-lib.ps1 ...` (see README), or let `scripts/build.ps1` do it.
+- **2026-10-14** - plugin DLL not linked: generating `.obs-sdk/lib/obs.lib` and `obs-frontend-api.lib` needs `dumpbin /exports` on the installed obs.dll; the Norton agent hook blocked that command, so it was not retried or worked around. The plugin sources compile at /W4 with zero warnings against the real 32.2.2 and Qt 6.11.1 headers (object files only). To get the DLL: `powershell -ExecutionPolicy Bypass -File scripts/make-import-lib.ps1 ...` (see README), or let `scripts/build.ps1` do it.
 - **2026-10-14** - glue logic against a real OBS is unverified (not allowed to load OBS). Reasoned from 32.2.2 source: rtmp stop can join the connect thread, so every output stop runs on a worker thread; one output object per connection attempt; own reconnect (libobs reconnect off).
 
 - **2026-10-14** - smoke test (portable OBS 32.2.2 + two local RTMP sinks) not done: it needs a visible OBS window and a built DLL. Needs the user's go-ahead and the import libs. Plan is in docs/limits.md-adjacent notes: portable zip sha-256 above, `--portable`, throwaway profile, `ffmpeg -listen 1` sinks on 127.0.0.1 only, closed afterwards.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Central build folder (unreleased)
+
+All compiled output (CMake trees, test executables, the DLL, generated import libs, the package zip) now goes to `D:\builds\obs-multistream-chat\` by default, overridable with `-BuildRoot` or `OMSC_BUILD_ROOT`, so one antivirus exclusion covers it. `scripts/build.ps1`, `install.ps1`, `package.ps1`, `make-import-lib.ps1`, the CMake presets and the tests were updated.
+
 ## Rename (unreleased)
 
 Project renamed from `obs-multistream` to **OBS Multistream Chat** (`obs-multistream-chat`): plugin id, DLL, dock id, install and config folders, CMake project/target and zip name. Rename only: there is no chat feature. `install.ps1` detects an old `obs-multistream` plugin folder and offers to remove it (`-RemoveOld`).

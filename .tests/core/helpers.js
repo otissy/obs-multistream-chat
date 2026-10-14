@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+// All compiled output lives in one central folder (see scripts/vsenv.ps1 Get-BuildRoot).
+const BUILD_ROOT = path.resolve(process.env.OMSC_BUILD_ROOT || 'D:/builds/obs-multistream-chat');
 
 function vsInstalled() {
   const vswhere = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe';
@@ -21,10 +23,10 @@ function onPath(cmd) {
 function candidates(name) {
   const exe = process.platform === 'win32' ? name + '.exe' : name;
   return [
-    path.join(ROOT, 'build', 'tests-vs', 'Release', exe),
-    path.join(ROOT, 'build', 'tests-vs', 'Debug', exe),
-    path.join(ROOT, 'build', 'windows-x64', 'Release', exe),
-    path.join(ROOT, 'build', 'tests', exe),
+    path.join(BUILD_ROOT, 'tests-vs', 'Release', exe),
+    path.join(BUILD_ROOT, 'tests-vs', 'Debug', exe),
+    path.join(BUILD_ROOT, 'windows-x64', 'Release', exe),
+    path.join(BUILD_ROOT, 'tests', exe),
   ];
 }
 function findExe(name) { return candidates(name).find(p => fs.existsSync(p)) || null; }
@@ -35,14 +37,15 @@ function ensureBuilt() {
   if (attempted) return { ok: false, reason };
   attempted = true;
   let cfg;
-  if (vsInstalled()) cfg = ['--preset', 'tests-vs2022'];
-  else if (onPath('g++') || onPath('clang++')) cfg = ['--preset', 'tests'];
+  const vsTree = path.join(BUILD_ROOT, 'tests-vs'), plainTree = path.join(BUILD_ROOT, 'tests');
+  if (vsInstalled()) cfg = ['-B', vsTree, '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DOMS_BUILD_PLUGIN=OFF', '-DOMS_BUILD_TESTS=ON'];
+  else if (onPath('g++') || onPath('clang++')) cfg = ['-B', plainTree, '-DOMS_BUILD_PLUGIN=OFF', '-DOMS_BUILD_TESTS=ON'];
   else { reason = 'no C++ compiler found (install VS Build Tools 2022, Desktop development with C++)'; return { ok: false, reason }; }
   let r = spawnSync('cmake', ['-S', ROOT, ...cfg], { encoding: 'utf8' });
   if (r.status !== 0) { reason = 'cmake configure failed:\n' + r.stdout + r.stderr; return { ok: false, reason, broken: true }; }
-  const build = cfg[1] === 'tests-vs2022'
-    ? ['--build', path.join(ROOT, 'build', 'tests-vs'), '--config', 'Release', '--parallel']
-    : ['--build', path.join(ROOT, 'build', 'tests'), '--parallel'];
+  const build = cfg[1] === vsTree
+    ? ['--build', vsTree, '--config', 'Release', '--parallel', '2']
+    : ['--build', plainTree, '--parallel', '2'];
   r = spawnSync('cmake', build, { encoding: 'utf8', maxBuffer: 1 << 26 });
   if (r.status !== 0) { reason = 'build failed:\n' + r.stdout.slice(-4000) + r.stderr.slice(-2000); return { ok: false, reason, broken: true }; }
   return findExe('oms_tests') ? { ok: true } : { ok: false, reason: 'built but exe not found', broken: true };
@@ -61,4 +64,4 @@ function runLayer(layer) {
   return { cases, status: r.status, out: (r.stdout || '') + (r.stderr || '') };
 }
 
-module.exports = { ROOT, ensureBuilt, findExe, runLayer, vsInstalled };
+module.exports = { ROOT, BUILD_ROOT, ensureBuilt, findExe, runLayer, vsInstalled };

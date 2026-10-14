@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { ROOT, sdk } = require('./helpers');
+const BUILD_ROOT = path.resolve(process.env.OMSC_BUILD_ROOT || 'D:/builds/obs-multistream-chat');
 
 const fwd = p => p.split(path.sep).join('/');
 const ini = fs.readFileSync(path.join(ROOT, 'data', 'locale', 'en-US.ini'), 'utf8');
@@ -34,7 +35,7 @@ test('plugin sources compile (needs MSVC + SDKs)', t => {
   if (!obs || !qt) return t.skip('UNVERIFIED: SDKs not present');
   const vswhere = 'C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe';
   if (!fs.existsSync(vswhere)) return t.skip('UNVERIFIED: no Visual Studio');
-  const dir = path.join(ROOT, 'build', 'glue-compile');
+  const dir = path.join(BUILD_ROOT, 'glue-compile');
   let r = spawnSync('cmake', ['-S', ROOT, '-B', dir, '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DOMS_BUILD_TESTS=OFF',
     '-DOBS_SDK_DIR=' + fwd(obs), '-DQT_SDK_DIR=' + fwd(qt)], { encoding: 'utf8' });
   assert.strictEqual(r.status, 0, r.stdout + r.stderr);

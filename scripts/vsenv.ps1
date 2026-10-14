@@ -9,3 +9,14 @@ function Enter-VsDevEnvironment {
   $out = & cmd.exe /c "`"$bat`" >nul && set"
   foreach ($line in $out) { if ($line -match '^([^=]+)=(.*)$') { Set-Item -Path "env:$($Matches[1])" -Value $Matches[2] } }
 }
+
+# One central folder for ALL compiled output (CMake trees, test exes, the DLL, generated import libs,
+# the package zip), so a single antivirus exclusion covers it.
+# Order: -BuildRoot parameter, then $env:OMSC_BUILD_ROOT, then the default below.
+# This only ever creates and uses that one folder; it never looks at its siblings.
+function Get-BuildRoot([string]$Override) {
+  $root = if ($Override) { $Override } elseif ($env:OMSC_BUILD_ROOT) { $env:OMSC_BUILD_ROOT } else { 'D:\builds\obs-multistream-chat' }
+  $root = [IO.Path]::GetFullPath($root)
+  New-Item -ItemType Directory -Force $root | Out-Null
+  return $root
+}

@@ -3,14 +3,15 @@
    C:\ProgramData\obs-studio\plugins\obs-multistream-chat\bin\64bit\obs-multistream-chat.dll
    C:\ProgramData\obs-studio\plugins\obs-multistream-chat\data\{locale,overlay}
  Refuses to run while OBS is open (it would hold the old DLL locked). Close OBS first.
-   powershell -File scripts\install.ps1               # from build\
+   powershell -File scripts\install.ps1               # DLL from the central build folder
    powershell -File scripts\install.ps1 -Uninstall
  -Dll / -Dest exist so the script can be tested against a scratch folder.
 #>
 [CmdletBinding()]
-param([string]$Dll, [string]$Dest = (Join-Path $env:ProgramData 'obs-studio\plugins\obs-multistream-chat'), [switch]$Uninstall, [switch]$IgnoreRunningObs, [switch]$RemoveOld)
+param([string]$Dll, [string]$Dest = (Join-Path $env:ProgramData 'obs-studio\plugins\obs-multistream-chat'), [switch]$Uninstall, [switch]$IgnoreRunningObs, [switch]$RemoveOld, [string]$BuildRoot)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
+. "$PSScriptRoot\vsenv.ps1"
 
 if (-not $IgnoreRunningObs -and (Get-Process obs64 -ErrorAction SilentlyContinue)) { throw 'OBS is running. Close it and run this again.' }
 
@@ -29,7 +30,7 @@ if ($Uninstall) {
   if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force; Write-Host "removed $Dest" } else { Write-Host 'nothing to remove' }
   return
 }
-if (-not $Dll) { $Dll = (Get-ChildItem (Join-Path $Root 'build') -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
+if (-not $Dll) { $Dll = (Get-ChildItem (Get-BuildRoot $BuildRoot) -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
 if (-not $Dll -or -not (Test-Path $Dll)) { throw 'obs-multistream-chat.dll not found. Run scripts\build.ps1 first (or pass -Dll).' }
 
 $bin = Join-Path $Dest 'bin\64bit'

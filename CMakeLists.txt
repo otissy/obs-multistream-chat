@@ -7,6 +7,13 @@ endif()
 option(OMS_BUILD_TESTS "Build the portable core tests (no OBS needed)" ON)
 option(OMS_BUILD_PLUGIN "Build the OBS plugin (needs .obs-sdk and .qt-sdk, see PROJECT.md)" ON)
 set(OBS_SDK_DIR "${CMAKE_SOURCE_DIR}/.obs-sdk" CACHE PATH "libobs + frontend-api headers and lib/obs.lib")
+# Generated import libs (obs.lib, obs-frontend-api.lib) live in the central build folder, not the repo.
+if(DEFINED ENV{OMSC_BUILD_ROOT} AND NOT "$ENV{OMSC_BUILD_ROOT}" STREQUAL "")
+  set(_oms_root "$ENV{OMSC_BUILD_ROOT}")
+else()
+  set(_oms_root "D:/builds/obs-multistream-chat")
+endif()
+set(OMS_IMPORT_LIB_DIR "${_oms_root}/import-libs" CACHE PATH "Where obs.lib and obs-frontend-api.lib are generated")
 set(QT_SDK_DIR "${CMAKE_SOURCE_DIR}/.qt-sdk" CACHE PATH "Qt 6.11.1 headers and lib/Qt6*.lib from obs-deps")
 
 set(CMAKE_CXX_STANDARD 17)

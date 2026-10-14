@@ -1,17 +1,22 @@
 <#
- Makes dist\obs-multistream-chat-<version>-windows-x64.zip (+ .sha256), laid out so extracting it into
+ Makes obs-multistream-chat-<version>-windows-x64.zip (+ .sha256), laid out so extracting it into
  C:\ProgramData\obs-studio\plugins\ gives the same tree install.ps1 creates.
-   powershell -File scripts\package.ps1 [-Dll path] [-OutDir dist]
+   powershell -File scripts\package.ps1 [-Dll path] [-OutDir dir] [-BuildRoot dir]
+ Default output: <build root>\dist, build root = -BuildRoot, else $env:OMSC_BUILD_ROOT, else
+ D:\builds\obs-multistream-chat.
 #>
 [CmdletBinding()]
-param([string]$Dll, [string]$OutDir = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dist'))
+param([string]$Dll, [string]$OutDir, [string]$BuildRoot)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
+. "$PSScriptRoot\vsenv.ps1"
+$Central = Get-BuildRoot $BuildRoot
+if (-not $OutDir) { $OutDir = Join-Path $Central 'dist' }
 
 $cm = Get-Content (Join-Path $Root 'CMakeLists.txt') -Raw
 if ($cm -notmatch 'project\(obs-multistream-chat VERSION (\d+\.\d+\.\d+)') { throw 'cannot read version from CMakeLists.txt' }
 $ver = $Matches[1]
-if (-not $Dll) { $Dll = (Get-ChildItem (Join-Path $Root 'build') -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
+if (-not $Dll) { $Dll = (Get-ChildItem $Central -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
 if (-not $Dll -or -not (Test-Path $Dll)) { throw 'obs-multistream-chat.dll not found. Run scripts\build.ps1 first (or pass -Dll).' }
 
 $stage = Join-Path $env:TEMP ("oms-package-" + [guid]::NewGuid().ToString('N'))

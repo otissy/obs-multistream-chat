@@ -32,9 +32,9 @@ You need either a release zip or a build from source.
 already enough, you do not need the CMake component of the installer):
 
 ```
-powershell -File scripts\build.ps1 -Test      # fetches pinned SDKs, builds, runs the core tests
-powershell -File scripts\install.ps1          # only when YOU run it; refuses while OBS is open
-powershell -File scripts\package.ps1          # dist\obs-multistream-chat-<ver>-windows-x64.zip + .sha256
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test      # fetches pinned SDKs, builds into D:\builds\obs-multistream-chat, runs the core tests
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1          # only when YOU run it; refuses while OBS is open
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1          # dist\obs-multistream-chat-<ver>-windows-x64.zip + .sha256
 ```
 
 `scripts\install.ps1 -Uninstall` removes it again. Nothing is installed, scheduled or added to startup
@@ -105,13 +105,19 @@ answering, the overlay dims everything instead of showing a stale "live".
 
 Freshly compiled, unsigned DLLs and test executables are commonly flagged by heuristic scanners
 (Norton reports them as `IDP.Generic`) and may be removed mid-run. That is a false positive of the
-"new unknown file" kind; nothing in this project is evading or hiding anything. All build output lives
-under one folder, `build\`, so you can exclude just that folder. This is your decision and your action:
+"new unknown file" kind; nothing in this project is evading or hiding anything. ALL compiled output (CMake tree, test
+executables, the plugin DLL, generated import libraries, the package zip) goes under one central folder,
+`D:\builds\obs-multistream-chat\` by default (override with `-BuildRoot` or the environment variable
+`OMSC_BUILD_ROOT`). Excluding that one folder is enough. This is your decision and your action:
 
 - To restore a blocked file in Norton: open Norton, **Security > History**, show the protection or
   quarantine history, select the item, and choose **Restore & Exclude** (menu names vary by version).
 - To exclude a folder without a detection: Norton **Settings > Antivirus > Scans and Risks > Items to
-  Exclude from Scans** (and *Exclude from Auto-Protect*), then add `...\obs-multistream-chat\build`.
+  Exclude from Scans** (and *Exclude from Auto-Protect*), then add `D:\builds\obs-multistream-chat` (just that folder; **not** `D:\builds` itself, which holds other
+  projects).
+- **Tradeoff:** anything placed in an excluded folder is no longer scanned. Only build code you have
+  reviewed there, and never drop downloaded files into it. Sources, the SDK download cache
+  (`build\downloads` inside the repo, archives only) and the `.obs-sdk` / `.qt-sdk` headers stay in the repo.
 - The built binaries carry version information (company, product, description, version) to make them
   easier to recognise. A release zip is not code-signed.
 

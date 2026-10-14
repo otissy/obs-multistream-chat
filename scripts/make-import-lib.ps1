@@ -1,12 +1,15 @@
 <#
  Generates an MSVC import library from an installed DLL's export table (no OBS SDK ships one).
  Reads the DLL file only; never loads or runs it.
-   powershell -File scripts/make-import-lib.ps1 -Dll "C:\Program Files\obs-studio\bin\64bit\obs.dll" -Name obs -OutDir .obs-sdk\lib
+   powershell -File scripts/make-import-lib.ps1 -Dll "C:\Program Files\obs-studio\bin\64bit\obs.dll" -Name obs
+ OutDir defaults to <build root>\import-libs (D:\builds\obs-multistream-chat unless -BuildRoot or
+ $env:OMSC_BUILD_ROOT says otherwise): generated binaries never go into the repo.
 #>
-param([Parameter(Mandatory)][string]$Dll, [Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][string]$OutDir)
+param([Parameter(Mandatory)][string]$Dll, [Parameter(Mandatory)][string]$Name, [string]$OutDir, [string]$BuildRoot)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\vsenv.ps1"
 Enter-VsDevEnvironment
+if (-not $OutDir) { $OutDir = Join-Path (Get-BuildRoot $BuildRoot) 'import-libs' }
 if (-not (Test-Path $Dll)) { throw "no such DLL: $Dll" }
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $def = Join-Path $OutDir "$Name.def"

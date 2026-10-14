@@ -739,6 +739,10 @@ TEST(L2, ingest_requires_token_host_json_and_length_before_reading_a_body)
 	fetchsite.headers["sec-fetch-site"] = "same-origin";
 	CHECK_EQ(handle_request(fetchsite, 5000, assets, sh, &hub).status, 403);
 
+	HttpRequest nodefetch = ingest_req(ok_body); // what Node's fetch adds: Sec-Fetch-Mode only
+	nodefetch.headers["sec-fetch-mode"] = "cors";
+	CHECK_EQ(handle_request(nodefetch, 5000, assets, sh, &hub).status, 200);
+
 	HttpRequest ct = ingest_req(ok_body);
 	ct.headers["content-type"] = "text/plain";
 	CHECK_EQ(handle_request(ct, 5000, assets, sh, &hub).status, 415);

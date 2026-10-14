@@ -104,3 +104,18 @@ test('no file in the reader or overlay reaches for a platform API, token or logi
     assert.ok(!apiHosts.test(s), path.relative(ROOT, f) + ' mentions an API or OAuth');
   }
 });
+
+test('plugin glue: the reader gets its token from the environment only, lives in a kill-on-close job, and is never started on load by default', () => {
+  const rp = fs.readFileSync(path.join(ROOT, 'src', 'obs', 'reader_process.cpp'), 'utf8');
+  const cmdLine = /std::wstring cmd = ([\s\S]*?);\n/.exec(rp)[1];
+  assert.ok(!/token/i.test(cmdLine), 'the command line must not mention the token: ' + cmdLine);
+  assert.ok(/OMSC_CHAT_TOKEN=/.test(rp) && /CREATE_UNICODE_ENVIRONMENT/.test(rp));
+  assert.ok(/JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE/.test(rp) && /CREATE_NO_WINDOW/.test(rp) && /SW_HIDE/.test(rp));
+  assert.ok(/PROC_THREAD_ATTRIBUTE_HANDLE_LIST/.test(rp), 'only the handles the child needs are inherited');
+  const pm = fs.readFileSync(path.join(ROOT, 'src', 'obs', 'plugin-main.cpp'), 'utf8');
+  assert.ok(/if \(st\.cfg\.chat\.start_with_obs && !st\.read_only\)/.test(pm), 'auto start only when the user ticked it');
+  assert.ok(/set_token\(""\)/.test(pm), 'the token is revoked when the reader ends');
+  assert.ok(!/0\.0\.0\.0|INADDR_ANY/.test(pm));
+  const cfg = fs.readFileSync(path.join(ROOT, 'src', 'core', 'config.cpp'), 'utf8');
+  assert.ok(!/token|cookie|password/i.test(/json::Value chat = [\s\S]*?root\.set\("chat"/.exec(cfg)[0]), 'no login material is ever saved in the chat block');
+});

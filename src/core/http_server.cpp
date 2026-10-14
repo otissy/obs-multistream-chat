@@ -282,8 +282,9 @@ bool ingest_precheck(const HttpRequest &req, int port, ChatHub &chat, HttpRespon
 		early = make_error(403, "forbidden host");
 		return false;
 	}
-	// The reader is a local program, not a web page: any Origin or fetch metadata means a browser
-	if (req.has_header("origin") || req.has_header("sec-fetch-site") || req.has_header("sec-fetch-mode")) {
+	// The reader is a local program, not a web page: a browser always sends Origin and/or
+	// Sec-Fetch-Site on a cross-site or POST request, Node's fetch sends neither (only Sec-Fetch-Mode).
+	if (req.has_header("origin") || req.has_header("sec-fetch-site")) {
 		early = make_error(403, "forbidden origin");
 		return false;
 	}

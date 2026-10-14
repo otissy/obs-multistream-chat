@@ -81,8 +81,8 @@ class Source extends EventEmitter {
   async start() {
     this.stopped = false;
     this._set('starting', 'opening the page');
-    await this._open();
     this.healthTimer = setInterval(() => this._evaluate(), 2000);
+    await this._open();
   }
 
   async _open() {

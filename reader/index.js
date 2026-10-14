@@ -81,9 +81,12 @@ async function start(opts, env, hooks = {}) {
 
   async function openBrowser() {
     cleanStaleProfiles();
-    browser = await launch({ chrome: opts.chrome, images: cfg.images, env: browserEnv });
+    const b = await launch({ chrome: opts.chrome, images: cfg.images, env: browserEnv });
+    if (shuttingDown) { await b.close(); return false; } // asked to stop while Chrome was starting
+    browser = b;
     browser.cdp.onclose = () => { if (!shuttingDown) onBrowserLost(); };
     log.info('browser started');
+    return true;
   }
   let relaunches = 0;
   async function onBrowserLost() {
@@ -94,7 +97,7 @@ async function start(opts, env, hooks = {}) {
     if (++relaunches > 3) { poster.setStatus({ id: 'reader', platform: 'twitch', state: 'error', detail: 'browser keeps failing' }); shutdown(5); return; }
     await new Promise(r => setTimeout(r, delayMs(relaunches - 1, 3000, 60000)));
     if (shuttingDown) return;
-    try { await openBrowser(); await startSources(); } catch (e) { log.error('could not restart the browser: ' + e.message); shutdown(5); }
+    try { if (await openBrowser()) await startSources(); } catch (e) { log.error('could not restart the browser: ' + e.message); shutdown(5); }
   }
   async function startSources() {
     for (const s of wanted) {
@@ -110,7 +113,7 @@ async function start(opts, env, hooks = {}) {
   }
 
   if (wanted.length) {
-    try { await openBrowser(); } catch (e) {
+    try { if (!(await openBrowser())) return { shutdown, done, sources, poster }; } catch (e) {
       log.error('browser start failed: ' + e.message);
       for (const s of wanted) poster.setStatus({ id: s.id, platform: s.platform, state: 'error', detail: 'could not start Chrome: ' + e.message });
       await new Promise(r => setTimeout(r, 1200)); // let the statuses reach the plugin

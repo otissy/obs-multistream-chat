@@ -179,7 +179,7 @@ std::string get_str(const json::Value &o, const char *k)
 
 bool state_known(const std::string &s)
 {
-	static const char *ok[] = {"starting", "reading", "quiet", "layout", "login", "error", "stopped"};
+	static const char *ok[] = {"starting", "reading", "quiet", "layout", "login", "error", "stopped", "consent", "disabled", "replay", "offline"};
 	for (size_t i = 0; i < sizeof ok / sizeof ok[0]; ++i)
 		if (s == ok[i])
 			return true;

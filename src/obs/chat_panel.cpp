@@ -52,6 +52,14 @@ StateLook look_for(const std::string &state)
 		return {"Needs login", "#ff4d4f"};
 	if (state == "error")
 		return {"Error", "#ff4d4f"};
+	if (state == "consent")
+		return {"Blocked by the platform's cookie-consent page", "#ff4d4f"};
+	if (state == "disabled")
+		return {"Chat is disabled for this stream", "#ffb020"};
+	if (state == "replay")
+		return {"Replay only: not a live stream", "#ffb020"};
+	if (state == "offline")
+		return {"Channel offline (no messages)", "#ffb020"};
 	if (state == "starting")
 		return {"Starting", "#ffb020"};
 	return {"Stopped", "#8a8a96"};

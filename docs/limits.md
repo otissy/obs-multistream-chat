@@ -75,3 +75,11 @@ Each x264-mode destination adds a CPU encode and no NVENC session, but costs CPU
   at most 4 tries per source. A page that loaded but shows no chat is reported, not reloaded.
 - **Restart OBS or the browser source** after restarting the plugin: the page numbers its lines per
   plugin run.
+- **YouTube in the EU:** a visitor may get a cookie-consent page before the chat. The reader presets the consent preference cookie
+  (`SOCS=CAI` on `.youtube.com`, a value used by other open-source tools; if YouTube stops honouring it the state is
+  *Blocked by the platform's cookie-consent page*) and does not click anything. The popout form
+  `live_chat?is_popout=1&v=<id>` is used; `embed_domain` is only needed by the embedded chat iframe and is not sent.
+  A video with chat off, no longer live, or members-only shows *Chat is disabled*; a finished video's chat replay shows *Replay only*.
+- **Kick:** when the chat list is there but no row ever matches and the page says the channel is offline, the state is *Channel
+  offline*; if the channel is live and the state is still *Quiet*, the row selectors are wrong: run `--diagnose` and fix
+  `reader\adapters\kick.json`.

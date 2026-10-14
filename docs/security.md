@@ -101,3 +101,12 @@ as a second layer.
 **Process ownership.** The reader and its Chrome are placed in a Windows job object that kills them
 when OBS exits or crashes, and the plugin stops them when you press Stop. `chat-reader.log` holds states
 and errors only, never chat text and never the token.
+
+**The consent cookie.** For YouTube the adapter sets one cookie before the page loads, through the DevTools protocol
+(`Network.setCookie`) in that source's own cookie-less browser context: `SOCS=CAI`, domain `.youtube.com`, secure. It is a *consent
+preference* cookie (it records that the cookie dialog was answered), **not a login, session or identifier of you**. The pack
+validator only accepts the names `SOCS` and `CONSENT`, values of letters, digits and `+_.-`, and a domain that is a parent of
+the platform's own host; nothing else can be set. The context is discarded with the tab. The reader still never clicks.
+
+**Diagnose mode.** `--diagnose` needs no token, posts nothing, and its output is structural by construction (a test plants a fake
+author, text, emote and message id in a fixture and asserts none of them appears in the output).

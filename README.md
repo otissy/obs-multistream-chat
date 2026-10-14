@@ -111,8 +111,9 @@ Google Chrome in its normal place. Nothing else is installed or downloaded.
 - **TikTok and X are experimental.** TikTok may show a captcha or login; X broadcasts usually need a
   logged-in account to show chat. When that happens the dock says **"Needs login"** and nothing is read.
   The reader will not log in for you.
-- Twitch, YouTube and Kick are expected to work, but **none of the five has been tried against a real
-  page by the author** (that was not allowed while building): use the checklist below.
+- A live check by the project coordinator found Twitch working (about 79 lines in 150 s, no duplicates); Kick found its chat list but
+  no lines (see the Kick row below); YouTube did not load its chat in the EU (the consent page, now handled). **Nothing else has been
+  tried against a real page by the author** (that was not allowed while building): use the checklist below.
 
 ### Set it up
 
@@ -138,6 +139,17 @@ Nothing here was run against a real platform. For each platform you use:
 | Kick | channel name | *Reading*, lines with the green icon | same, `kick.json` (Kick changes markup often) |
 | TikTok (experimental) | `@username` of someone who is **live now** | *Reading* with lines, or *Needs login* | expected sometimes; nothing to fix on your side |
 | X (experimental) | link of a running broadcast | *Needs login* is the likely answer | expected; there is no workaround here |
+
+**New states in the dock** (so a silent source always says why): *Blocked by the platform's cookie-consent page*,
+*Chat is disabled for this stream*, *Replay only: not a live stream*, *Channel offline (no messages)*, besides the older ones.
+For YouTube in the EU the reader sets YouTube's consent *preference* cookie (`SOCS`, not a login, see docs/security.md) in
+its own throw-away browser before loading the chat page; it never clicks anything.
+
+**Seeing what a page looks like, without sharing chat:** `node reader\index.js --diagnose --config <reader-config.json>`
+loads each configured page once (about 25 s, `--wait <seconds>` to change) and prints JSON lines with **structure only**:
+selector match counts, the tag/class path of the chat list, the tag/class shape of the first message row, data-attribute
+*names*, iframe host names, and yes/no for each state word. No message text, author names, attribute values or tokens.
+The reader config is `chat-reader.json` next to the plugin's `config.json` (written when you press Start once).
 
 Also check once: the lines appear **once** (no doubles), the **order** is right when two platforms are
 busy, and `chat-reader.log` (next to `config.json`) has no errors. It lists states and errors only,

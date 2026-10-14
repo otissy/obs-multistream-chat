@@ -12,6 +12,9 @@
 - New: icons for X (`x.svg`); config schema 3 (adds `chat`, migrated from 2 on first load).
 - Changed: the existing config tests that parse `"schema":2` text now use `"schema":3` (a schema-2 file
   is `Migrated`, not `Ok`); a dedicated test covers the 2 -> 3 migration.
+- New: page states *consent*, *disabled*, *replay* and *offline* (selector-pack `notes` + `noteStates`), YouTube consent cookie
+  `SOCS` preset through CDP, `replayPaths`, Kick rows also matched by `[data-index]`, and `node reader\index.js --diagnose`
+  (structure-only facts about a page).
 - Not verified: any real platform page (not allowed while building); see README "Live checklist".
 
 ## Central build folder (unreleased)

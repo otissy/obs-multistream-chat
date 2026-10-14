@@ -276,6 +276,10 @@ Deviations from the brief and why:
 | `node reader\index.js` | resolved through `obs_module_file("reader/index.js")` = `<plugin>\dataeader\index.js` | the plugin data folder is where OBS finds module files; zip and install.ps1 copy `reader/` there |
 | per-source status "needs login" etc. | states `starting reading quiet layout login error stopped` | `quiet` = container found, zero messages for `quiet_minutes` (default 5) |
 
+Live check (coordinator, 2026-10-14, counts only): Twitch worked (79 lines, 19 authors, 0 duplicates in 150 s); Kick found the chat
+list but no lines in 150 s (maybe offline, maybe selectors); YouTube (EU) stayed on `layout`, likely the consent page. Reaction: states
+consent/disabled/replay/offline (pack `notes`/`noteStates`), consent cookie via CDP, `--diagnose`. Kick still needs a live look.
+
 Known weak spots (also in docs/limits.md): all five platform packs unverified live; X rows are found by
 avatar anchor (a guess); YouTube members-only/ad rows are not special-cased; Kick virtualised lists may
 re-create rows (ids from `data-chat-entry` guard that; Twitch/TikTok/X ids are synthetic, so a row that

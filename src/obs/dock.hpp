@@ -12,6 +12,8 @@ class QTableWidget;
 
 namespace oms {
 
+class ChatPanel;
+
 class MultistreamDock : public QWidget {
 public:
 	explicit MultistreamDock(QWidget *parent);
@@ -33,6 +35,7 @@ private:
 	QPushButton *edit_btn_;
 	QPushButton *remove_btn_;
 	std::vector<std::string> row_ids_;
+	ChatPanel *chat_panel_ = nullptr;
 };
 
 } // namespace oms

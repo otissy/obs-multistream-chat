@@ -1,4 +1,5 @@
 #include "dock.hpp"
+#include "chat_panel.hpp"
 #include "destination.hpp"
 #include "plugin.hpp"
 
@@ -19,6 +20,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QTabWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
 
@@ -247,7 +249,15 @@ private:
 
 MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 {
-	QVBoxLayout *root = new QVBoxLayout(this);
+	QTabWidget *tabs = new QTabWidget();
+	QWidget *streams_page = new QWidget();
+	chat_panel_ = new ChatPanel(this);
+	QVBoxLayout *outer = new QVBoxLayout(this);
+	outer->setContentsMargins(0, 0, 0, 0);
+	outer->addWidget(tabs);
+	tabs->addTab(streams_page, T("Tab.Streams"));
+	tabs->addTab(chat_panel_, T("Tab.Chat"));
+	QVBoxLayout *root = new QVBoxLayout(streams_page);
 	root->setContentsMargins(6, 6, 6, 6);
 
 	banner_ = new QLabel();
@@ -439,6 +449,8 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 void MultistreamDock::refresh()
 {
 	PluginState &st = plugin();
+	if (chat_panel_)
+		chat_panel_->refresh();
 	std::vector<RuntimeView> views = st.mgr->views();
 
 	std::string banner = st.mgr->bottleneck_banner();

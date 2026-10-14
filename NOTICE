@@ -24,3 +24,44 @@ generic.svg
 No other third-party code or artwork is bundled. Build-time SDK headers (OBS Studio 32.2.2,
 GPL-2.0-or-later; Qt 6.11.1 from obs-deps, LGPL-3.0) are fetched by scripts/fetch-sdks.ps1 and are
 not redistributed in the release zip.
+
+Chat overlay icon (data/overlay/icons/x.svg)
+--------------------------------------------
+x.svg  The X glyph. Written into this repository from the geometry of the Simple Icons "x" icon
+       (CC0 1.0, https://github.com/simple-icons/simple-icons, same project and licence as the other
+       icons above). It was NOT downloaded in this task (the build was not allowed any network access
+       beyond one study archive), so it is not hash-pinned to the 16.35.0 tag: compare it with
+       icons/x.svg of that tag and replace it if they differ.
+       sha-256 of the bundled file: 6cc7df189ce44ff0d88420ab43ac9c19da083b3d9fd470519fc67f012fa313fe
+       X and the X logo are trademarks of their owner (nominative use only, as above).
+       twitch.svg, youtube.svg, kick.svg and tiktok.svg above are reused for the chat lines.
+
+Study source for the chat reader (nothing copied)
+--------------------------------------------------
+reader/adapters/*.json (selector packs) were written after READING the chat-page code of
+Social Stream Ninja, https://github.com/steveseguin/social_stream (author: Steve Seguin and
+contributors), to learn which elements of each platform's chat page carry the author, text, emotes and
+badges. Only facts about the platforms' pages (class names, data attributes, element structure) were
+used; no code, no expressions and no text were copied, and reader/lib/inject.js is original.
+  Archive: https://codeload.github.com/steveseguin/social_stream/zip/refs/heads/main , fetched once on
+           2026-10-14 (HTTPS). The transfer was cut by the 400,000,000-byte size cap set for it, so the
+           archive is INCOMPLETE and the commit id (stored at the end of a git archive) is unknown. The
+           first 400,000,000 bytes have sha-256
+           57e6e637c733548705a4bce84eebc04de68a72d6dd6039e84fc2f0549d2286a3 ; the files read were fully
+           inside it and are pinned individually (sha-256 of the extracted files):
+    LICENSE                          3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+    sources/twitch.js                e89204645481cb3ab82dee3a70b76b4c44a4d72cd530e5cc160855785b92e7e8
+    sources/youtube.js               43c1daac24c41b2bd70416629c71798e80b63d00f6bd914599d23613df515254
+    sources/kick.js                  5b816a56609586ab656387184acaafcf4d91f0a1f58eca8dae47f4638a85a499
+    sources/kick_new.js              34a7aaba5ca7740eb3a1b46f983a43ec7380ca3bee64444c9f19c447280905bd
+    sources/tiktok.js                2cf2a29f2f1332a852422f7e2d06ef4b698658b7de0e477b06ae86d9d964f99f
+    sources/x.js                     a1dbe477fb3bad8ca14241cffc58c6d0ef0ac5ff3f10a5a805d50df68b59a55f
+    sources/static/x.js              b20ad7af2a2af4da6cdbb776aec7ee0e42e6adad44089b6fc511db2f1ad68a3d
+    sources/youtube_static.js        d404f658fefcfc03bf0e400bdb6abb485b815110cfdf7e6ee3183597ac8868a8
+    sources/graveyard/twitter.js     3b75fa2d141bbe3a33f7fcc68952c4a06ef5c3f5a7a8490e3500fbf184ca4ea4
+    sources/static/kick_chatroom_scout.js 3b0f8523e66027817d10d061496800ebb43de8db91ab83423cd0f682775a034a
+  Licence found in the archive: the top-level LICENSE is the GNU GENERAL PUBLIC LICENSE Version 3 (not
+           MIT, which the task brief assumed). This project is GPL-2.0-or-later; since no code was
+           copied the difference does not bind this repository, but it is recorded here. If code from
+           that project is ever reused, GPL-3.0 compatibility must be checked first.
+  The archive was kept outside the repository and is not redistributed.

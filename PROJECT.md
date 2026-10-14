@@ -11,7 +11,12 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
-## Current state (2026-10-13)
+## Current state (2026-10-14)
+
+Version 0.2.0 adds the chat half (see "Chat (0.2.0)" below): reader, adapters, merge server, overlay
+page, dock tab. Built and tested offline; no real platform page was ever loaded.
+
+## Earlier state (2026-10-13)
 
 A native C++ plugin for OBS Studio 32.2.2 (Windows x64) that sends the one stream OBS already
 encodes to several RTMP(S) destinations at once, with no platform API, no OAuth, no relay
@@ -228,6 +233,55 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 | GPU saturated | shared encoders default; banner on skipped/lagged frames |
 | OBS closes while threads run | server + manager stopped in `obs_module_unload` before Qt tears down |
 
+## Chat (0.2.0): merged live chat without any platform API
+
+```
+ reader/index.js (node, hidden child of OBS, only started by the user)
+   headless Chrome (throw-away profile, no login) --CDP/WebSocket--> one tab per source
+   injected read-only engine (reader/lib/inject.js, isolated world) + selector pack (reader/adapters/<p>.json)
+        | Runtime binding (page can not call it)           health: Source (reader/lib/source.js)
+        v
+   Poster (reader/lib/poster.js) --POST /chat/ingest, Bearer token from env--> HttpServer (127.0.0.1)
+                                                                   ChatHub (src/core/chat_hub.*)
+   sanitise -> dedupe (platform,id) -> filters -> rate limit -> reorder window (300 ms) -> ring (500)
+                                                                        | SSE /chat/events (Last-Event-ID)
+                                         data/overlay/chat.html + chat.js (browser source), dock Chat tab
+```
+
+- Core (C++, portable, tested): `chat_targets` (platforms, target validation, emote host allow-list),
+  `chat_hub` (sanitiser, hub), `random` (token), config schema 3 (`chat` block, `build_reader_config`),
+  http_server routes. Glue: `src/obs/reader_process.*` (CreateProcess hidden, job object kill-on-close,
+  stdin pipe = stop signal, token in env only), `src/obs/chat_panel.*` (dock tab), plugin-main wiring.
+- Reader (Node 22+, no dependencies): see the file list in `reader/`. Adapters are JSON packs validated at
+  load; an invalid pack disables only its platform with a message.
+- Config schema 3 adds `chat`: `start_with_obs`, `node_path`, `quiet_minutes`, `hide_commands`,
+  `hide_bots`, `blocked_words`, `blocked_users`, `sources[{id,platform,target,enabled}]`. 2 -> 3 is a
+  migration (status Migrated, saved as 3); an older plugin reading 3 treats it as too new (read-only).
+  No login, cookie or token is ever stored; the reader config `chat-reader.json` has none either.
+- Tests: `.tests/chat/` (L1 JS+fixtures, L2 units + each adapter in headless Chrome + C++ units via
+  oms_tests, L3 reader module vs stub merge server + C++ socket tests, L4 reader process -> real C++
+  server -> overlay in Chrome, screenshots). `.tests/chat/vectors/targets.json` is shared by the C++ and
+  JS target validators. Fixtures are in `.tests/chat/fixtures/dom.js` and are NOT checked against live pages.
+
+Deviations from the brief and why:
+
+| Brief | Done | Why |
+|---|---|---|
+| message `{platform,id,author,text,emotes[],badges[],time}` | `parts[]` of text and emote items instead of `text` + `emotes[]`; `t` = when the reader saw it | keeps each emote where it stands in the sentence; the server derives plain text |
+| reorder "by arrival with a small window" | arrival minus the reader-reported age (cap 5 s) inside a 300 ms hold | pages deliver in bursts; arrival alone would reorder them |
+| ONE pinned archive, sha-256 in NOTICE | the transfer hit the 400 MB cap I set: the archive is a truncated prefix; selector files were extracted from it and pinned per file | repo is >400 MB (voice models); only per-file pins are real |
+| SSN is MIT | its LICENSE is GPL-3.0 | read from the archive; nothing copied, recorded in NOTICE |
+| simple-icons X in NOTICE with source | `x.svg` written from the known geometry, not downloaded | no network allowed; flagged in NOTICE to verify |
+| headless Chrome "via plain WebSocket" | yes, `--remote-debugging-port=0` on loopback | per brief; the DevTools pipe would avoid a port and is a possible later hardening |
+| `node reader\index.js` | resolved through `obs_module_file("reader/index.js")` = `<plugin>\dataeader\index.js` | the plugin data folder is where OBS finds module files; zip and install.ps1 copy `reader/` there |
+| per-source status "needs login" etc. | states `starting reading quiet layout login error stopped` | `quiet` = container found, zero messages for `quiet_minutes` (default 5) |
+
+Known weak spots (also in docs/limits.md): all five platform packs unverified live; X rows are found by
+avatar anchor (a guess); YouTube members-only/ad rows are not special-cased; Kick virtualised lists may
+re-create rows (ids from `data-chat-entry` guard that; Twitch/TikTok/X ids are synthetic, so a row that
+is re-rendered after 1.5 s would show twice); emote images load from the platforms' CDNs inside the
+OBS browser source.
+
 ## Limits (verified)
 
 | Limit | What it means |
@@ -265,8 +319,12 @@ Read from the 32.2.2 source (`libobs/obs-encoder.c`, `obs-output.c`):
 - **2026-10-14** - glue logic against a real OBS is unverified (not allowed to load OBS). Reasoned from 32.2.2 source: rtmp stop can join the connect thread, so every output stop runs on a worker thread; one output object per connection attempt; own reconnect (libobs reconnect off).
 
 - **2026-10-14** - smoke test (portable OBS 32.2.2 + two local RTMP sinks) not done: it needs a visible OBS window and a built DLL. Needs the user's go-ahead and the import libs. Plan is in docs/limits.md-adjacent notes: portable zip sha-256 above, `--portable`, throwaway profile, `ffmpeg -listen 1` sinks on 127.0.0.1 only, closed afterwards.
+- **2026-10-14** - chat (0.2.0): none of the five platform adapters has been run against a live page (forbidden while building); fixtures only. TikTok and X are experimental by design. Live checklist in README.
+- **2026-10-14** - chat: the overlay's emote images are fetched by the OBS browser source from the platforms' CDNs (allow-listed by CSP and by the hub); this is the only network traffic the overlay itself makes.
+- **2026-10-14** - chat: the reader's Chrome exposes a loopback DevTools port while it runs (brief asked for WebSocket CDP).
 
 ## Dropped approaches
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.
 - **2026-10-13** - nlohmann/json or cpp-httplib as dependencies - dropped: network is restricted to OBS, obs-deps, Qt, icon sources, and a ~400-line parser plus a ~500-line server is smaller than the audit burden.
+

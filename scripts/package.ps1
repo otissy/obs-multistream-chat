@@ -24,6 +24,8 @@ $tree = Join-Path $stage 'obs-multistream-chat'
 New-Item -ItemType Directory -Force (Join-Path $tree 'bin\64bit') | Out-Null
 Copy-Item $Dll (Join-Path $tree 'bin\64bit\obs-multistream-chat.dll')
 Copy-Item (Join-Path $Root 'data') (Join-Path $tree 'data') -Recurse
+# the chat reader (plain JavaScript + selector packs) lives next to the data files: obs_module_file("reader/index.js")
+Copy-Item (Join-Path $Root 'reader') (Join-Path $tree 'data\reader') -Recurse
 foreach ($f in 'README.md', 'LICENSE', 'NOTICE', 'CHANGELOG.md') { Copy-Item (Join-Path $Root $f) $tree }
 Copy-Item (Join-Path $Root 'docs') (Join-Path $tree 'docs') -Recurse
 

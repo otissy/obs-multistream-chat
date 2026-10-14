@@ -4,6 +4,7 @@
  */
 #include "dock.hpp"
 #include "plugin.hpp"
+#include "random.hpp"
 #include "redact.hpp"
 
 #include <obs-frontend-api.h>
@@ -63,6 +64,8 @@ AssetMap load_assets()
 	};
 	std::vector<Item> items = {{"/overlay.html", "overlay/overlay.html", "text/html; charset=utf-8"},
 				   {"/overlay.js", "overlay/overlay.js", "text/javascript; charset=utf-8"},
+				   {"/chat.html", "overlay/chat.html", "text/html; charset=utf-8"},
+				   {"/chat.js", "overlay/chat.js", "text/javascript; charset=utf-8"},
 				   {"/icons/generic.svg", "overlay/icons/generic.svg", "image/svg+xml"}};
 	static std::vector<std::string> urls; // keeps the c-strings below alive
 	urls.clear();
@@ -72,6 +75,20 @@ AssetMap load_assets()
 		if (icon == "generic")
 			continue;
 		urls.push_back("/icons/" + icon + ".svg");
+	}
+	urls.push_back("/icons/x.svg"); // chat platforms that are not RTMP presets
+	{
+		// the chat overlay icons that no RTMP preset already added
+		const char *chat_icons[] = {"twitch", "youtube", "kick", "tiktok"};
+		for (size_t i = 0; i < 4; ++i) {
+			std::string u = std::string("/icons/") + chat_icons[i] + ".svg";
+			bool have = false;
+			for (size_t k = 0; k < urls.size(); ++k)
+				if (urls[k] == u)
+					have = true;
+			if (!have)
+				urls.push_back(u);
+		}
 	}
 	for (size_t i = 0; i < items.size(); ++i) {
 		std::string path = module_file(items[i].file);
@@ -96,6 +113,21 @@ AssetMap load_assets()
 	return m;
 }
 
+void poll_reader()
+{
+	PluginState &st = *g_state;
+	if (!st.reader_active)
+		return;
+	if (st.reader.running())
+		return;
+	st.reader_active = false;
+	st.chat_hub.set_token(""); // a stopped reader's token is dead
+	int code = st.reader.exit_code();
+	st.chat_hub.mark_all_sources("stopped", "reader stopped");
+	st.chat_notice = code == 0 ? std::string() : describe_reader_exit(code);
+	log_safe(LOG_INFO, "chat reader ended with code " + std::to_string(code));
+}
+
 void publish_state()
 {
 	PluginState &st = *g_state;
@@ -108,6 +140,7 @@ void on_tick()
 	if (!g_state || !g_state->mgr)
 		return;
 	g_state->mgr->tick();
+	poll_reader();
 	publish_state();
 	if (g_dock)
 		g_dock->refresh();
@@ -127,6 +160,10 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 		g_state->timer = nullptr;
 		g_dock = nullptr;
 		g_state->mgr->shutdown();
+		g_state->reader.stop_blocking();
+		g_state->reader_active = false;
+		g_state->chat_hub.set_token("");
+		g_state->chat_hub.shutdown();
 		if (g_state->server)
 			g_state->server->stop();
 		break;
@@ -142,6 +179,91 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 PluginState &plugin()
 {
 	return *g_state;
+}
+
+std::string plugin_chat_url()
+{
+	if (!g_state || !g_state->server || !g_state->server->running())
+		return std::string();
+	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/chat.html";
+}
+
+void plugin_apply_chat_filter()
+{
+	ChatFilter f;
+	const ChatConfig &c = g_state->cfg.chat;
+	f.words = c.blocked_words;
+	f.users = c.blocked_users;
+	f.hide_commands = c.hide_commands;
+	f.hide_bots = c.hide_bots;
+	g_state->chat_hub.set_filter(f);
+}
+
+bool plugin_reader_running()
+{
+	return g_state && g_state->reader_active && g_state->reader.running();
+}
+
+void plugin_stop_reader()
+{
+	if (!g_state)
+		return;
+	g_state->reader.request_stop();
+	g_state->chat_notice.clear();
+}
+
+bool plugin_start_reader(std::string &err)
+{
+	PluginState &st = *g_state;
+	if (st.reader_active && st.reader.running()) {
+		err = "the chat reader is already running";
+		return false;
+	}
+	if (!st.server || !st.server->running()) {
+		err = "The local server is not running, so the chat reader has nowhere to send messages.";
+		return false;
+	}
+	bool any = false;
+	for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i)
+		any = any || st.cfg.chat.sources[i].enabled;
+	if (!any) {
+		err = "Add and enable at least one chat source first.";
+		return false;
+	}
+	std::string js = module_file("reader/index.js");
+	if (js.empty()) {
+		err = "reader/index.js is missing from the plugin folder (reinstall the plugin).";
+		return false;
+	}
+	size_t slash = st.config_path.find_last_of("/\\");
+	std::string dir = slash == std::string::npos ? std::string() : st.config_path.substr(0, slash + 1);
+	if (dir.empty()) {
+		err = "No plugin config folder.";
+		return false;
+	}
+	std::string cfg_file = dir + "chat-reader.json";
+	std::string werr;
+	if (!write_file_atomic(cfg_file, build_reader_config(st.cfg, st.server->port()), werr)) {
+		err = "Could not write the reader config: " + werr;
+		return false;
+	}
+	std::string token = random_token_hex(32);
+	if (token.empty()) {
+		err = "No secure random numbers available, not starting the chat reader.";
+		return false;
+	}
+	plugin_apply_chat_filter();
+	st.chat_hub.set_token(token);
+	if (!st.reader.start(st.cfg.chat.node_path, js, cfg_file, dir + "chat-reader.log", token, err)) {
+		st.chat_hub.set_token("");
+		return false;
+	}
+	token.assign(token.size(), '\0');
+	st.reader_active = true;
+	st.chat_notice.clear();
+	st.chat_hub.mark_all_sources("starting", "");
+	log_safe(LOG_INFO, "chat reader started");
+	return true;
 }
 
 bool plugin_save_config(std::string &err)
@@ -200,7 +322,8 @@ bool obs_module_load(void)
 
 	ServerOptions so;
 	so.preferred_port = st.cfg.server.port ? st.cfg.server.port : st.cfg.server.last_port;
-	st.server.reset(new HttpServer(st.hub, load_assets(), so));
+	plugin_apply_chat_filter();
+	st.server.reset(new HttpServer(st.hub, load_assets(), so, &st.chat_hub));
 	std::string err;
 	if (!st.server->start(err)) {
 		st.notice = "Overlay server could not start: " + err;
@@ -229,6 +352,11 @@ bool obs_module_load(void)
 
 	obs_frontend_add_event_callback(on_frontend_event, nullptr);
 	publish_state();
+	if (st.cfg.chat.start_with_obs && !st.read_only) {
+		std::string cerr;
+		if (!plugin_start_reader(cerr))
+			st.chat_notice = cerr; // never fatal: the plugin works without chat
+	}
 	blog(LOG_INFO, "[obs-multistream-chat] version %s loaded", PLUGIN_VERSION);
 	return true;
 }
@@ -243,6 +371,9 @@ void obs_module_unload(void)
 		g_state->timer->stop();
 	if (g_state->mgr)
 		g_state->mgr->shutdown();
+	g_state->reader.stop_blocking();
+	g_state->chat_hub.set_token("");
+	g_state->chat_hub.shutdown();
 	g_state->hub.shutdown();
 	if (g_state->server)
 		g_state->server->stop();

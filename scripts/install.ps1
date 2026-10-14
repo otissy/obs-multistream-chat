@@ -1,7 +1,7 @@
 <#
  Installs obs-multistream-chat into the per-plugin ProgramData layout OBS scans, only when YOU run it:
    C:\ProgramData\obs-studio\plugins\obs-multistream-chat\bin\64bit\obs-multistream-chat.dll
-   C:\ProgramData\obs-studio\plugins\obs-multistream-chat\data\{locale,overlay}
+   C:\ProgramData\obs-studio\plugins\obs-multistream-chat\data\{locale,overlay,reader}
  Refuses to run while OBS is open (it would hold the old DLL locked). Close OBS first.
    powershell -File scripts\install.ps1               # DLL from the central build folder
    powershell -File scripts\install.ps1 -Uninstall
@@ -37,5 +37,6 @@ $bin = Join-Path $Dest 'bin\64bit'
 New-Item -ItemType Directory -Force $bin | Out-Null
 Copy-Item $Dll (Join-Path $bin 'obs-multistream-chat.dll') -Force
 Copy-Item (Join-Path $Root 'data') (Join-Path $Dest 'data') -Recurse -Force
+Copy-Item (Join-Path $Root 'reader') (Join-Path $Dest 'data\reader') -Recurse -Force
 Write-Host "installed to $Dest"
 Write-Host 'Start OBS, then View > Docks > OBS Multistream Chat.'

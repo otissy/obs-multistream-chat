@@ -52,3 +52,52 @@ Serves the overlay to the OBS browser source.
 ## Reporting
 
 Please report problems privately to the repository owner (otissy) rather than in public issues.
+
+## The chat reader (since 0.2.0)
+
+**What the reader can do.** It runs as your Windows user, as `node reader\index.js`, started only by
+you (the dock button, or "Start with OBS" if you ticked it). It starts a headless Chrome with a fresh
+throw-away profile, opens the chat page of each channel you added (the URL is built from a fixed
+template per platform; a link you type must be on that platform's own host, or it is refused), and
+reads the chat list with a script that cannot click, type, scroll, navigate or send anything (a test
+searches the script for every such API). It posts what it read to `127.0.0.1` only.
+
+**What it cannot do.** It has no login, cookie, platform token or API key, and the plugin never stores
+one. It cannot open a page outside the platform's host list: if a page redirects elsewhere, the tab is
+closed and the source stops. Downloads, permission prompts, popups and dialogs are denied or closed.
+It is not a sandbox: a malicious page that exploits Chrome could act as that Chrome; use a Chrome that is
+kept up to date, and note that the reader opens only the channels you chose.
+
+**Why loopback only.** Everything the reader sends goes to the plugin's server on `127.0.0.1`
+(never `0.0.0.0`). The server keeps its existing protections (peer address re-checked, `Host` header must
+be `127.0.0.1:<port>` or `localhost:<port>`, a present `Origin` must match) and adds:
+
+- `POST /chat/ingest` needs `Authorization: Bearer <token>`. The token is 32 random bytes from the
+  operating system, created each time you press Start, handed to the reader **through its environment
+  only** (never the command line, so it is not visible in the process list), removed from the
+  environment given to Chrome, its launch buffers are wiped after the process starts, scrubbed from the reader's
+  log, and invalid as soon as the reader stops. Comparison is constant-time. A request without the
+  right token is answered `401` **before its body is read**.
+- Any `Origin` or `Sec-Fetch-Site` on an ingest request is refused: a web page, even with the token,
+  cannot post. Only `application/json` with a `Content-Length` is accepted (no chunked uploads); the
+  body cap is 256 KiB, 100 messages per batch.
+- The reader's Chrome listens on a random loopback DevTools port for the lifetime of the reader (that
+  is how it is driven). Another program running as you could connect to it; such a program could already
+  do far more as you. The Chrome has no login to steal.
+
+**Sanitising.** Everything from a page is untrusted text. The server reduces it to plain text: invalid
+UTF-8 is replaced, tag-like text (`<script>`, `<img ...>`) is removed, control characters,
+bidirectional overrides, zero-width and tag characters are dropped, runs of combining marks are
+capped, whitespace is collapsed and length is capped (500 characters of text, 40 of name). Colours
+must be `#rrggbb`. An emote is an image only if its URL is `https`, has no credentials or port, and its
+host is on the allow-list of **that platform's** own image hosts; otherwise it is shown as its name. The
+overlay page then sets everything with `textContent` (it contains no `innerHTML`), its Content-Security-
+Policy only allows images from `'self'` and those hosts, and a test feeds it hostile messages directly
+as a second layer.
+
+**Limits and duplicates.** Per source: 20 lines/s sustained, burst 60; duplicates are dropped by
+(platform, id); at most 16 sources; 4096 ids remembered; 500 lines kept for new overlays.
+
+**Process ownership.** The reader and its Chrome are placed in a Windows job object that kills them
+when OBS exits or crashes, and the plugin stops them when you press Stop. `chat-reader.log` holds states
+and errors only, never chat text and never the token.

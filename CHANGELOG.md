@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 (unreleased): merged chat without any platform API
+
+- New: **Chat tab** in the dock, **/chat.html** browser source and a Node **reader** (`reader/`) that
+  reads the public chat pages of Twitch, YouTube, Kick, TikTok (experimental) and X (experimental) in a
+  headless Chrome of its own, no API, OAuth, token or login.
+- New: selector packs (`reader/adapters/*.json`) so a layout change is a file edit, plus a health check
+  per source (*Reading*, *Quiet*, *Page layout changed or login needed*, *Needs login*, *Error*).
+- New: chat merge in the local server (`/chat/ingest`, `/chat/events`, `/chat/status.json`): token,
+  sanitising, emote host allow-list, dedupe, ordering window, blocklist, bot/command filter, rate limits.
+- New: icons for X (`x.svg`); config schema 3 (adds `chat`, migrated from 2 on first load).
+- Changed: the existing config tests that parse `"schema":2` text now use `"schema":3` (a schema-2 file
+  is `Migrated`, not `Ok`); a dedicated test covers the 2 -> 3 migration.
+- Not verified: any real platform page (not allowed while building); see README "Live checklist".
+
 ## Central build folder (unreleased)
 
 All compiled output (CMake trees, test executables, the DLL, generated import libs, the package zip) now goes to `D:\builds\obs-multistream-chat\` by default, overridable with `-BuildRoot` or `OMSC_BUILD_ROOT`, so one antivirus exclusion covers it. `scripts/build.ps1`, `install.ps1`, `package.ps1`, `make-import-lib.ps1`, the CMake presets and the tests were updated.

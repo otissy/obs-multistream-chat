@@ -42,3 +42,36 @@ Each x264-mode destination adds a CPU encode and no NVENC session, but costs CPU
 - RTMP(S) only: no SRT, WHIP or HLS ingest.
 - Keys are tied to your Windows user (DPAPI).
 - Not tested yet against a real OBS or real platforms (see CHANGELOG).
+
+## Chat reading (since 0.2.0)
+
+- **Not an API.** The chat reader reads what a platform's public chat *web page* shows, in a hidden
+  Chrome. That is the opposite of a supported integration: platforms may forbid automated reading in
+  their terms of service, may block automated browsers, add captchas, require a login, or change
+  their markup at any time. The author has not checked any platform's current terms. **You decide**
+  whether to use it, per channel. The plugin sends nothing to any platform, logs in nowhere, stores no
+  cookie, and only opens the chat pages of channels you add.
+- **Never verified against a real page by the author.** The adapters (`reader\adapters\*.json`) were
+  written from reading the open-source Social Stream Ninja sources (see NOTICE) and tested against
+  local fixture pages. Fixtures prove the code reads the structure it was told about; they cannot
+  prove a platform still renders that structure. Use the live checklist in the README.
+- **Per platform:** Twitch (popout chat), YouTube (`live_chat` popout of a *live* video) and Kick
+  (popout chat) are expected to work without an account. TikTok (live page) and X (broadcast page) are
+  **experimental**: TikTok may need a login or show a human check; X usually needs a login and then
+  shows *Needs login*. When the reader cannot read, the dock says so; it never pretends.
+- **Order is approximate across platforms.** Lines are ordered by when the reader saw them, inside a
+  300 ms window; pages that deliver in bursts can interleave slightly differently from what viewers
+  saw. History on the page when the reader attaches is skipped on purpose.
+- **Emotes** are shown only from each platform's own image host (Twitch, Kick, YouTube emoji, X emoji,
+  TikTok); anything else becomes its name as text. Third-party emotes (7TV, BTTV, FFZ) are not read:
+  the Chrome has no extensions.
+- **No viewer counts, no sending, no moderation, no usernames or avatars:** only the display name shown
+  on the page, the line, and a platform icon.
+- **Needs** Node.js 22+ and Google Chrome (or Edge as a last resort). An unsigned compiled helper was
+  avoided on purpose (antivirus), so this is plain `node` running JavaScript you can read.
+- **Cost:** one headless Chrome (a few hundred MB while open) plus one tab per source, each loaded
+  once. If you stream a heavy game, start the reader only when you need chat.
+- **A reload happens only after a failed load or a crash**, with backoff (5 s, 10 s, 20 s, 40 s) and
+  at most 4 tries per source. A page that loaded but shows no chat is reported, not reloaded.
+- **Restart OBS or the browser source** after restarting the plugin: the page numbers its lines per
+  plugin run.

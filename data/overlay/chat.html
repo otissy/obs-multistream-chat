@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OBS Multistream Chat: merged chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  OBS Browser Source page: one merged chat from Twitch, YouTube, Kick, TikTok and X, each line
+  with a small icon of the platform it came from. Reads only /chat/events (SSE) from the plugin's
+  local server. Everything shown is set with textContent; there is no innerHTML anywhere.
+  Query (all optional):
+    theme=dark|light|transparent   font=10..72 (px)   size=10..96 (icon px)   max=1..100 (lines kept)
+    fade=0..600 (seconds until a line fades away, 0 = never)   colors=platform|hash|off
+    emotes=1|0   align=bottom|top   backlog=0..200 (lines replayed when the page opens, default = max)
+-->
+<style>
+  :root {
+    --font: 20px;
+    --icon: 22px;
+    --fg: #f2f2f5;
+    --dim: #a9a9b8;
+    --card: rgba(18, 18, 24, 0.82);
+    --twitch: #9146ff; --youtube: #ff4e45; --kick: #53fc18; --tiktok: #25f4ee; --x: #f2f2f5;
+  }
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; height: 100%; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--fg); font-size: var(--font); line-height: 1.35; }
+  body[data-theme="light"] { --fg: #15151c; --dim: #5a5a6a; --card: rgba(255, 255, 255, 0.92); --x: #15151c; --tiktok: #fe2c55; --kick: #1fa800; --youtube: #d4161c; }
+  body[data-theme="transparent"] { --card: transparent; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); }
+  #chat { position: fixed; inset: 0; box-sizing: border-box; padding: 8px 12px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+  body[data-align="top"] #chat { justify-content: flex-start; }
+  body[data-theme="dark"] #chat, body[data-theme="light"] #chat { background: var(--card); }
+  .msg { display: block; padding: 2px 0; overflow-wrap: anywhere; word-break: break-word; max-height: 12em; overflow: hidden; animation: rise .22s ease-out; transition: opacity 1s ease; }
+  .msg.fading { opacity: 0; }
+  .ico { display: inline-block; width: var(--icon); height: var(--icon); vertical-align: -0.28em; margin-right: .4em; background-color: var(--brand, var(--dim)); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
+  .msg[data-platform="twitch"] { --brand: var(--twitch); }
+  .msg[data-platform="youtube"] { --brand: var(--youtube); }
+  .msg[data-platform="kick"] { --brand: var(--kick); }
+  .msg[data-platform="tiktok"] { --brand: var(--tiktok); }
+  .msg[data-platform="x"] { --brand: var(--x); }
+  .name { font-weight: 700; }
+  .sep { color: var(--dim); margin-right: .3em; }
+  .emote { height: 1.5em; width: auto; vertical-align: middle; margin: 0 1px; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .msg { animation: none; transition: none; } }
+</style>
+</head>
+<body data-theme="dark" data-align="bottom">
+<div id="chat" aria-live="polite"></div>
+<script src="/chat.js"></script>
+</body>
+</html>

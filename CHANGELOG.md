@@ -25,6 +25,6 @@ First complete draft.
 - Tests: core C++ (L2 75, L3 12 incl. real sockets, L4 against the real server), overlay in headless
   Chrome (L1 8, L2 9, L3 3, L4 5 with true-size screenshots), glue static/compile checks, packaging.
 
-Known gaps: not loaded into a real OBS; not streamed to any real platform; the plugin DLL is not
-linked on the development machine yet (import libraries pending); no overlay test for hostile handles
+Known gaps: not loaded into a real OBS; not streamed to any real platform; the plugin DLL links and packages but has
+not been loaded into OBS; no overlay test for hostile handles
 (see PROJECT.md).

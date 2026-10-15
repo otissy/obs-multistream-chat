@@ -30,6 +30,7 @@ private:
 
 	QLabel *banner_;
 	QLabel *notice_;
+	QLabel *double_;
 	QTableWidget *table_;
 	QLabel *url_label_;
 	QPushButton *edit_btn_;

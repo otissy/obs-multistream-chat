@@ -29,7 +29,7 @@ bool make_plan(const Destination &d, const EnvSnapshot &env, LaunchPlan &plan, s
 			err = "a destination on another canvas needs its own video encoder";
 			return false;
 		}
-		if (env.main_audio_tracks.empty()) {
+		if (env.main_audio_tracks.empty() || env.main_audio_tracks[0] <= 0) {
 			err = "the main stream has no usable video/audio encoder to share";
 			return false;
 		}

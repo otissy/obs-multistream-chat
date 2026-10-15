@@ -27,7 +27,7 @@ target_link_libraries(obs-multistream-chat PRIVATE oms_core)
 if(OMS_HAVE_IMPORT_LIBS)
   target_link_libraries(obs-multistream-chat PRIVATE
     "${OMS_IMPORT_LIB_DIR}/obs.lib" "${OMS_IMPORT_LIB_DIR}/obs-frontend-api.lib"
-    "${QT_SDK_DIR}/lib/Qt6Core.lib" "${QT_SDK_DIR}/lib/Qt6Gui.lib" "${QT_SDK_DIR}/lib/Qt6Widgets.lib")
+    version.lib "${QT_SDK_DIR}/lib/Qt6Core.lib" "${QT_SDK_DIR}/lib/Qt6Gui.lib" "${QT_SDK_DIR}/lib/Qt6Widgets.lib")
   endif()
 target_compile_definitions(obs-multistream-chat PRIVATE PLUGIN_VERSION="${PROJECT_VERSION}" QT_NO_DEBUG QT_NO_KEYWORDS)
 set_target_properties(obs-multistream-chat PROPERTIES PREFIX "" AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)

@@ -1,97 +1,91 @@
-// OBS-side owner of one rtmp output per destination. All methods run on the UI thread except
-// the libobs signal callbacks, which only push into the event queue (see output_manager.cpp).
+// libobs side of the output fleet: implements OutputBackend (one obs_output per destination, all
+// state per destination, see src/core/fleet.hpp) and owns the Fleet. All methods run on the UI
+// thread except the libobs signal callbacks, which only push into the fleet's event queue.
 #pragma once
-#include "config.hpp"
-#include "health.hpp"
-#include "state_feed.hpp"
-#include "stats.hpp"
+#include "fleet.hpp"
+#include "plan.hpp"
 
 #include <obs.h>
 
 #include <deque>
-#include <functional>
+#include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
 namespace oms {
 
-struct RuntimeView {
-	Destination dest; // key and key_token are blanked in views
-	State state = State::Idle;
-	double bitrate_kbps = 0;
-	double dropped_pct = 0;
-	int64_t uptime_ms = 0;
-	int attempts = 0;
-	int64_t retry_in_ms = -1;
-	std::string detail;     // degraded reason
-	std::string last_error; // already redacted
-	bool can_start = false;
-	bool can_stop = false;
+struct EncoderChoice {
+	std::string id;
+	std::string label;
+	std::string codec; // h264 / hevc / av1
+	bool hardware = false;
 };
 
-class OutputManager {
+struct AitumInfo {
+	bool installed = false;
+	std::string version; // "" when unknown
+	bool version_inspected = false;
+};
+
+class OutputManager : public OutputBackend {
 public:
 	OutputManager(Config &cfg, const SecretProtector &protector, const Clock &clock);
 	~OutputManager();
 
-	// Destinations list changed in the config (add / edit / remove / enable).
-	void sync_with_config();
-
+	void sync_with_config() { fleet_.sync_with_config(); }
 	void on_main_stream_started();
-	void on_main_stream_stopping();
+	void on_main_stream_stopping() { fleet_.on_main_stream_stopping(); }
 	void on_main_stream_stopped();
-	bool main_live() const { return main_live_; }
-
-	void start_destination(const std::string &id);
-	void stop_destination(const std::string &id);
-	void start_all();
-	void stop_all();
-	// Hard stop for module unload / OBS exit: no waiting for stop signals.
-	void shutdown();
-
-	// Every 500 ms from the UI thread.
+	bool main_live() const { return fleet_.main_live(); }
+	void start_destination(const std::string &id) { fleet_.start_destination(id); }
+	void stop_destination(const std::string &id) { fleet_.stop_destination(id); }
+	void start_all() { fleet_.start_all(); }
+	void stop_all() { fleet_.stop_all(); }
+	void shutdown() { fleet_.shutdown(); }
 	void tick();
-
-	std::vector<RuntimeView> views() const;
-	std::vector<OverlayEntry> overlay_entries() const;
-	// "" when nothing is wrong, else a one-line explanation of the bottleneck.
+	std::vector<RuntimeView> views() const { return fleet_.views(); }
+	std::vector<OverlayEntry> overlay_entries() const { return fleet_.overlay_entries(); }
 	std::string bottleneck_banner() const { return banner_; }
+	Fleet &fleet() { return fleet_; }
+	const std::vector<std::string> &double_stream_warnings() const { return double_warnings_; }
+
+	// Pickers for the dock.
+	std::vector<std::string> canvas_names() const; // non-main canvases currently registered
+	std::vector<EncoderChoice> video_encoders() const;
+	std::string track_name(int track) const; // "" when the user did not name it
+	AitumInfo aitum_info() const;
+
+	// OutputBackend
+	bool launch(const std::string &id, uint64_t epoch, const Destination &eff, const std::string &key, bool &depends_on_main,
+		    double &target_kbps, std::string &err) override;
+	void request_stop(const std::string &id) override;
+	bool sample(const std::string &id, Sample &out) override;
+	void release(const std::string &id, bool force) override;
+	bool has_output(const std::string &id) const override;
 
 private:
-	struct Ctx; // heap object handed to libobs signals; outlives the output
-	struct Runtime;
-
-	enum class EvKind { Started, Stopped };
-	struct Event {
-		std::string id;
-		uint64_t epoch;
-		EvKind kind;
-		int code;
-		std::string error;
+	struct Ctx;
+	struct Attempt {
+		obs_output_t *out = nullptr;
+		obs_service_t *svc = nullptr;
+		Ctx *ctx = nullptr;
+		obs_canvas_t *canvas = nullptr; // strong ref: the encoder's video_t belongs to it
 	};
 
-	Runtime *find(const std::string &id) const;
-	void apply(Runtime &r, const Command &c);
-	bool launch(Runtime &r);
-	void release_attempt(Runtime &r, bool force);
-	void fail_launch(Runtime &r, const std::string &why);
-	void drain_events();
-	void sample(Runtime &r, int64_t now);
+	EnvSnapshot snapshot() const;
+	void drop(Attempt &a, bool disconnect);
 	void update_banner(int64_t now);
 	static void sig_start(void *data, calldata_t *cd);
 	static void sig_stop(void *data, calldata_t *cd);
-	void push_event(const Event &e);
 
 	Config &cfg_;
-	const SecretProtector &protector_;
 	const Clock &clock_;
-	std::vector<std::unique_ptr<Runtime>> runtimes_;
-	std::mutex ev_m_;
-	std::vector<Event> events_;
-	bool main_live_ = false;
+	Fleet fleet_;
+	std::map<std::string, Attempt> attempts_;
 	std::string banner_;
+	std::vector<std::string> double_warnings_;
+	int64_t last_double_check_ = -1000000;
 	struct MainSample {
 		int64_t t;
 		uint64_t frames;
@@ -101,7 +95,6 @@ private:
 		uint32_t total;
 	};
 	std::deque<MainSample> main_samples_;
-	unsigned rng_state_;
 };
 
 } // namespace oms

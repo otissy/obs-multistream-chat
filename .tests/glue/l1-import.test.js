@@ -41,7 +41,8 @@ test('plugin never logs or formats key fields', () => {
 
 test('output manager never frees what libobs owns and never leaves rtmp reconnect on', () => {
   const src = fs.readFileSync(path.join(OBS, 'output_manager.cpp'), 'utf8');
-  assert.match(src, /obs_output_set_reconnect_settings\(r\.out, 0, 0\)/);
-  assert.match(src, /secure_zero\(key\)/);
+  const fleet = fs.readFileSync(path.join(ROOT, 'src', 'core', 'fleet.cpp'), 'utf8'); // 0.3.0: the orchestration moved to the core
+  assert.match(src, /obs_output_set_reconnect_settings\(a\.out, 0, 0\)/);
+  assert.match(fleet, /secure_zero\(key\)/);
   assert.ok(!/obs_output_release\(main\);[\s\S]{0,80}obs_output_get_video_encoder\(main\)/.test(src), 'encoders read after releasing main');
 });

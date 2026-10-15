@@ -11,7 +11,9 @@
 #include <obs-module.h>
 #include <util/base.h>
 
+#include <QAction>
 #include <QApplication>
+#include <QDockWidget>
 #include <QTimer>
 #include <QWidget>
 
@@ -39,6 +41,10 @@ namespace {
 
 PluginState *g_state = nullptr;
 MultistreamDock *g_dock = nullptr;
+bool g_dock_registered = false;     // obs_frontend_add_dock_by_id returned true
+bool g_exiting = false;
+bool g_dock_retry_allowed = true;   // one more try on OBS_FRONTEND_EVENT_FINISHED_LOADING
+QDockWidget *g_fallback = nullptr;  // our own floating window when OBS refused the dock
 
 void log_safe(int level, const std::string &msg)
 {
@@ -135,6 +141,76 @@ void publish_state()
 		st.hub.publish(st.mgr->overlay_entries(), st.mgr->main_live());
 }
 
+// ---- the dock ------------------------------------------------------------------------------
+// WHY THIS IS NOT IN obs_module_load: the plugins whose docks do show up here (obs-track-monitor,
+// casterview) register in obs_module_post_load ("Called when all modules have finished loading",
+// obs-module.h) and log "dock registered" after the module list; 0.1.0 to 0.3.0 registered from
+// obs_module_load and the return value was ignored, so a refusal was silent and no dock appeared.
+// Every outcome is logged now, and a failure is retried once on FINISHED_LOADING.
+QWidget *main_window()
+{
+	return static_cast<QWidget *>(obs_frontend_get_main_window());
+}
+
+void create_dock(const char *when)
+{
+	if (g_exiting || g_dock_registered || g_fallback)
+		return;
+	QWidget *mw = main_window();
+	if (!mw) {
+		log_safe(LOG_WARNING, std::string("frontend main window not ready (") + when + "), will retry when OBS finishes loading");
+		return;
+	}
+	if (!g_dock)
+		g_dock = new MultistreamDock(mw);
+	bool ok = obs_frontend_add_dock_by_id("obs-multistream-chat", obs_module_text("Dock.Title"), g_dock);
+	if (ok) {
+		g_dock_registered = true;
+		log_safe(LOG_INFO, std::string("dock registered (") + when + "): View > Docks > OBS Multistream Chat");
+	} else {
+		log_safe(LOG_WARNING, std::string("dock registration returned false (") + when + "): " +
+					      (g_dock_retry_allowed ? "will retry once when OBS finishes loading; " : "") +
+					      "Tools > OBS Multistream Chat still opens the panel");
+	}
+}
+
+// Tools > OBS Multistream Chat: always works, even when OBS refused the dock.
+void show_panel()
+{
+	if (!g_dock && !g_exiting)
+		create_dock("tools menu");
+	if (!g_dock) {
+		log_safe(LOG_ERROR, "cannot show the panel: the frontend main window does not exist");
+		return;
+	}
+	QDockWidget *host = qobject_cast<QDockWidget *>(g_dock->parentWidget());
+	if (!host) {
+		if (!g_fallback) {
+			g_fallback = new QDockWidget(QString::fromUtf8(obs_module_text("Dock.Title")), main_window());
+			g_fallback->setObjectName("obs-multistream-chat-fallback");
+			g_fallback->setWidget(g_dock);
+			g_fallback->setFloating(true);
+			g_fallback->resize(760, 520);
+			log_safe(LOG_INFO, "panel opened in its own floating window (the OBS dock was not registered)");
+		}
+		host = g_fallback;
+	}
+	host->show();
+	host->raise();
+	host->activateWindow();
+}
+
+void install_tools_entry()
+{
+	void *a = obs_frontend_add_tools_menu_qaction(obs_module_text("Dock.Title"));
+	if (!a) {
+		log_safe(LOG_WARNING, "could not add Tools > OBS Multistream Chat");
+		return;
+	}
+	QObject::connect(static_cast<QAction *>(a), &QAction::triggered, []() { show_panel(); });
+	log_safe(LOG_INFO, "Tools > OBS Multistream Chat added");
+}
+
 void on_tick()
 {
 	if (!g_state || !g_state->mgr)
@@ -159,6 +235,8 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 			g_state->timer->stop(); // the dock (and the timer parented to it) is about to be destroyed
 		g_state->timer = nullptr;
 		g_dock = nullptr;
+		g_fallback = nullptr;
+		g_exiting = true;
 		g_state->mgr->shutdown();
 		g_state->reader.stop_blocking();
 		g_state->reader_active = false;
@@ -166,6 +244,12 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 		g_state->chat_hub.shutdown();
 		if (g_state->server)
 			g_state->server->stop();
+		break;
+	case OBS_FRONTEND_EVENT_FINISHED_LOADING:
+		if (!g_dock_registered && !g_fallback && g_dock_retry_allowed) {
+			g_dock_retry_allowed = false;
+			create_dock("finished loading");
+		}
 		break;
 	default: break;
 	}
@@ -343,10 +427,8 @@ bool obs_module_load(void)
 			log_safe(LOG_WARNING, "could not save config: " + err);
 	}
 
-	g_dock = new MultistreamDock(static_cast<QWidget *>(obs_frontend_get_main_window()));
-	obs_frontend_add_dock_by_id("obs-multistream-chat", obs_module_text("Dock.Title"), g_dock);
-
-	st.timer = new QTimer(g_dock);
+	// The dock itself is created in obs_module_post_load (see create_dock). The tick timer does not depend on it.
+	st.timer = new QTimer(qApp);
 	QObject::connect(st.timer, &QTimer::timeout, []() { on_tick(); });
 	st.timer->start(500);
 
@@ -359,6 +441,17 @@ bool obs_module_load(void)
 	}
 	blog(LOG_INFO, "[obs-multistream-chat] version %s loaded", PLUGIN_VERSION);
 	return true;
+}
+
+void obs_module_post_load(void)
+{
+	using namespace oms;
+	if (!g_state)
+		return;
+	create_dock("post load");
+	install_tools_entry();
+	if (g_dock)
+		g_dock->refresh();
 }
 
 void obs_module_unload(void)
@@ -377,7 +470,8 @@ void obs_module_unload(void)
 	g_state->hub.shutdown();
 	if (g_state->server)
 		g_state->server->stop();
-	g_dock = nullptr; // the frontend owns and destroys the dock widget
+	g_dock = nullptr; // the frontend owns and destroys the dock widget (or our fallback window, a child of the main window)
+	delete g_state->timer;
 	g_state->timer = nullptr;
 	g_state->mgr.reset();
 	g_state->server.reset();

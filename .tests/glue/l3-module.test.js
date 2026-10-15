@@ -79,3 +79,44 @@ test('no stream key or Aitum server ever reaches a log call or a message string'
   }
   assert.ok(!/log_line\([^;]*(\bkey\b|\.server)/.test(mgr.replace(/"[^"]*"/g, '""')));
 });
+
+// ---- 0.3.1: the dock must always be reachable -------------------------------------------------
+const main = strip(read('src', 'obs', 'plugin-main.cpp'));
+
+test('the dock is registered in obs_module_post_load, never from obs_module_load, and the result is checked', () => {
+  const load = main.slice(main.indexOf('bool obs_module_load(void)'), main.indexOf('void obs_module_post_load(void)'));
+  assert.ok(!/add_dock_by_id|MultistreamDock\(/.test(load), 'obs_module_load must not register the dock');
+  const post = main.slice(main.indexOf('void obs_module_post_load(void)'), main.indexOf('void obs_module_unload(void)'));
+  assert.match(post, /create_dock\("post load"\)/);
+  assert.match(post, /install_tools_entry\(\)/);
+  assert.match(main, /bool ok = obs_frontend_add_dock_by_id\(/);
+  assert.equal((main.match(/obs_frontend_add_dock_by_id\(/g) || []).length, 1);
+});
+
+test('every dock outcome is logged and one retry happens on FINISHED_LOADING', () => {
+  const raw = read('src', 'obs', 'plugin-main.cpp');
+  for (const msg of ['dock registered', 'dock registration returned false', 'frontend main window not ready']) assert.ok(raw.includes(msg), msg);
+  assert.match(main, /case OBS_FRONTEND_EVENT_FINISHED_LOADING:[\s\S]{0,200}g_dock_retry_allowed = false;[\s\S]{0,60}create_dock\("finished loading"\)/);
+});
+
+test('Tools > OBS Multistream Chat always opens the panel, in a floating window if OBS refused the dock', t => {
+  assert.match(main, /obs_frontend_add_tools_menu_qaction\(/);
+  assert.match(main, /QAction::triggered, \[\]\(\) \{ show_panel\(\); \}/);
+  assert.match(main, /g_fallback = new QDockWidget\(/);
+  assert.match(main, /g_fallback->setFloating\(true\)/);
+  const dir = sdk('.obs-sdk');
+  if (dir) assert.ok(walk(dir, /\.h$/).map(p => fs.readFileSync(p, 'utf8')).join('\n').includes('obs_frontend_add_tools_menu_qaction('));
+});
+
+test('the tick timer does not depend on the dock existing', () => {
+  assert.match(main, /st\.timer = new QTimer\(qApp\)/);
+  assert.ok(!/new QTimer\(g_dock\)/.test(main));
+});
+
+test('the dock shows a big start/stop, a summary line and the chat reader state', () => {
+  const dock = strip(read('src', 'obs', 'dock.cpp'));
+  assert.match(dock, /big_btn_->setMinimumHeight\(40\)/);
+  assert.match(dock, /update_glance\(views\)/);
+  assert.match(dock, /plugin_reader_running\(\)/);
+  for (const col of ['Col.Status', 'Col.Bitrate', 'Col.Dropped', 'Col.Uptime']) assert.ok(dock.includes(col), col);
+});

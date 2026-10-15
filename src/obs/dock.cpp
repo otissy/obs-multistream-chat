@@ -565,6 +565,15 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	double_->hide();
 	root->addWidget(double_);
 
+	// at-a-glance strip for use DURING a stream: one big button and one summary line
+	big_btn_ = new QPushButton();
+	big_btn_->setMinimumHeight(40);
+	big_btn_->setStyleSheet("font-size:15px; font-weight:bold;");
+	glance_ = new QLabel();
+	glance_->setWordWrap(true);
+	root->addWidget(big_btn_);
+	root->addWidget(glance_);
+
 	table_ = new QTableWidget(0, 9);
 	QStringList heads;
 	heads << T("Col.On") << T("Col.Status") << T("Col.Name") << T("Col.Handle") << T("Col.Source") << T("Col.Bitrate") << T("Col.Dropped")
@@ -583,14 +592,10 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	QPushButton *add = new QPushButton(T("Btn.Add"));
 	edit_btn_ = new QPushButton(T("Btn.Edit"));
 	remove_btn_ = new QPushButton(T("Btn.Remove"));
-	QPushButton *start_all = new QPushButton(T("Btn.StartAll"));
-	QPushButton *stop_all = new QPushButton(T("Btn.StopAll"));
 	row1->addWidget(add);
 	row1->addWidget(edit_btn_);
 	row1->addWidget(remove_btn_);
 	row1->addStretch(1);
-	row1->addWidget(start_all);
-	row1->addWidget(stop_all);
 	root->addLayout(row1);
 
 	QHBoxLayout *row2 = new QHBoxLayout();
@@ -605,8 +610,12 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	QObject::connect(add, &QPushButton::clicked, [this]() { add_destination(); });
 	QObject::connect(edit_btn_, &QPushButton::clicked, [this]() { edit_selected(); });
 	QObject::connect(remove_btn_, &QPushButton::clicked, [this]() { remove_selected(); });
-	QObject::connect(start_all, &QPushButton::clicked, []() { plugin().mgr->start_all(); });
-	QObject::connect(stop_all, &QPushButton::clicked, []() { plugin().mgr->stop_all(); });
+	QObject::connect(big_btn_, &QPushButton::clicked, [this]() {
+		if (big_btn_->property("act").toString() == "stop")
+			plugin().mgr->stop_all();
+		else
+			plugin().mgr->start_all();
+	});
 	QObject::connect(copy, &QPushButton::clicked, [this]() { copy_overlay_url(); });
 	QObject::connect(table_, &QTableWidget::itemSelectionChanged, [this]() {
 		bool any = !selected_id().empty();
@@ -739,6 +748,51 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 	table_->resizeColumnsToContents();
 }
 
+// Big start/stop button and the one-line summary: destinations live / total, worst state, chat reader.
+void MultistreamDock::update_glance(const std::vector<RuntimeView> &views)
+{
+	PluginState &st = plugin();
+	int live = 0, trouble = 0, enabled = 0;
+	bool any_active = false, any_startable = false;
+	double kbps = 0;
+	for (size_t i = 0; i < views.size(); ++i) {
+		const RuntimeView &v = views[i];
+		if (v.dest.enabled)
+			++enabled;
+		if (v.state == State::Live) {
+			++live;
+			kbps += v.bitrate_kbps;
+		}
+		if (v.state == State::Degraded || v.state == State::Reconnecting || v.state == State::Failed)
+			++trouble;
+		any_active = any_active || v.can_stop;
+		any_startable = any_startable || v.can_start;
+	}
+	big_btn_->setProperty("act", any_active ? "stop" : "start");
+	big_btn_->setText(any_active ? T("Btn.StopAllBig") : T("Btn.StartAllBig"));
+	big_btn_->setEnabled(any_active || any_startable);
+	big_btn_->setStyleSheet(QString("font-size:15px; font-weight:bold; color:white; background:%1;").arg(any_active ? "#9b2c2c" : "#2f7d4f"));
+
+	QString chat;
+	if (!plugin_reader_running()) {
+		chat = T("Glance.ChatOff");
+	} else {
+		std::vector<SourceStatus> src = st.chat_hub.sources();
+		int reading = 0;
+		for (size_t i = 0; i < src.size(); ++i)
+			reading += src[i].state == "reading" ? 1 : 0;
+		chat = T("Glance.ChatOn").arg(reading).arg(static_cast<int>(src.size()));
+	}
+	QString line = T("Glance.Streams").arg(live).arg(enabled);
+	if (live > 0)
+		line += QString(" | %1 kbps").arg(static_cast<int>(kbps));
+	if (trouble > 0)
+		line += " | " + T("Glance.Trouble").arg(trouble);
+	line += " | " + chat;
+	glance_->setText(line);
+	glance_->setStyleSheet(trouble > 0 ? "color:#ffb020;" : live > 0 ? "color:#3ddc84;" : "color:#8a8a96;");
+}
+
 void MultistreamDock::refresh()
 {
 	PluginState &st = plugin();
@@ -759,6 +813,8 @@ void MultistreamDock::refresh()
 	double_->setText(dtext);
 	std::string url = plugin_overlay_url();
 	url_label_->setText(url.empty() ? T("Msg.NoServer") : qs(url));
+
+	update_glance(views);
 
 	std::vector<std::string> ids;
 	for (size_t i = 0; i < views.size(); ++i)

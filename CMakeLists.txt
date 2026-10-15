@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(obs-multistream-chat VERSION 0.3.0 LANGUAGES CXX)
+project(obs-multistream-chat VERSION 0.3.1 LANGUAGES CXX)
 if(WIN32)
   enable_language(RC)
 endif()

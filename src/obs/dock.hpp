@@ -13,6 +13,7 @@ class QTableWidget;
 namespace oms {
 
 class ChatPanel;
+struct RuntimeView;
 
 class MultistreamDock : public QWidget {
 public:
@@ -27,12 +28,15 @@ private:
 	void copy_overlay_url();
 	std::string selected_id() const;
 	void save_and_sync();
+	void update_glance(const std::vector<RuntimeView> &views);
 
 	QLabel *banner_;
 	QLabel *notice_;
 	QLabel *double_;
 	QTableWidget *table_;
 	QLabel *url_label_;
+	QPushButton *big_btn_;
+	QLabel *glance_;
 	QPushButton *edit_btn_;
 	QPushButton *remove_btn_;
 	std::vector<std::string> row_ids_;

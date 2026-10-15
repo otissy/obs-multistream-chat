@@ -282,7 +282,7 @@ TEST(L2, destination_rejects_bad_fields)
 TEST(L2, destination_encoder_and_bitrate_rules)
 {
 	Destination d = good_dest();
-	d.encoder = "x264";
+	d.encoder = "own";
 	d.bitrate_kbps = 0;
 	CHECK(!validate_destination(d).empty());
 	d.bitrate_kbps = 2500;

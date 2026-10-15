@@ -9,7 +9,7 @@
 
 namespace oms {
 
-constexpr int kConfigSchema = 3;
+constexpr int kConfigSchema = 4;
 constexpr int kMaxChatSources = 10;
 constexpr size_t kMaxChatListEntries = 200;
 

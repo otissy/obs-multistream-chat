@@ -64,7 +64,7 @@ TEST(L2, config_roundtrip_with_sealed_keys)
 	Destination y = dest("d2", "YouTube");
 	y.platform = "youtube";
 	y.url = "rtmp://a.rtmp.youtube.com/live2";
-	y.encoder = "x264";
+	y.encoder = "own";
 	y.bitrate_kbps = 3500;
 	y.enabled = false;
 	y.auto_start = false;
@@ -79,7 +79,7 @@ TEST(L2, config_roundtrip_with_sealed_keys)
 	CHECK(r.status == LoadStatus::Ok);
 	CHECK_EQ(r.config.destinations.size(), size_t(2));
 	CHECK_EQ(r.config.server.last_port, 51734);
-	CHECK_EQ(r.config.destinations[1].encoder, std::string("x264"));
+	CHECK_EQ(r.config.destinations[1].encoder, std::string("own"));
 	CHECK_EQ(r.config.destinations[1].bitrate_kbps, 3500);
 	CHECK_FALSE(r.config.destinations[1].enabled);
 	CHECK_FALSE(r.config.destinations[1].auto_start);
@@ -114,7 +114,7 @@ TEST(L2, config_migrates_schema1_and_seals_plaintext)
 	const Destination &d = r.config.destinations[0];
 	CHECK_EQ(d.name, std::string("Main"));
 	CHECK_EQ(d.handle, std::string("otiyyy"));
-	CHECK_EQ(d.encoder, std::string("x264"));
+	CHECK_EQ(d.encoder, std::string("own"));
 	CHECK_EQ(d.bitrate_kbps, 2500);
 	CHECK(d.key.empty());
 	CHECK(!d.key_token.empty());
@@ -128,7 +128,7 @@ TEST(L2, config_migrates_schema1_and_seals_plaintext)
 TEST(L2, config_v2_plaintext_key_is_sealed_on_load)
 {
 	InsecureTestProtector p;
-	std::string text = "{\"schema\":3,\"destinations\":[{\"id\":\"d1\",\"name\":\"T\",\"platform\":\"twitch\","
+	std::string text = "{\"schema\":4,\"destinations\":[{\"id\":\"d1\",\"name\":\"T\",\"platform\":\"twitch\","
 			   "\"url\":\"rtmp://live.twitch.tv/app\",\"key\":\"" + kFakeKey + "\"}]}";
 	LoadResult r = parse_config(text, p);
 	CHECK(r.status == LoadStatus::Ok);
@@ -143,7 +143,7 @@ TEST(L2, config_malformed_inputs_never_crash)
 {
 	InsecureTestProtector p;
 	const char *bad[] = {"", "{", "[]", "null", "42", "{\"schema\":\"two\"}", "{\"schema\":0}",
-			     "{\"schema\":-5}", "\xff\xfe garbage", "{\"schema\":3,\"destinations\":{}}"};
+			     "{\"schema\":-5}", "\xff\xfe garbage", "{\"schema\":4,\"destinations\":{}}"};
 	for (size_t i = 0; i < sizeof bad / sizeof bad[0]; ++i) {
 		LoadResult r = parse_config(bad[i], p);
 		bool ok_or_defaulted = r.status == LoadStatus::Malformed || r.status == LoadStatus::Ok;
@@ -152,14 +152,14 @@ TEST(L2, config_malformed_inputs_never_crash)
 		CHECK_FALSE(r.read_only);
 	}
 	CHECK(parse_config("{", p).status == LoadStatus::Malformed);
-	CHECK(parse_config("{\"schema\":3,\"destinations\":{}}", p).status == LoadStatus::Ok);
-	CHECK(!parse_config("{\"schema\":3,\"destinations\":{}}", p).warnings.empty());
+	CHECK(parse_config("{\"schema\":4,\"destinations\":{}}", p).status == LoadStatus::Ok);
+	CHECK(!parse_config("{\"schema\":4,\"destinations\":{}}", p).warnings.empty());
 }
 
 TEST(L2, config_bad_destinations_are_skipped_not_fatal)
 {
 	InsecureTestProtector p;
-	std::string text = "{\"schema\":3,\"destinations\":["
+	std::string text = "{\"schema\":4,\"destinations\":["
 			   "{\"id\":\"d1\",\"name\":\"ok\",\"platform\":\"twitch\",\"url\":\"rtmp://h/app\"},"
 			   "{\"id\":\"d2\",\"name\":\"badurl\",\"platform\":\"twitch\",\"url\":\"http://h/app\"},"
 			   "42,"
@@ -174,7 +174,7 @@ TEST(L2, config_bad_destinations_are_skipped_not_fatal)
 TEST(L2, config_caps_destination_count)
 {
 	InsecureTestProtector p;
-	std::string text = "{\"schema\":3,\"destinations\":[";
+	std::string text = "{\"schema\":4,\"destinations\":[";
 	for (int i = 0; i < 20; ++i) {
 		if (i)
 			text += ",";
@@ -198,11 +198,11 @@ TEST(L2, config_newer_schema_is_read_only)
 TEST(L2, config_port_values_are_range_checked)
 {
 	InsecureTestProtector p;
-	LoadResult r = parse_config("{\"schema\":3,\"server\":{\"port\":70000,\"last_port\":-1}}", p);
+	LoadResult r = parse_config("{\"schema\":4,\"server\":{\"port\":70000,\"last_port\":-1}}", p);
 	CHECK_EQ(r.config.server.port, 0);
 	CHECK_EQ(r.config.server.last_port, 0);
 	CHECK(!r.warnings.empty());
-	r = parse_config("{\"schema\":3,\"server\":{\"port\":51000,\"last_port\":51001}}", p);
+	r = parse_config("{\"schema\":4,\"server\":{\"port\":51000,\"last_port\":51001}}", p);
 	CHECK_EQ(r.config.server.port, 51000);
 	CHECK_EQ(r.config.server.last_port, 51001);
 }

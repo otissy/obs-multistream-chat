@@ -202,7 +202,53 @@ void read_chat(const json::Value &root, LoadResult &r)
 	}
 }
 
-void parse_v2(const json::Value &root, const SecretProtector &p, LoadResult &r)
+void read_extras(const json::Value &o, Destination &d, size_t index, LoadResult &r)
+{
+	const json::Value *arr = o.find("venc_extra");
+	if (!arr)
+		return;
+	if (!arr->is_array()) {
+		r.warnings.push_back("destination " + label_of(d, index) + ": venc_extra is not a list: ignored");
+		return;
+	}
+	for (size_t i = 0; i < arr->size() && d.venc_extra.size() < kMaxExtraSettings; ++i) {
+		const json::Value &e = arr->at(i);
+		if (!e.is_object())
+			continue;
+		ExtraSetting x;
+		x.key = str_of(e, "key");
+		std::string t = str_of(e, "type");
+		x.type = t.size() == 1 ? t[0] : '?';
+		x.value = str_of(e, "value");
+		d.venc_extra.push_back(x); // validated (and the destination skipped) by validate_destination
+	}
+}
+
+void read_v4_fields(const json::Value &o, Destination &d, size_t index, LoadResult &r)
+{
+	d.canvas = str_of(o, "canvas");
+	d.video_encoder = str_of(o, "video_encoder", "obs_x264");
+	d.keyint_sec = int_of(o, "keyint_sec", 2, 0, 10);
+	d.preset = str_of(o, "preset", "veryfast");
+	d.profile = str_of(o, "profile");
+	d.rate_control = str_of(o, "rate_control", "CBR");
+	d.out_width = int_of(o, "out_width", 0, 0, 8192);
+	d.out_height = int_of(o, "out_height", 0, 0, 8192);
+	d.scale_type = int_of(o, "scale_type", 3, 0, 5);
+	d.fps_div = int_of(o, "fps_div", 1, 1, 4);
+	d.audio_track = int_of(o, "audio_track", 0, 0, kMaxAudioTracks);
+	d.audio_bitrate_kbps = int_of(o, "audio_bitrate_kbps", 160, 64, 320);
+	d.delay_sec = int_of(o, "delay_sec", 0, 0, 3600);
+	d.delay_preserve = bool_of(o, "delay_preserve", false);
+	const json::Value *a = o.find("aitum");
+	if (a && a->is_object()) {
+		d.aitum_mode = str_of(*a, "mode", "off");
+		d.aitum_output = str_of(*a, "output");
+	}
+	read_extras(o, d, index, r);
+}
+
+void parse_v2(const json::Value &root, int schema, const SecretProtector &p, LoadResult &r)
 {
 	r.config.auto_start_with_stream = bool_of(root, "auto_start_with_stream", true);
 	read_server(root, r);
@@ -231,6 +277,13 @@ void parse_v2(const json::Value &root, const SecretProtector &p, LoadResult &r)
 		d.encoder = str_of(o, "encoder", "shared");
 		d.bitrate_kbps = int_of(o, "bitrate_kbps", 0, 0, 51000);
 		d.auto_start = bool_of(o, "auto_start", true);
+		if (schema < 4) {
+			// 0.2.0 "x264" mode == own encoder obs_x264 / veryfast / keyint 2 / CBR (the new defaults)
+			if (d.encoder == "x264")
+				d.encoder = "own";
+		} else {
+			read_v4_fields(o, d, i, r);
+		}
 		d.key_token = str_of(o, "key_enc");
 		if (d.key_token.size() > 4096)
 			d.key_token.clear();
@@ -267,7 +320,7 @@ void parse_v1(const json::Value &root, const SecretProtector &p, LoadResult &r)
 		d.handle = str_of(o, "shown_name");
 		d.enabled = bool_of(o, "enabled", true);
 		bool reuse = bool_of(o, "reuse_encoder", true);
-		d.encoder = reuse ? "shared" : "x264";
+		d.encoder = reuse ? "shared" : "own";
 		d.bitrate_kbps = reuse ? 0 : 2500;
 		d.auto_start = true;
 		d.key = str_of(o, "key");
@@ -309,9 +362,10 @@ LoadResult parse_config(const std::string &text, const SecretProtector &protecto
 		r.message = "config.json was upgraded from schema 1; stream keys are now encrypted";
 		return r;
 	}
-	parse_v2(pr.value, protector, r);
-	if (schema == 2) {
-		// schema 3 only adds the "chat" block (read from a v2 file it is simply absent): defaults, saved as 3
+	parse_v2(pr.value, schema, protector, r);
+	if (schema < kConfigSchema) {
+		// 2 -> 3 added the "chat" block, 3 -> 4 added canvas / audio track / encoder options / Aitum link:
+		// absent fields take their defaults, "x264" becomes "own"; saved as the current schema
 		r.status = LoadStatus::Migrated;
 		r.needs_save = true;
 		return r;
@@ -484,6 +538,33 @@ bool serialize_config(const Config &cfg, std::string &out, std::string &err)
 		o.set("encoder", json::Value::string(d.encoder));
 		o.set("bitrate_kbps", json::Value::number(d.bitrate_kbps));
 		o.set("auto_start", json::Value::boolean(d.auto_start));
+		o.set("canvas", json::Value::string(d.canvas));
+		o.set("video_encoder", json::Value::string(d.video_encoder));
+		o.set("keyint_sec", json::Value::number(d.keyint_sec));
+		o.set("preset", json::Value::string(d.preset));
+		o.set("profile", json::Value::string(d.profile));
+		o.set("rate_control", json::Value::string(d.rate_control));
+		o.set("out_width", json::Value::number(d.out_width));
+		o.set("out_height", json::Value::number(d.out_height));
+		o.set("scale_type", json::Value::number(d.scale_type));
+		o.set("fps_div", json::Value::number(d.fps_div));
+		o.set("audio_track", json::Value::number(d.audio_track));
+		o.set("audio_bitrate_kbps", json::Value::number(d.audio_bitrate_kbps));
+		o.set("delay_sec", json::Value::number(d.delay_sec));
+		o.set("delay_preserve", json::Value::boolean(d.delay_preserve));
+		json::Value ex = json::Value::array();
+		for (size_t k = 0; k < d.venc_extra.size(); ++k) {
+			json::Value e = json::Value::object();
+			e.set("key", json::Value::string(d.venc_extra[k].key));
+			e.set("type", json::Value::string(std::string(1, d.venc_extra[k].type)));
+			e.set("value", json::Value::string(d.venc_extra[k].value));
+			ex.push(e);
+		}
+		o.set("venc_extra", ex);
+		json::Value au = json::Value::object();
+		au.set("mode", json::Value::string(d.aitum_mode));
+		au.set("output", json::Value::string(d.aitum_output));
+		o.set("aitum", au);
 		arr.push(o);
 	}
 	root.set("destinations", arr);

@@ -58,6 +58,18 @@ bool is_valid_id(const std::string &id)
 	return true;
 }
 
+bool is_valid_token(const std::string &s, size_t max)
+{
+	if (s.empty() || s.size() > max)
+		return false;
+	for (size_t i = 0; i < s.size(); ++i) {
+		char c = s[i];
+		if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '.' || c == '-'))
+			return false;
+	}
+	return true;
+}
+
 std::string make_id(unsigned seed)
 {
 	// xorshift scramble so consecutive seeds give unrelated-looking ids
@@ -134,12 +146,66 @@ std::vector<ValidationIssue> validate_destination(const Destination &d, bool req
 	check_url(d.url, out);
 	if (d.handle.size() > 128 || has_control_chars(d.handle))
 		out.push_back({"handle", "Handle is at most 128 bytes with no control characters."});
-	if (d.encoder != "shared" && d.encoder != "x264")
-		out.push_back({"encoder", "Encoder must be shared or x264."});
+	if (d.encoder != "shared" && d.encoder != "own")
+		out.push_back({"encoder", "Encoder must be shared or own."});
 	if (d.bitrate_kbps < 0 || d.bitrate_kbps > 51000)
 		out.push_back({"bitrate_kbps", "Bitrate must be 0-51000 kbps."});
-	if (d.encoder == "x264" && (d.bitrate_kbps < 300 || d.bitrate_kbps > 51000))
-		out.push_back({"bitrate_kbps", "x264 mode needs a bitrate of 300-51000 kbps."});
+	if (d.encoder == "own") {
+		if (d.bitrate_kbps < 300 || d.bitrate_kbps > 51000)
+			out.push_back({"bitrate_kbps", "An own encoder needs a bitrate of 300-51000 kbps."});
+		if (!is_valid_token(d.video_encoder, 64))
+			out.push_back({"video_encoder", "Video encoder id is missing or malformed."});
+		if (d.keyint_sec < 0 || d.keyint_sec > 10)
+			out.push_back({"keyint_sec", "Keyframe interval must be 0-10 seconds."});
+		if (!d.preset.empty() && !is_valid_token(d.preset, 32))
+			out.push_back({"preset", "Preset is malformed."});
+		if (!d.profile.empty() && !is_valid_token(d.profile, 32))
+			out.push_back({"profile", "Profile is malformed."});
+		if (!d.rate_control.empty() && !is_valid_token(d.rate_control, 32))
+			out.push_back({"rate_control", "Rate control is malformed."});
+		bool w0 = d.out_width == 0, h0 = d.out_height == 0;
+		if (w0 != h0 || (!w0 && (d.out_width < 2 || d.out_width > 8192 || d.out_height < 2 || d.out_height > 8192 ||
+					 (d.out_width % 2) != 0 || (d.out_height % 2) != 0)))
+			out.push_back({"out_width", "Rescale needs both width and height, even, 2-8192 (or both 0)."});
+		if (d.scale_type < 0 || d.scale_type > 5)
+			out.push_back({"scale_type", "Scale type must be 0-5."});
+		if (d.fps_div < 1 || d.fps_div > 4)
+			out.push_back({"fps_div", "Frame-rate divisor must be 1-4."});
+		if (d.venc_extra.size() > kMaxExtraSettings)
+			out.push_back({"venc_extra", "Too many extra encoder settings."});
+		for (size_t i = 0; i < d.venc_extra.size() && i < kMaxExtraSettings; ++i) {
+			const ExtraSetting &e = d.venc_extra[i];
+			bool key_ok = !e.key.empty() && e.key.size() <= 40;
+			for (size_t k = 0; key_ok && k < e.key.size(); ++k) {
+				unsigned char c = static_cast<unsigned char>(e.key[k]);
+				if (!(std::islower(c) || std::isdigit(c) || c == '_'))
+					key_ok = false;
+			}
+			bool type_ok = e.type == 'i' || e.type == 'd' || e.type == 'b' || e.type == 's';
+			if (!key_ok || !type_ok || e.value.size() > 128 || has_control_chars(e.value)) {
+				out.push_back({"venc_extra", "An extra encoder setting is malformed."});
+				break;
+			}
+		}
+	}
+	if (!d.canvas.empty()) {
+		if (d.canvas.size() > 128 || has_control_chars(d.canvas))
+			out.push_back({"canvas", "Canvas name is at most 128 bytes with no control characters."});
+		if (d.encoder != "own")
+			out.push_back({"canvas", "A destination on another canvas needs its own video encoder."});
+	}
+	if (d.audio_track < 0 || d.audio_track > kMaxAudioTracks)
+		out.push_back({"audio_track", "Audio track must be 0 (as the main stream) or 1-6."});
+	if (d.audio_bitrate_kbps < 64 || d.audio_bitrate_kbps > 320)
+		out.push_back({"audio_bitrate_kbps", "Audio bitrate must be 64-320 kbps."});
+	if (d.delay_sec < 0 || d.delay_sec > 3600)
+		out.push_back({"delay_sec", "Delay must be 0-3600 seconds."});
+	if (d.aitum_mode != "off" && d.aitum_mode != "copy" && d.aitum_mode != "follow")
+		out.push_back({"aitum_mode", "Aitum mode must be off, copy or follow."});
+	if (d.aitum_output.size() > 128 || has_control_chars(d.aitum_output))
+		out.push_back({"aitum_output", "Aitum output name is at most 128 bytes with no control characters."});
+	if (d.aitum_mode == "follow" && d.aitum_output.empty())
+		out.push_back({"aitum_output", "Follow mode needs the name of an Aitum output."});
 	if (!d.key.empty()) {
 		if (d.key.size() > 512)
 			out.push_back({"key", "Stream key is too long (max 512)."});

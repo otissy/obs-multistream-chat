@@ -11,6 +11,16 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## 0.3.1 (2026-10-15): dock registration fix
+
+Root cause of "no dock": registration happened in `obs_module_load` with the result ignored (silent when refused).
+Evidence: the real OBS 32.2.2 log shows obs-track-monitor and casterview (both register in `obs_module_post_load`, which
+obs-module.h documents as "called when all modules have finished loading") logging "dock registered" after the module list,
+while this plugin logged only config/server/version lines. The exact reason OBS refuses an early registration was not proven
+(OBS source is not vendored); the fix follows the working plugins and logs every outcome. Qt check: installed
+Qt6Core/Gui/Widgets are 6.11.1.0 = headers/libs used (QT_VERSION_STR 6.11.1): no mismatch, no rebuild against other Qt.
+Fallbacks: one retry on FINISHED_LOADING, Tools > OBS Multistream Chat (floating QDockWidget if not registered).
+
 ## Current state (2026-10-15)
 
 Version 0.3.0 adds per-destination canvas, audio track, own-encoder options and optional Aitum Stream Suite
@@ -424,7 +434,8 @@ OBS browser source.
 - **2026-10-14** - chat: the reader's Chrome exposes a loopback DevTools port while it runs (brief asked for WebSocket CDP).
 - **2026-10-14** - 0.2.0 built with `scriptsuild.ps1 -Test`: core suite 122/122 in one process; obs-multistream-chat.dll 537,088 bytes, sha-256 b5344f902067e7fc2a572c9c9380c52983b8eee5ecc35a3f382036b456bc82aa; zip dist\obs-multistream-chat-0.2.0-windows-x64.zip sha-256 e6c79fc231e3255fc2acd0488e9513b2614658eab21bc9a34e55bc1cea5358c1. Still never loaded into OBS; the dock Chat tab and the child-process code compile and link but were not run.
 
-- **2026-10-15** - 0.3.0 built with `scriptsuild.ps1 -Test` (idle priority, 2 jobs): core suite 145/145 in one process (was 122); ladders core 190, glue 15, packaging 14 green; obs-multistream-chat.dll 670,208 bytes, sha-256 9679d68d1889cf16f052ebf055b24b2f2c92b9338a8bc6fa5ea713774c24b68f; zip dist\obs-multistream-chat-0.3.0-windows-x64.zip sha-256 e5742b6856bdc39f21e64d04c23f174128fa2d49c9d2093a8e85abbb24100703 (contains dataeader). Chat/overlay ladders were not re-run (untouched; they start headless Chrome). Gotcha: the ladder's `findExe` reuses a stale `tests-vs\Release\oms_tests.exe`; delete it after core changes.
+- **2026-10-15** - 0.3.0 built with `scriptsuild.ps1 -Test` (idle priority, 2 jobs): core suite 145/145 in one process (was 122); ladders core 190, glue 15, packaging 14 green; obs-multistream-chat.dll 670,208 bytes, sha-256 9679d68d1889cf16f052ebf055b24b2f2c92b9338a8bc6fa5ea713774c24b68f; zip dist\obs-multistream-chat-0.3.0-windows-x64.zip sha-256 e5742b6856bdc39f21e64d04c23f174128fa2d49c9d2093a8e85abbb24100703 (contains data
+eader). Chat/overlay ladders were not re-run (untouched; they start headless Chrome). Gotcha: the ladder's `findExe` reuses a stale `tests-vs\Release\oms_tests.exe`; delete it after core changes.
 - **2026-10-15** - read-only probe `oms_aitum_probe` run on the real active profile's aitum.json: status Ok, 2 canvases, 1 stream output mapped (encoder unset -> obs_x264/4500 default notes, canvas Vertical, no server/key); no key or server printed.
 
 ## Dropped approaches

@@ -37,7 +37,7 @@ You need either a release zip or a build from source.
 
 **Release zip:** close OBS, extract `obs-multistream-chat-<version>-windows-x64.zip` so that the
 `obs-multistream-chat` folder ends up in `C:\ProgramData\obs-studio\plugins\`. Check the zip against its
-`.sha256` file first. Start OBS, then **View > Docks > OBS Multistream Chat**.
+`.sha256` file first. Start OBS, then open the panel from **View > Docks > OBS Multistream Chat** or, always, from **Tools > OBS Multistream Chat** (a normal menu entry that shows the same panel, in its own floating window if OBS refused to dock it).
 
 **From source** (needs Visual Studio Build Tools 2022 with *Desktop development with C++*; CMake is
 already enough, you do not need the CMake component of the installer):
@@ -50,6 +50,17 @@ powershell -ExecutionPolicy Bypass -File scripts\package.ps1          # dist\obs
 
 `scripts\install.ps1 -Uninstall` removes it again. Nothing is installed, scheduled or added to startup
 by anything else.
+
+## Finding the panel
+
+- **View > Docks > OBS Multistream Chat**: the dock, like every other.
+- **Tools > OBS Multistream Chat**: opens (or raises) the same panel. If the dock was not registered it opens in
+  its own floating window, which you can leave floating or drag into a dock area.
+- The OBS log (Help > Log Files > View Current Log) says which happened: `dock registered`,
+  `dock registration returned false`, or `frontend main window not ready`, plus `Tools > OBS Multistream Chat added`.
+- During a stream the panel shows one big **Start/Stop all destinations** button, a line such as
+  `2 of 3 live | 11800 kbps | chat: 3 of 3 sources reading`, and per destination the status dot, canvas / track, bitrate,
+  dropped %, uptime and a Start/Stop button.
 
 ## Setup
 

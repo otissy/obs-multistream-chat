@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.1 (unreleased): the dock was never registered in OBS
+
+- Fixed: 0.1.0 to 0.3.0 registered the dock from `obs_module_load` and ignored the return value; in the real
+  OBS 32.2.2 log the plugin logged nothing about a dock while obs-track-monitor and casterview (which register in
+  `obs_module_post_load`) logged "dock registered". The dock is now created in `obs_module_post_load`.
+- New: every outcome is logged (`dock registered`, `dock registration returned false`, `frontend main window not
+  ready`), and a failed registration is retried once on `OBS_FRONTEND_EVENT_FINISHED_LOADING`.
+- New: **Tools > OBS Multistream Chat** (`obs_frontend_add_tools_menu_qaction`) always opens the panel; if OBS
+  refused the dock it opens in a floating window of its own.
+- New: at-a-glance strip in the panel: a big Start/Stop all button and a summary line (live / total, total kbps,
+  destinations needing attention, chat reader and sources reading). The Start all / Stop all buttons were replaced by it.
+- Changed: the 500 ms tick timer no longer hangs off the dock (it ran only if the dock existed).
+- Checked: OBS 32.2.2 ships Qt6Core/Gui/Widgets 6.11.1.0, the exact version the plugin is built against: no mismatch.
+- Not verified: still never loaded into a running OBS.
+
 ## 0.3.0 (unreleased): canvas, audio track and Aitum output settings per destination
 
 - New: **canvas** per destination ("" = main canvas, or any named OBS canvas via `obs_enum_canvases` /

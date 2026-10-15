@@ -34,6 +34,24 @@ consumer cards historically allowed only a small number, raised in newer drivers
 **zero** sessions, which is why it is the default on a GPU that is already busy with a game and OBS.
 Each x264-mode destination adds a CPU encode and no NVENC session, but costs CPU and a raw-frame copy.
 
+## Canvases, audio tracks and Aitum (since 0.3.0)
+
+- A destination on another canvas has its own video encoder: x264 costs CPU, a hardware encoder uses one of
+  the GPU's encode sessions (on a card that is busy with a game and OBS, keep x264 as the default).
+- The canvas is matched by **name**. A renamed canvas is a missing canvas. Canvases appear when their owner
+  creates them (Aitum: a few seconds after OBS starts), so a destination started earlier reports it and retries.
+- If a canvas is removed while a destination streams from it, the output keeps its own reference and keeps
+  encoding the last video it had until you stop it. It is not stopped automatically.
+- Audio always comes from OBS's global mixer tracks; a canvas does not have audio of its own here. A track no
+  source is routed to is silent (the OBS log says so when the destination starts).
+- Shared video can only carry the audio tracks the main stream already encodes without an extra AAC encoder.
+- Aitum's settings are read from `aitum.json` of the active OBS profile, layout of version 1.2.4. Keys named
+  `stream_server`, `stream_key`, `custom_delay`, `delay_sec` and `delay_preserve` were never seen in a file and
+  are marked unverified. A single `audio_track` value is not used. See [aitum.md](aitum.md).
+- The plugin does not talk to Aitum's code; it cannot see Aitum's outputs by name, only any active output's
+  service when looking for double streaming.
+- Not verified in a running OBS.
+
 ## Other
 
 - Windows x64 and OBS 32.x only; built against libobs 32.2.2 (loads on equal or newer libobs of the

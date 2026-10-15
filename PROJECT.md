@@ -11,7 +11,15 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
-## Current state (2026-10-14)
+## Current state (2026-10-15)
+
+Version 0.3.0 adds per-destination canvas, audio track, own-encoder options and optional Aitum Stream Suite
+output settings (spec below, docs/aitum.md). Core logic is tested with mocks (fleet of 8 and 12 mock outputs);
+the glue compiles and links against the pinned 32.2.2 headers and the installed obs.dll but has NEVER been
+loaded into OBS. Orchestration now lives in `src/core/fleet.*` (backend interface), decisions in `plan.*`, Aitum
+mapping in `aitum.*`; `src/obs/output_manager.*` is only the libobs backend.
+
+## State of 0.2.0 (2026-10-14)
 
 Version 0.2.0 adds the chat half (see "Chat (0.2.0)" below): reader, adapters, merge server, overlay
 page, dock tab. Built and tested offline; no real platform page was ever loaded.
@@ -131,12 +139,15 @@ src/core/            portable C++17, no OBS, no Qt. Builds into static lib oms_c
   ring.hpp           fixed-capacity ring buffer
   stats.hpp/.cpp     StatsTracker: samples -> bitrate, dropped %, uptime
   health.hpp/.cpp    HealthMachine: idle/connecting/live/degraded/reconnecting/failed
-  config.hpp/.cpp    schema v2, load/save, migration v1->v2, atomic write, DPAPI keys
+  config.hpp/.cpp    schema v4 (3 -> 4 migrates), load/save, migrations, atomic write, DPAPI keys
+  aitum.hpp/.cpp     read-only parser + mapper for Aitum's aitum.json, double-stream detection (0.3.0)
+  plan.hpp/.cpp      shared/own video + audio-track + canvas decisions from an EnvSnapshot (0.3.0)
+  fleet.hpp/.cpp     per-destination runtimes behind OutputBackend, events, ordering, Aitum follow (0.3.0)
   state_feed.hpp/.cpp  OverlayState snapshot -> JSON; StateHub (thread-safe, versioned)
   http_server.hpp/.cpp 127.0.0.1-only read-only server: static allowlist, state.json, SSE
 src/obs/             OBS glue, links libobs, obs-frontend-api, Qt6
   plugin-main.cpp    module entry, wiring, frontend events
-  output_manager.*   one obs_output per destination, encoder sharing, signals -> event queue
+  output_manager.*   libobs OutputBackend: one obs_output per destination, canvases, encoders, signals -> Fleet
   dock.*             Qt6 dock + add/edit dialog (no Q_OBJECT; functor connects, like the rest
                      of production-suite, so there is no moc step)
 data/locale/en-US.ini
@@ -184,7 +195,8 @@ docs/                security.md, limits.md
 ## Config file format
 
 `%APPDATA%\obs-studio\plugin_config\obs-multistream-chat\config.json` (OBS's own per-user plugin
-config location, via `obs_module_get_config_path`). Schema version 2:
+config location, via `obs_module_get_config_path`). **Current schema is 4** (see the 0.3.0 spec for the added
+per-destination fields; `encoder` is `shared|own`). The example below shows the original schema 2 fields:
 
 ```json
 {
@@ -391,6 +403,11 @@ OBS browser source.
 - Version: `CMakeLists.txt` project VERSION (also read by package script and `plugin-main.cpp`).
 
 ## Known problems
+
+- **2026-10-15** - 0.3.0 was never loaded into a running OBS (forbidden: OBS was live). Unverified in OBS: an encoder attached to an Aitum canvas's `video_t` (`obs_encoder_set_video(venc, obs_canvas_get_video(c))`), `obs_encoder_set_gpu_scale_type` on non-texture encoders, an extra AAC encoder on another mixer track next to a shared video encoder (A/V offset), hardware encoder ids on a second canvas, `obs_get_module("aitum-stream-suite")` matching Aitum's module name, the double-stream check seeing Aitum's outputs.
+- **2026-10-15** - Aitum keys `stream_server`, `stream_key`, `custom_delay`, `delay_sec`, `delay_preserve`, `audio_track` exist as strings in aitum-stream-suite.dll 1.2.4 but in none of the author's 9 profile files, so their placement and base are unverified (importer reads them, marks them unverified). Only 1 stream output exists in the active profile (Vertical Stream, no server).
+- **2026-10-15** - a canvas removed while a destination streams from it is not detected (the output keeps its own canvas reference); a renamed canvas counts as missing.
+- **2026-10-15** - existing weakness kept: `Ctx` objects handed to libobs signals are intentionally leaked (a few dozen bytes per attempt).
 
 - **2026-10-13** - full `oms_tests all` run could not complete: Norton (IDP.Generic) removed the exe mid-run. Verified: L2 73/73 in one process; each L3 test passes alone except one that failed once (431 reset, fixed with a drain, not re-run after the fix) and the LAN-probe test was rewritten after a stall and not re-run. The user must exclude `build/` in Norton and run `scripts/build.ps1 -Test`.
 - **2026-10-13** - real platforms and a real OBS load are unverified (not allowed to start OBS or stream).

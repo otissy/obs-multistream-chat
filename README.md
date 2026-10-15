@@ -20,7 +20,13 @@ destination is a plain RTMP(S) URL plus that platform's stream key. Native C++ p
   *page* in a hidden Chrome of its own. See [Merged chat](#merged-chat) before you use it: it may be
   against a platform's terms, and TikTok and X are experimental.
 - **Shared encoders by default:** extra destinations reuse the main stream's encoders, so no extra
-  NVENC session and no extra GPU load. A separate x264 encode per destination is optional.
+  NVENC session and no extra GPU load. A separate encode per destination is optional.
+- **Per-destination canvas and audio track (new in 0.3.0):** a destination can stream the main canvas or
+  any other OBS canvas (for example the vertical canvas Aitum Stream Suite creates), with its own encoder
+  (x264 by default, or any installed hardware encoder), and can carry any OBS mixer track 1 to 6.
+- **Optional Aitum Stream Suite output settings (new in 0.3.0):** copy or follow the output settings
+  Aitum already has, while this plugin runs the outputs. Any number of outputs at once: nothing is shared
+  between destinations. See [docs/aitum.md](docs/aitum.md).
 
 Status: see [CHANGELOG.md](CHANGELOG.md). It has **not** been loaded into a real OBS or streamed to a
 real platform yet; read [docs/limits.md](docs/limits.md) first.
@@ -52,8 +58,35 @@ by anything else.
    the URL from the platform's dashboard.
 3. Paste the stream key (masked; **Reveal** shows what you typed). Type the handle you want shown on
    stream.
-4. Leave **Encoder** on *Shared* unless you know you want a separate x264 encode.
+4. Leave **Video encoder mode** on *Shared* unless you want another canvas, another resolution or another
+   audio track for this destination (next section).
 5. Start your normal OBS stream. Destinations with *Start with the main stream* go live with it.
+
+### Canvas, encoder and audio track per destination (0.3.0)
+
+- **Canvas.** *Main canvas* is what OBS streams. Any other canvas OBS has (Aitum Stream Suite makes them at
+  startup) can be chosen from the list. A destination on another canvas always uses **its own video
+  encoder**, because the resolution differs: pick the encoder (*x264* is the safe default; hardware encoders
+  are listed with a note, each one uses one of your GPU's few encode sessions), bitrate, keyframe interval,
+  preset, profile, rate control, an optional rescale and a frame-rate divisor. If the canvas is not there at
+  start (Aitum creates its canvases a few seconds after OBS opens), the row says so and retries; nothing
+  crashes.
+- **Audio track.** *As the main stream* carries whatever the main stream carries. *Track 1 to 6* carries that
+  OBS mixer track (the names come from Settings > Output > Advanced > Audio, if you named them; sources are
+  routed to tracks in Advanced Audio Properties). With **shared** video you get the main stream's audio
+  encoder if it already encodes that track; any other track gets its own AAC encoder (you pick the bitrate).
+  With an **own** encoder the audio is always its own AAC encoder on the track you pick. If no source is
+  routed to the track the OBS log says so (that track would be silent).
+- **Stream delay** per destination (own and shared outputs alike); OBS's own stream delay still applies to
+  the main stream only.
+- **Limit of shared mode:** one bitrate, resolution, frame rate and keyframe interval for all shared
+  destinations, and the audio is limited to the tracks the main stream encodes (anything else costs a small
+  extra AAC encode). The dock explains this under the fields.
+- **Aitum Stream Suite.** *Copy once* or *Follow* an Aitum output's settings; details, the file layout and
+  what is and is not mapped are in [docs/aitum.md](docs/aitum.md).
+- **More than two destinations at once** is a design goal and is covered by a test with eight mock outputs,
+  including start/stop order and one output failing while the rest run. It has not run against eight real
+  RTMP connections yet.
 
 | Platform | Where to find the key | Default URL in the dialog |
 |---|---|---|
@@ -204,5 +237,6 @@ executables, the plugin DLL, generated import libraries, the package zip) goes u
 
 - [docs/security.md](docs/security.md): what is stored where, how keys are protected, the local server.
 - [docs/limits.md](docs/limits.md): what this deliberately does not do.
+- [docs/aitum.md](docs/aitum.md): using Aitum Stream Suite's output settings, where its file lives, double-streaming warning.
 - [PROJECT.md](PROJECT.md): design, threading, config format, decisions, known problems.
 - [NOTICE](NOTICE): third-party icons and trademarks.

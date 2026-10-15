@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0 (unreleased): canvas, audio track and Aitum output settings per destination
+
+- New: **canvas** per destination ("" = main canvas, or any named OBS canvas via `obs_enum_canvases` /
+  `obs_get_canvas_by_name`). A non-main canvas always has its own video encoder (id, bitrate, keyframe
+  interval, preset, profile, rate control, rescale, frame-rate divisor, extra settings). A missing canvas gives
+  a clear status and a retry, never a crash. The output holds a reference to its canvas for as long as it runs.
+- New: **audio track** per destination (as the main stream, or mixer track 1 to 6). Shared video reuses the
+  main stream's audio encoder when it already carries the track, else an own AAC encoder
+  (`obs_audio_encoder_create(..., track - 1)`) with a selectable bitrate. Track names come from the profile.
+- New: **stream delay** per destination (`obs_output_set_delay`).
+- New: **Aitum Stream Suite settings** per destination: *Copy once* and *Follow* (re-read at each start), read-only,
+  keys never logged or stored (`src/core/aitum.*`, [docs/aitum.md](docs/aitum.md)). Layout checked against 1.2.4.
+- New: **double-streaming warning** (same server and key active in two places) in the dock.
+- New: the per-destination orchestration moved out of the OBS glue into `src/core/fleet.*` behind an
+  `OutputBackend` interface, and the encoder/canvas/track decisions into `src/core/plan.*`; both are unit tested
+  with mocks (eight and twelve simultaneous mock outputs, error isolation, start/stop ordering, concurrent events).
+- Changed: config **schema 4** (3 -> 4 migrates: `encoder: "x264"` becomes `"own"` with `obs_x264`, `veryfast`,
+  keyframe 2 s, i.e. what 0.2.0 did; saved as 4; older plugins treat 4 as too new and read it read-only).
+  Tests that wrote `"schema":3` now write 4 and `"x264"` became `"own"` (named in the tests' commit).
+- Changed: the dock's encoder choice is now *Shared* or *Own encoder*; the table has a *Canvas / track* column.
+- Not verified: never loaded into a running OBS; hardware encoders on an Aitum canvas's video output are untested.
+
 ## 0.2.0 (unreleased): merged chat without any platform API
 
 - New: **Chat tab** in the dock, **/chat.html** browser source and a Node **reader** (`reader/`) that

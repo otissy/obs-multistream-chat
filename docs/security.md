@@ -49,6 +49,18 @@ Serves the overlay to the OBS browser source.
 - Another program on the same PC running as you can still read that feed (and could read your config
   file). The feed was chosen to hold nothing sensitive for that reason.
 
+## Aitum Stream Suite import (since 0.3.0)
+
+- The plugin only **reads** `aitum.json` of the active OBS profile; it never writes, renames or deletes it
+  and never touches Aitum's outputs. See [aitum.md](aitum.md).
+- An Aitum stream key (if the file holds one) is handled like a typed key: in *Copy once* it is encrypted with
+  DPAPI at once; in *Follow* it is held in memory for the start only and wiped, and is never written to
+  `config.json`, the log, the dock or an error message. The same applies to Aitum's server address.
+- The double-streaming check compares key strings in memory (ours, Aitum's file, other active outputs'
+  services) and reports only labels such as `"Twitch" (this plugin) and OBS main stream`.
+- Files over 4 MB, non-JSON files and unexpected layouts are rejected with a generic message that contains
+  no value from the file.
+
 ## Reporting
 
 Please report problems privately to the repository owner (otissy) rather than in public issues.

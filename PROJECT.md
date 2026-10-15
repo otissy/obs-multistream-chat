@@ -438,6 +438,8 @@ OBS browser source.
 eader). Chat/overlay ladders were not re-run (untouched; they start headless Chrome). Gotcha: the ladder's `findExe` reuses a stale `tests-vs\Release\oms_tests.exe`; delete it after core changes.
 - **2026-10-15** - read-only probe `oms_aitum_probe` run on the real active profile's aitum.json: status Ok, 2 canvases, 1 stream output mapped (encoder unset -> obs_x264/4500 default notes, canvas Vertical, no server/key); no key or server printed.
 
+- **2026-10-15** - 0.3.1 built (idle, 2 jobs): core 145/145, glue ladder 20, packaging green; obs-multistream-chat.dll 679936 bytes, sha-256 a88afbc6dea2a387eecc3782d214ecd6f43b984164b2ba4e12a1c914ddef4423; zip dist\obs-multistream-chat-0.3.1-windows-x64.zip sha-256 99b741e3cedb7630bc043b126cbea55c26364ed15fb80c3996a14fc30d6a80c8. Exports obs_module_post_load (checked in the DLL). Still never loaded into OBS.
+
 ## Dropped approaches
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.

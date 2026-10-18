@@ -25,6 +25,7 @@
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QTextBrowser>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -117,7 +118,7 @@ public:
 		platform_ = new QComboBox();
 		const std::vector<PlatformPreset> &p = platform_presets();
 		for (size_t i = 0; i < p.size(); ++i)
-			platform_->addItem(qs(p[i].label), qs(p[i].id));
+			platform_->addItem(QIcon(QPixmap::fromImage(create_platform_icon(p[i].id, 20))), qs(p[i].label), qs(p[i].id));
 		int idx = platform_->findData(qs(d.platform.empty() ? "twitch" : d.platform));
 		platform_->setCurrentIndex(idx < 0 ? 0 : idx);
 		form->addRow(T("Dialog.Platform"), platform_);
@@ -600,7 +601,7 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 
 	table_ = new QTableWidget(0, 9);
 	QStringList heads;
-	heads << T("Col.On") << T("Col.Status") << T("Col.Name") << T("Col.Handle") << T("Col.Source") << T("Col.Bitrate") << T("Col.Dropped")
+	heads << T("Col.On") << T("Col.Status") << T("Col.Name") << T("Col.Handle") << T("Dialog.Track") << T("Col.Bitrate") << T("Col.Dropped")
 	      << T("Col.Uptime") << QString();
 	table_->setHorizontalHeaderLabels(heads);
 	table_->verticalHeader()->hide();
@@ -609,17 +610,21 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	table_->horizontalHeader()->setStretchLastSection(false);
 	table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+	table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
 	root->addWidget(table_, 1);
 
 	QHBoxLayout *row1 = new QHBoxLayout();
 	QPushButton *add = new QPushButton(T("Btn.Add"));
 	edit_btn_ = new QPushButton(T("Btn.Edit"));
 	remove_btn_ = new QPushButton(T("Btn.Remove"));
+	QPushButton *guide_btn = new QPushButton(QString::fromUtf8("? Audio & Setup Guide"));
+	guide_btn->setStyleSheet("background:#232733; color:#58a6ff; font-weight:bold; border:1px solid #384259; border-radius:3px; padding:3px 10px;");
 	row1->addWidget(add);
 	row1->addWidget(edit_btn_);
 	row1->addWidget(remove_btn_);
 	row1->addStretch(1);
+	row1->addWidget(guide_btn);
 	root->addLayout(row1);
 
 	QHBoxLayout *row2 = new QHBoxLayout();
@@ -634,6 +639,7 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	QObject::connect(add, &QPushButton::clicked, [this]() { add_destination(); });
 	QObject::connect(edit_btn_, &QPushButton::clicked, [this]() { edit_selected(); });
 	QObject::connect(remove_btn_, &QPushButton::clicked, [this]() { remove_selected(); });
+	QObject::connect(guide_btn, &QPushButton::clicked, [this]() { show_audio_tutorial(); });
 	QObject::connect(big_btn_, &QPushButton::clicked, [this]() {
 		if (big_btn_->property("act").toString() == "stop")
 			plugin().mgr->stop_all();
@@ -743,6 +749,7 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 {
 	row_ids_ = ids;
 	table_->setRowCount(static_cast<int>(ids.size()));
+	OutputManager &mgr = *plugin().mgr;
 	for (size_t i = 0; i < ids.size(); ++i) {
 		int row = static_cast<int>(i);
 		std::string id = ids[i];
@@ -758,6 +765,25 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 				}
 		});
 		table_->setCellWidget(row, 0, cb);
+
+		QComboBox *track_cb = new QComboBox();
+		track_cb->addItem(T("Dialog.TrackMain"), 0);
+		for (int t = 1; t <= kMaxAudioTracks; ++t)
+			track_cb->addItem(qs(track_label(t, mgr.track_name(t))), t);
+		track_cb->setStyleSheet("QComboBox { padding: 2px 4px; font-size: 11px; }");
+		QObject::connect(track_cb, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, id, track_cb](int) {
+			int chosen_track = track_cb->currentData().toInt();
+			PluginState &st = plugin();
+			for (size_t k = 0; k < st.cfg.destinations.size(); ++k) {
+				if (st.cfg.destinations[k].id == id && st.cfg.destinations[k].audio_track != chosen_track) {
+					st.cfg.destinations[k].audio_track = chosen_track;
+					save_and_sync();
+					return;
+				}
+			}
+		});
+		table_->setCellWidget(row, 4, track_cb);
+
 		QPushButton *btn = new QPushButton();
 		QObject::connect(btn, &QPushButton::clicked, [id, btn]() {
 			if (btn->property("act").toString() == "stop")
@@ -766,8 +792,11 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 				plugin().mgr->start_destination(id);
 		});
 		table_->setCellWidget(row, 8, btn);
-		for (int c = 1; c <= 7; ++c)
+		for (int c = 1; c <= 7; ++c) {
+			if (c == 4)
+				continue;
 			table_->setItem(row, c, new QTableWidgetItem());
+		}
 	}
 	table_->resizeColumnsToContents();
 }
@@ -870,11 +899,30 @@ void MultistreamDock::refresh()
 		if (!v.last_error.empty())
 			tip += (tip.isEmpty() ? "" : "\n") + qs(v.last_error);
 		status->setToolTip(tip);
-		table_->item(row, 2)->setText(qs(v.dest.name));
+
+		QString display_name = qs(v.dest.name);
+		if (!v.dest.canvas.empty())
+			display_name += " [" + qs(v.dest.canvas) + "]";
+		table_->item(row, 2)->setText(display_name);
+		table_->item(row, 2)->setIcon(QIcon(QPixmap::fromImage(create_platform_icon(v.dest.platform, 20))));
+		table_->item(row, 2)->setToolTip(source_tooltip(v.dest));
+
 		table_->item(row, 3)->setText(qs(v.dest.handle));
 		bool live = v.state == State::Live || v.state == State::Degraded;
-		table_->item(row, 4)->setText(source_summary(v.dest));
-		table_->item(row, 4)->setToolTip(source_tooltip(v.dest));
+
+		QComboBox *track_cb = qobject_cast<QComboBox *>(table_->cellWidget(row, 4));
+		if (track_cb) {
+			int idx = track_cb->findData(v.dest.audio_track);
+			if (idx >= 0 && track_cb->currentIndex() != idx) {
+				bool prev = track_cb->blockSignals(true);
+				track_cb->setCurrentIndex(idx);
+				track_cb->blockSignals(prev);
+			}
+			track_cb->setEnabled(!live);
+			track_cb->setToolTip(live ? T("Dialog.TrackLocked")
+						  : qs(track_label(v.dest.audio_track, plugin().mgr->track_name(v.dest.audio_track))));
+		}
+
 		table_->item(row, 5)->setText(live ? QString("%1 kbps").arg(static_cast<int>(v.bitrate_kbps)) : "-");
 		table_->item(row, 6)->setText(live ? QString("%1 %").arg(v.dropped_pct, 0, 'f', 1) : "-");
 		table_->item(row, 7)->setText(fmt_uptime(v.uptime_ms));
@@ -886,6 +934,113 @@ void MultistreamDock::refresh()
 			btn->setEnabled(stop || v.can_start);
 		}
 	}
+}
+
+void MultistreamDock::show_audio_tutorial()
+{
+	QDialog dlg(this);
+	dlg.setWindowTitle("OBS Multi-Stream & Audio Routing Tutorial");
+	dlg.resize(760, 620);
+	QVBoxLayout *l = new QVBoxLayout(&dlg);
+	QTextBrowser *tb = new QTextBrowser(&dlg);
+	tb->setOpenExternalLinks(true);
+	tb->setStyleSheet("background:#18181f; color:#e0e0e8; font-family:Segoe UI, sans-serif; font-size:13px; line-height:1.5; padding:12px;");
+
+	QString html = R"HTML(
+	<h2 style="color:#58a6ff; margin-top:0;">Multi-Stream & Audio Routing Tutorial</h2>
+	<p>Welcome! This guide explains how to stream to multiple platforms simultaneously with customized audio tracks and video resolutions.</p>
+
+	<div style="background:#20202c; border-left:4px solid #58a6ff; padding:10px; margin-bottom:14px; border-radius:4px;">
+		<b style="color:#ffffff;">Quick Track Selector:</b> You can change any stream's audio track instantly using the <b>Audio Track dropdown</b> in the Streams table row with zero dialogs!
+	</div>
+
+	<h3 style="color:#3ddc84;">1. How Audio Routing Works in OBS</h3>
+	<p>OBS has <b>6 internal audio tracks</b>. By default, your main stream broadcasts Track 1. With this plugin, every destination can broadcast a completely different audio track!</p>
+	<ul>
+		<li><b>Main (Default):</b> Broadcasts the exact audio track that your primary OBS stream is sending.</li>
+		<li><b>Track 1 to Track 6:</b> Broadcasts an independent audio mix with its own dedicated AAC encoder.</li>
+	</ul>
+
+	<h3 style="color:#3ddc84;">2. Setting Up Independent Audio in OBS (Advanced Audio Properties)</h3>
+	<p>To control which sounds go to which platform:</p>
+	<ol>
+		<li>In the OBS main window, click the <b>Edit</b> menu at the top &gt; <b>Advanced Audio Properties</b> (or click the gear/3-dots on any Audio Mixer fader &gt; Advanced Audio Properties).</li>
+		<li>Look at the <b>Tracks (1 2 3 4 5 6)</b> checkboxes on the right side of the window:</li>
+	</ol>
+
+	<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; border-color:#384259; width:100%; margin:10px 0; background:#1c1c26;">
+		<tr style="background:#282c3c; color:#ffffff;">
+			<th>Audio Source</th>
+			<th>Track 1 (e.g. Twitch)</th>
+			<th>Track 2 (e.g. YouTube VOD)</th>
+			<th>Track 3 (e.g. TikTok)</th>
+			<th>Track 4 (e.g. Kick)</th>
+		</tr>
+		<tr>
+			<td><b>Microphone</b></td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+		</tr>
+		<tr>
+			<td><b>Game Audio</b></td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+		</tr>
+		<tr>
+			<td><b>Music / Spotify</b></td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#ff6b6b;">&#10008; Unchecked (No DMCA!)</td>
+			<td align="center" style="color:#ff6b6b;">&#10008; Unchecked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+		</tr>
+		<tr>
+			<td><b>Discord / Voice Chat</b></td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#ff6b6b;">&#10008; Unchecked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+			<td align="center" style="color:#3ddc84;">&#10004; Checked</td>
+		</tr>
+	</table>
+
+	<h3 style="color:#3ddc84;">3. Naming Your Audio Tracks in OBS</h3>
+	<p>Want the dropdown to show friendly names like <i>"Track 2 (No Music)"</i> instead of just numbers?</p>
+	<ol>
+		<li>In OBS, open <b>Settings &gt; Output</b>.</li>
+		<li>Set <i>Output Mode</i> to <b>Advanced</b>.</li>
+		<li>Under the <i>Recording</i> or <i>Audio</i> tab, you can name Tracks 1 through 6 (e.g., "Twitch Mix", "No-Copyright", "Voice Only").</li>
+		<li>Our Streams dock automatically reads these names from your OBS profile and displays them in the dropdown!</li>
+	</ol>
+
+	<h3 style="color:#3ddc84;">4. Adding Streaming Platforms</h3>
+	<p>Click <b>Add stream</b> below to add any platform:</p>
+	<ul>
+		<li><b>Twitch:</b> Select Twitch preset &gt; paste Stream Key from Twitch Dashboard &gt; Settings &gt; Stream.</li>
+		<li><b>Kick:</b> Select Kick preset &gt; paste Stream Key from Kick Creator Dashboard &gt; Settings &gt; Stream URL &amp; Key.</li>
+		<li><b>YouTube:</b> Select YouTube preset &gt; paste Stream Key from YouTube Studio &gt; Go Live.</li>
+		<li><b>TikTok:</b> Select TikTok preset &gt; paste Server URL and Stream Key from TikTok LIVE Studio or Live access.</li>
+		<li><b>Instagram Live:</b> Select Instagram preset &gt; paste Stream URL and Key from Instagram Live Producer.</li>
+		<li><b>X (Twitter):</b> Select X preset &gt; paste Stream Key from X Media Studio / Live Producer.</li>
+		<li><b>Restream / Custom:</b> Pre-configured RTMP endpoints for multi-broadcasting.</li>
+	</ul>
+
+	<h3 style="color:#3ddc84;">5. Vertical Video &amp; Multi-Canvas (TikTok / Instagram)</h3>
+	<p>If you use Aitum Stream Suite or the OBS Vertical Canvas plugin, you can select that canvas in <b>Edit &gt; Canvas</b>. The destination will automatically encode at vertical 1080x1920 while your main stream remains horizontal 1920x1080!</p>
+	)HTML";
+
+	tb->setHtml(html);
+	l->addWidget(tb, 1);
+	QHBoxLayout *bl = new QHBoxLayout();
+	bl->addStretch(1);
+	QPushButton *close_btn = new QPushButton("Got it, Close", &dlg);
+	close_btn->setStyleSheet("padding:6px 18px; font-weight:bold; background:#2f7d4f; color:white; border-radius:4px;");
+	QObject::connect(close_btn, &QPushButton::clicked, &dlg, &QDialog::accept);
+	bl->addWidget(close_btn);
+	l->addLayout(bl);
+	dlg.exec();
 }
 
 } // namespace oms

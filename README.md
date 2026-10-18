@@ -33,23 +33,23 @@ real platform yet; read [docs/limits.md](docs/limits.md) first.
 
 ## Install
 
-You need either a release zip or a build from source.
+### Recommended: Windows Setup Installer
+Download and run **`obs-multistream-chat-<version>-windows-x64-setup.exe`** from the [Releases](https://github.com/otissy/obs-multistream-chat/releases).
+- Automatically installs to `C:\ProgramData\obs-studio\plugins\obs-multistream-chat`.
+- Safely closes OBS if running during install.
+- Provides a clean Windows uninstaller.
 
-**Release zip:** close OBS, extract `obs-multistream-chat-<version>-windows-x64.zip` so that the
-`obs-multistream-chat` folder ends up in `C:\ProgramData\obs-studio\plugins\`. Check the zip against its
-`.sha256` file first. Start OBS, then open the panel from **View > Docks > OBS Multistream Chat** or, always, from **Tools > OBS Multistream Chat** (a normal menu entry that shows the same panel, in its own floating window if OBS refused to dock it).
+### Portable ZIP Archive
+Close OBS, extract `obs-multistream-chat-<version>-windows-x64.zip` so that the `obs-multistream-chat` folder ends up in `C:\ProgramData\obs-studio\plugins\`.
 
-**From source** (needs Visual Studio Build Tools 2022 with *Desktop development with C++*; CMake is
-already enough, you do not need the CMake component of the installer):
+Start OBS, then open the dock from **View > Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**).
 
+### Building from Source (Developers)
+Needs Visual Studio Build Tools 2022 with *Desktop development with C++*:
 ```
-powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test      # fetches pinned SDKs, builds into D:\builds\obs-multistream-chat, runs the core tests
-powershell -ExecutionPolicy Bypass -File scripts\install.ps1          # only when YOU run it; refuses while OBS is open
-powershell -ExecutionPolicy Bypass -File scripts\package.ps1          # dist\obs-multistream-chat-<ver>-windows-x64.zip + .sha256
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1
 ```
-
-`scripts\install.ps1 -Uninstall` removes it again. Nothing is installed, scheduled or added to startup
-by anything else.
 
 ## Finding the panel
 

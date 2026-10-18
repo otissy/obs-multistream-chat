@@ -1,9 +1,9 @@
-; Inno Setup script for obs-multistream-chat
+﻿; Inno Setup script for obs-multistream-chat
 #ifndef MyAppName
   #define MyAppName "OBS Multistream Chat"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion "0.4.0"
+  #define MyAppVersion "0.4.1"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "otissy"

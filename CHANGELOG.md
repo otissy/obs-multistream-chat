@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 ## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
 

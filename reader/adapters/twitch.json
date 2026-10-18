@@ -9,14 +9,15 @@
   "loginPaths": ["/login", "/signup"],
   "containerTimeoutSec": 45,
   "engine": {
-    "container": [".chat-scrollable-area__message-container", ".chat-list--other", ".chat-list--default", ".chat-room__content"],
-    "item": [".chat-line__message"],
-    "ignore": [".user-notice-line", ".chat-line__message--deleted-notice", ".chat-line__status"],
-    "id": { "attrs": ["data-mid"] },
-    "author": { "sel": [".chat-author__display-name", ".chatter-name"], "color": "inline" },
-    "body": { "sel": ["[data-a-target='chat-line-message-body']", "[data-test-selector='chat-line-message-body']", ".message"] },
-    "emote": { "sel": ["img.chat-image", "img.chat-line__message--emote"], "name": ["alt"], "src": ["src"] },
-    "badge": { "sel": ["img.chat-badge"], "name": ["alt", "aria-label"] },
+    "container": [".chat-scrollable-area__message-container", ".chat-list--other", ".chat-list--default", ".chat-room__content", "[data-a-target='chat-scroller']", "[data-test-selector='chat-scrollable-area__message-container']"],
+    "item": [".chat-line__message", ".chat-line__message--shared", "[data-a-target='chat-line-message']"],
+    "ignore": [".chat-line__message--deleted-notice"],
+    "id": { "attrs": ["data-mid", "id"] },
+    "author": { "sel": [".chat-author__display-name", "[data-a-target='chat-message-username']", "[data-a-target='chat-author-display-name']", ".chatter-name"], "color": "inline" },
+    "body": { "sel": ["[data-a-target='chat-line-message-body']", "[data-test-selector='chat-line-message-body']", ".message", ".text-fragment"] },
+    "emote": { "sel": ["img.chat-image", "img.chat-line__message--emote", "[data-test-selector='chat-message-emote']"], "name": ["alt"], "src": ["src"] },
+    "badge": { "sel": ["img.chat-badge", "[data-a-target='chat-badge']", ".chat-badge", "[data-a-target='shared-chat-channel-badge']", ".chat-line__shared-chat-indicator"], "name": ["alt", "aria-label", "title", "data-channel"] },
     "login": { "sel": ["[data-a-target='login-button']"], "text": ["log in to continue", "this content is not available"] }
   }
 }
+

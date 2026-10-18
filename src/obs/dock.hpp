@@ -26,6 +26,7 @@ private:
 	void edit_selected();
 	void remove_selected();
 	void copy_overlay_url();
+	void show_audio_tutorial();
 	std::string selected_id() const;
 	void save_and_sync();
 	void update_glance(const std::vector<RuntimeView> &views);

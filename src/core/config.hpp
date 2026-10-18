@@ -28,7 +28,8 @@ struct ChatSource {
 };
 
 struct ChatConfig {
-	bool start_with_obs = false;      // start the reader when OBS starts (default: only on the button)
+	bool start_with_obs = false;       // start the reader when OBS starts
+	bool auto_start_with_stream = true;// auto-start the reader when streaming starts (default: true)
 	std::string node_path;            // "" = look for node.exe on PATH
 	int quiet_minutes = 5;            // zero messages for this long -> "quiet, layout changed or login needed"
 	std::string user_agent = "chrome"; // reader.userAgent: "chrome" (installed Chrome's own, minus "Headless") | "headless"

@@ -2,6 +2,7 @@
  * obs-multistream-chat: send the stream OBS already encodes to several RTMP(S) destinations, with a
  * dock for the streamer and a browser-source overlay for the audience. No platform APIs.
  */
+#include "chat_targets.hpp"
 #include "dock.hpp"
 #include "plugin.hpp"
 #include "random.hpp"
@@ -218,6 +219,14 @@ void on_tick()
 	g_state->mgr->tick();
 	poll_reader();
 	publish_state();
+
+	if (g_state->cfg.chat.auto_start_with_stream && !g_state->reader_active && !g_state->read_only) {
+		if (g_state->mgr->main_live() || g_state->mgr->any_live()) {
+			std::string cerr;
+			plugin_start_reader(cerr);
+		}
+	}
+
 	if (g_dock)
 		g_dock->refresh();
 }
@@ -227,9 +236,20 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 	if (!g_state || !g_state->mgr)
 		return;
 	switch (ev) {
-	case OBS_FRONTEND_EVENT_STREAMING_STARTED: g_state->mgr->on_main_stream_started(); break;
+	case OBS_FRONTEND_EVENT_STREAMING_STARTED:
+		g_state->mgr->on_main_stream_started();
+		if (!g_state->reader_active && !g_state->read_only && g_state->cfg.chat.auto_start_with_stream) {
+			std::string cerr;
+			plugin_start_reader(cerr);
+		}
+		break;
 	case OBS_FRONTEND_EVENT_STREAMING_STOPPING: g_state->mgr->on_main_stream_stopping(); break;
-	case OBS_FRONTEND_EVENT_STREAMING_STOPPED: g_state->mgr->on_main_stream_stopped(); break;
+	case OBS_FRONTEND_EVENT_STREAMING_STOPPED:
+		g_state->mgr->on_main_stream_stopped();
+		if (!g_state->cfg.chat.start_with_obs && g_state->reader_active) {
+			plugin_stop_reader();
+		}
+		break;
 	case OBS_FRONTEND_EVENT_EXIT:
 		if (g_state->timer)
 			g_state->timer->stop(); // the dock (and the timer parented to it) is about to be destroyed
@@ -249,6 +269,11 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 		if (!g_dock_registered && !g_fallback && g_dock_retry_allowed) {
 			g_dock_retry_allowed = false;
 			create_dock("finished loading");
+		}
+		break;
+	case OBS_FRONTEND_EVENT_PROFILE_CHANGED:
+		if (g_state && g_state->mgr) {
+			g_state->mgr->sync_with_config();
 		}
 		break;
 	default: break;
@@ -310,6 +335,31 @@ bool plugin_start_reader(std::string &err)
 	bool any = false;
 	for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i)
 		any = any || st.cfg.chat.sources[i].enabled;
+	if (!any) {
+		for (size_t i = 0; i < st.cfg.destinations.size(); ++i) {
+			const Destination &d = st.cfg.destinations[i];
+			std::string plat = d.platform;
+			if (plat != "twitch" && plat != "kick" && plat != "tiktok")
+				continue;
+			std::string raw = !d.handle.empty() ? d.handle : d.name;
+			if (raw.empty())
+				continue;
+			std::string norm, nerr;
+			if (!normalize_chat_target(plat, raw, norm, nerr))
+				continue;
+			ChatSource s;
+			s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
+			s.platform = plat;
+			s.target = norm;
+			s.enabled = true;
+			st.cfg.chat.sources.push_back(s);
+			any = true;
+		}
+		if (any) {
+			std::string serr;
+			plugin_save_config(serr);
+		}
+	}
 	if (!any) {
 		err = "Add and enable at least one chat source first.";
 		return false;

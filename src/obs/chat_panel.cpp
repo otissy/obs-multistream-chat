@@ -11,15 +11,24 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPainterPath>
 #include <QPlainTextEdit>
+#include <QPolygonF>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QTableWidget>
+#include <QTabWidget>
+#include <QTextBrowser>
+#include <QTimer>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace oms {
@@ -35,6 +44,164 @@ std::string ss(const QString &q)
 	return q.toUtf8().toStdString();
 }
 
+struct PlatformBadge {
+	const char *label;
+	const char *bg;
+	const char *fg;
+};
+
+PlatformBadge badge_for(const std::string &platform)
+{
+	if (platform == "twitch")
+		return {"Twitch", "#9146ff", "#ffffff"};
+	if (platform == "youtube")
+		return {"YouTube", "#ff0000", "#ffffff"};
+	if (platform == "kick")
+		return {"Kick", "#53fc18", "#121212"};
+	if (platform == "tiktok")
+		return {"TikTok", "#25f4ee", "#121212"};
+	if (platform == "x")
+		return {"X", "#f2f2f5", "#121212"};
+	return {"Chat", "#8a8a96", "#ffffff"};
+}
+
+QImage create_platform_icon(const std::string &platform, int sz = 36)
+{
+	QImage img(sz, sz, QImage::Format_ARGB32_Premultiplied);
+	img.fill(Qt::transparent);
+	QPainter p(&img);
+	p.setRenderHint(QPainter::Antialiasing, true);
+
+	qreal s = sz / 24.0;
+	p.scale(s, s);
+
+	if (platform == "twitch") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#9146ff"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+
+		QPainterPath path;
+		path.moveTo(5, 4);
+		path.lineTo(19, 4);
+		path.lineTo(19, 14);
+		path.lineTo(16, 17);
+		path.lineTo(13, 17);
+		path.lineTo(11, 19);
+		path.lineTo(11, 17);
+		path.lineTo(5, 17);
+		path.closeSubpath();
+		p.setBrush(Qt::white);
+		p.drawPath(path);
+
+		p.setBrush(QColor("#9146ff"));
+		p.drawRect(QRectF(9.5, 7.5, 2, 5));
+		p.drawRect(QRectF(14.5, 7.5, 2, 5));
+	} else if (platform == "youtube") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#ff0000"));
+		p.drawRoundedRect(QRectF(1, 3, 22, 18), 5.5, 5.5);
+
+		QPolygonF tri;
+		tri << QPointF(9.5, 7.5) << QPointF(16.5, 12.0) << QPointF(9.5, 16.5);
+		p.setBrush(Qt::white);
+		p.drawPolygon(tri);
+	} else if (platform == "kick") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#53fc18"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+
+		p.setBrush(QColor("#000000"));
+		p.drawRect(QRectF(5, 5, 4, 14));
+		p.drawRect(QRectF(14, 5, 5, 4.5));
+		p.drawRect(QRectF(9, 9.5, 5, 5));
+		p.drawRect(QRectF(14, 14.5, 5, 4.5));
+	} else if (platform == "tiktok") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#16161c"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+
+		p.setPen(QPen(QColor("#25f4ee"), 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+		p.drawLine(QPointF(13, 5), QPointF(13, 15));
+		p.drawLine(QPointF(13, 5), QPointF(17, 7));
+
+		p.setPen(QPen(QColor("#fe2c55"), 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+		p.drawLine(QPointF(12, 6), QPointF(12, 16));
+		p.drawLine(QPointF(12, 6), QPointF(16, 8));
+
+		p.setPen(QPen(Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+		p.drawLine(QPointF(12.5, 5.5), QPointF(12.5, 15.5));
+		p.drawLine(QPointF(12.5, 5.5), QPointF(16.5, 7.5));
+
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#25f4ee"));
+		p.drawEllipse(QRectF(8, 13, 7, 6));
+		p.setBrush(QColor("#fe2c55"));
+		p.drawEllipse(QRectF(7, 14, 7, 6));
+		p.setBrush(Qt::white);
+		p.drawEllipse(QRectF(7.5, 13.5, 6.5, 5.5));
+	} else if (platform == "x") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#1e1e24"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+
+		p.setPen(QPen(Qt::white, 2.2, Qt::SolidLine, Qt::SquareCap));
+		p.drawLine(QPointF(6, 6), QPointF(18, 18));
+		p.drawLine(QPointF(18, 6), QPointF(6, 18));
+	} else if (platform == "facebook") {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#1877f2"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+
+		p.setPen(QPen(Qt::white, 2.5, Qt::SolidLine, Qt::RoundCap));
+		p.drawLine(QPointF(13, 20), QPointF(13, 10));
+		p.drawLine(QPointF(13, 10), QPointF(16, 7));
+		p.drawLine(QPointF(11, 13), QPointF(15, 13));
+	} else {
+		p.setPen(Qt::NoPen);
+		p.setBrush(QColor("#3a3a46"));
+		p.drawRoundedRect(QRectF(1, 1, 22, 22), 5, 5);
+		p.setBrush(Qt::white);
+		QPainterPath path;
+		path.moveTo(6, 6);
+		path.lineTo(18, 6);
+		path.lineTo(18, 14);
+		path.lineTo(12, 14);
+		path.lineTo(9, 17);
+		path.lineTo(9, 14);
+		path.lineTo(6, 14);
+		path.closeSubpath();
+		p.drawPath(path);
+	}
+
+	p.end();
+	return img;
+}
+
+QString hash_color(const std::string &name)
+{
+	uint32_t h = 2166136261u;
+	for (size_t i = 0; i < name.size(); ++i) {
+		h ^= static_cast<unsigned char>(name[i]);
+		h *= 16777619u;
+	}
+	int hue = static_cast<int>((h ^ (h >> 16)) % 360);
+	QColor c = QColor::fromHsl(hue, 185, 175);
+	return c.name();
+}
+
+QString author_color(const ChatMessage &m)
+{
+	if (valid_chat_color(m.color)) {
+		QColor c(qs(m.color));
+		if (c.isValid()) {
+			if (c.lightness() < 125)
+				c = c.lighter(160);
+			return c.name();
+		}
+	}
+	return hash_color(m.author);
+}
+
 struct StateLook {
 	const char *label;
 	const char *color;
@@ -44,6 +211,10 @@ StateLook look_for(const std::string &state)
 {
 	if (state == "reading")
 		return {"Reading", "#3ddc84"};
+	if (state == "waiting")
+		return {"Waiting for live stream (auto-detecting)", "#38bdf8"};
+	if (state == "starting")
+		return {"Connecting / checking live...", "#ffb020"};
 	if (state == "quiet")
 		return {"Quiet: no messages yet", "#ffb020"};
 	if (state == "layout")
@@ -161,30 +332,110 @@ QString join_lines(const std::vector<std::string> &v)
 
 ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 {
-	QVBoxLayout *root = new QVBoxLayout(this);
-	root->setContentsMargins(6, 6, 6, 6);
+	QVBoxLayout *main_layout = new QVBoxLayout(this);
+	main_layout->setContentsMargins(0, 0, 0, 0);
+
+	tabs_ = new QTabWidget(this);
+	main_layout->addWidget(tabs_);
+
+	// --- 1. Live Chat Page ---
+	QWidget *live_page = new QWidget();
+	QVBoxLayout *ll = new QVBoxLayout(live_page);
+	ll->setContentsMargins(6, 6, 6, 6);
+
+	QHBoxLayout *top_live = new QHBoxLayout();
+	live_reader_status_ = new QLabel("Reader stopped");
+	live_reader_status_->setStyleSheet("color:#8a8a96; font-weight:bold;");
+	live_reader_btn_ = new QPushButton("Start reader");
+	live_reader_btn_->setMinimumHeight(26);
+
+	font_smaller_btn_ = new QPushButton("A-");
+	font_smaller_btn_->setMaximumWidth(32);
+	font_size_label_ = new QLabel("14px");
+	font_size_label_->setStyleSheet("color:#8a8a96; min-width:32px; text-align:center;");
+	font_bigger_btn_ = new QPushButton("A+");
+	font_bigger_btn_->setMaximumWidth(32);
+
+	clear_btn_ = new QPushButton("Clear");
+	clear_btn_->setMaximumWidth(60);
+
+	top_live->addWidget(live_reader_status_);
+	top_live->addWidget(live_reader_btn_);
+	top_live->addStretch(1);
+	top_live->addWidget(font_smaller_btn_);
+	top_live->addWidget(font_size_label_);
+	top_live->addWidget(font_bigger_btn_);
+	top_live->addWidget(clear_btn_);
+	ll->addLayout(top_live);
+
+	// Channel Auto-Connect Quick Bar
+	QHBoxLayout *chan_box = new QHBoxLayout();
+	QLabel *chan_lbl = new QLabel("My Channel:");
+	chan_lbl->setStyleSheet("font-weight:bold; color:#8a8a96; font-size:12px;");
+	channel_input_ = new QLineEdit();
+	channel_input_->setPlaceholderText("Enter channel name (e.g. RoyalAscent) to auto-connect chat");
+	channel_input_->setMinimumHeight(26);
+	auto_connect_btn_ = new QPushButton("Auto-Connect");
+	auto_connect_btn_->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
+	auto_connect_btn_->setMinimumHeight(26);
+
+	chan_box->addWidget(chan_lbl);
+	chan_box->addWidget(channel_input_, 1);
+	chan_box->addWidget(auto_connect_btn_);
+	ll->addLayout(chan_box);
+
+	auto_connect_info_ = new QLabel();
+	auto_connect_info_->setStyleSheet("color:#3ddc84; font-size:12px; padding:2px;");
+	auto_connect_info_->hide();
+	ll->addWidget(auto_connect_info_);
+
+	chat_browser_ = new QTextBrowser();
+	chat_browser_->setOpenExternalLinks(false);
+	chat_browser_->setReadOnly(true);
+	chat_browser_->document()->setMaximumBlockCount(500);
+	chat_browser_->setStyleSheet(
+		"QTextBrowser { background-color: #121217; color: #f2f2f5; border: 1px solid #282832; border-radius: 4px; padding: 6px; font-family: 'Segoe UI', system-ui, sans-serif; }"
+	);
+	const char *init_plats[] = {"twitch", "kick", "youtube", "tiktok", "x", "facebook", "chat"};
+	for (const char *plat : init_plats) {
+		QImage icon = create_platform_icon(plat, 48);
+		chat_browser_->document()->addResource(QTextDocument::ImageResource, QUrl(QString("platform://%1").arg(plat)), icon);
+	}
+	ll->addWidget(chat_browser_, 1);
+
+	pause_scroll_btn_ = new QPushButton(QString::fromUtf8("\xE2\xAC\x87 Chat paused - click to resume autoscroll"));
+	pause_scroll_btn_->setStyleSheet("background-color: #ffb020; color: #15151c; font-weight: bold; padding: 5px; border-radius: 3px; font-size: 13px;");
+	pause_scroll_btn_->hide();
+	ll->addWidget(pause_scroll_btn_);
+
+	// --- 2. Sources & Settings Page ---
+	QWidget *settings_page = new QWidget();
+	QVBoxLayout *sl = new QVBoxLayout(settings_page);
+	sl->setContentsMargins(6, 6, 6, 6);
 
 	QLabel *about = new QLabel("Reads the public chat page of each channel below in a hidden Chrome of its own, "
 				   "without any platform API, token or login. Automated reading may be against a platform's terms: "
 				   "you decide. See docs/limits.md.");
 	about->setWordWrap(true);
 	about->setStyleSheet("color:#8a8a96;");
-	root->addWidget(about);
+	sl->addWidget(about);
 
 	notice_ = new QLabel();
 	notice_->setWordWrap(true);
 	notice_->setStyleSheet("background:#3a2530; color:#ffb3c1; padding:6px; border-radius:4px;");
 	notice_->hide();
-	root->addWidget(notice_);
+	sl->addWidget(notice_);
 
 	QHBoxLayout *top = new QHBoxLayout();
 	reader_btn_ = new QPushButton("Start chat reader");
 	reader_state_ = new QLabel();
 	start_with_obs_ = new QCheckBox("Start with OBS");
+	auto_start_stream_ = new QCheckBox("Auto-start with stream");
 	top->addWidget(reader_btn_);
 	top->addWidget(reader_state_, 1);
 	top->addWidget(start_with_obs_);
-	root->addLayout(top);
+	top->addWidget(auto_start_stream_);
+	sl->addLayout(top);
 
 	table_ = new QTableWidget(0, 4);
 	QStringList heads;
@@ -195,22 +446,24 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	table_->setSelectionMode(QAbstractItemView::SingleSelection);
 	table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-	root->addWidget(table_, 1);
+	sl->addWidget(table_, 1);
 
 	QHBoxLayout *row = new QHBoxLayout();
 	QPushButton *add = new QPushButton("Add...");
 	edit_btn_ = new QPushButton("Edit...");
 	remove_btn_ = new QPushButton("Remove");
+	sync_dest_btn_ = new QPushButton("Auto-sync from Destinations");
 	row->addWidget(add);
 	row->addWidget(edit_btn_);
 	row->addWidget(remove_btn_);
+	row->addWidget(sync_dest_btn_);
 	row->addStretch(1);
-	root->addLayout(row);
+	sl->addLayout(row);
 
 	hide_commands_ = new QCheckBox("Hide commands (!word, /word)");
 	hide_bots_ = new QCheckBox("Hide well-known bots");
-	root->addWidget(hide_commands_);
-	root->addWidget(hide_bots_);
+	sl->addWidget(hide_commands_);
+	sl->addWidget(hide_bots_);
 	QHBoxLayout *lists = new QHBoxLayout();
 	QVBoxLayout *wl = new QVBoxLayout();
 	wl->addWidget(new QLabel("Blocked words (one per line)"));
@@ -224,9 +477,9 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	ul->addWidget(users_);
 	lists->addLayout(wl);
 	lists->addLayout(ul);
-	root->addLayout(lists);
+	sl->addLayout(lists);
 	QPushButton *apply = new QPushButton("Apply filters");
-	root->addWidget(apply);
+	sl->addWidget(apply);
 
 	QHBoxLayout *urlrow = new QHBoxLayout();
 	url_label_ = new QLabel();
@@ -235,16 +488,55 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	QPushButton *copy = new QPushButton("Copy chat URL");
 	urlrow->addWidget(url_label_, 1);
 	urlrow->addWidget(copy);
-	root->addLayout(urlrow);
+	sl->addLayout(urlrow);
+
+	tabs_->addTab(live_page, "Live Chat");
+	tabs_->addTab(settings_page, "Sources & Settings");
+
+	// Connect signals
+	QObject::connect(tabs_, &QTabWidget::currentChanged, [this](int idx) {
+		if (idx == 0) {
+			unread_count_ = 0;
+			tabs_->setTabText(0, "Live Chat");
+		}
+	});
+
+	QObject::connect(channel_input_, &QLineEdit::returnPressed, [this]() { auto_connect_channel(); });
+	QObject::connect(auto_connect_btn_, &QPushButton::clicked, [this]() { auto_connect_channel(); });
+	QObject::connect(live_reader_btn_, &QPushButton::clicked, [this]() { toggle_reader(); });
+	QObject::connect(clear_btn_, &QPushButton::clicked, [this]() { clear_chat(); });
+	QObject::connect(font_smaller_btn_, &QPushButton::clicked, [this]() { set_font_scale(-2); });
+	QObject::connect(font_bigger_btn_, &QPushButton::clicked, [this]() { set_font_scale(+2); });
+
+	QScrollBar *bar = chat_browser_->verticalScrollBar();
+	QObject::connect(bar, &QScrollBar::valueChanged, [this, bar](int val) {
+		if (val >= bar->maximum() - 25) {
+			autoscroll_ = true;
+			pause_scroll_btn_->hide();
+		} else {
+			autoscroll_ = false;
+			pause_scroll_btn_->show();
+		}
+	});
+	QObject::connect(pause_scroll_btn_, &QPushButton::clicked, [this, bar]() {
+		autoscroll_ = true;
+		bar->setValue(bar->maximum());
+		pause_scroll_btn_->hide();
+	});
 
 	QObject::connect(add, &QPushButton::clicked, [this]() { add_source(); });
 	QObject::connect(edit_btn_, &QPushButton::clicked, [this]() { edit_selected(); });
 	QObject::connect(remove_btn_, &QPushButton::clicked, [this]() { remove_selected(); });
+	QObject::connect(sync_dest_btn_, &QPushButton::clicked, [this]() { sync_from_destinations(); });
 	QObject::connect(reader_btn_, &QPushButton::clicked, [this]() { toggle_reader(); });
 	QObject::connect(apply, &QPushButton::clicked, [this]() { apply_filters(); });
 	QObject::connect(copy, &QPushButton::clicked, [this]() { copy_chat_url(); });
 	QObject::connect(start_with_obs_, &QCheckBox::clicked, [this](bool on) {
 		plugin().cfg.chat.start_with_obs = on;
+		save();
+	});
+	QObject::connect(auto_start_stream_, &QCheckBox::clicked, [this](bool on) {
+		plugin().cfg.chat.auto_start_with_stream = on;
 		save();
 	});
 	QObject::connect(hide_commands_, &QCheckBox::clicked, [this](bool) { apply_filters(); });
@@ -256,6 +548,22 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	});
 	edit_btn_->setEnabled(false);
 	remove_btn_->setEnabled(false);
+
+	// Pre-load backlog messages
+	PluginState &st = plugin();
+	std::vector<ChatMessage> bl = st.chat_hub.backlog(50);
+	for (size_t i = 0; i < bl.size(); ++i) {
+		if (bl[i].seq > last_seq_)
+			last_seq_ = bl[i].seq;
+		append_message(bl[i]);
+	}
+	if (last_seq_ == 0)
+		last_seq_ = st.chat_hub.last_seq();
+
+	chat_poll_timer_ = new QTimer(this);
+	QObject::connect(chat_poll_timer_, &QTimer::timeout, [this]() { poll_chat(); });
+	chat_poll_timer_->start(250);
+
 	refresh();
 }
 
@@ -266,6 +574,106 @@ std::string ChatPanel::selected_id() const
 		return std::string();
 	int row = r.first().topRow();
 	return (row >= 0 && row < static_cast<int>(row_ids_.size())) ? row_ids_[static_cast<size_t>(row)] : std::string();
+}
+
+void ChatPanel::auto_connect_channel()
+{
+	if (!channel_input_)
+		return;
+	QString raw = channel_input_->text().trimmed();
+	if (raw.isEmpty())
+		return;
+	std::string base = ss(raw);
+	if (!base.empty() && base.front() == '@')
+		base = base.substr(1);
+
+	PluginState &st = plugin();
+	const char *plats[] = {"twitch", "kick", "tiktok"};
+	bool changed = false;
+	for (const char *plat : plats) {
+		std::string norm, err;
+		if (!normalize_chat_target(plat, base, norm, err))
+			continue;
+		bool found = false;
+		for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i) {
+			if (st.cfg.chat.sources[i].platform == plat) {
+				st.cfg.chat.sources[i].target = norm;
+				st.cfg.chat.sources[i].enabled = true;
+				found = true;
+				changed = true;
+				break;
+			}
+		}
+		if (!found && st.cfg.chat.sources.size() < static_cast<size_t>(kMaxChatSources)) {
+			ChatSource s;
+			s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
+			s.platform = plat;
+			s.target = norm;
+			s.enabled = true;
+			st.cfg.chat.sources.push_back(s);
+			changed = true;
+		}
+	}
+
+	if (changed) {
+		save();
+	}
+
+	if (!st.reader_active) {
+		std::string cerr;
+		plugin_start_reader(cerr);
+	}
+
+	if (auto_connect_info_) {
+		auto_connect_info_->setText(QString("Auto-connected \"%1\" across Twitch, Kick & TikTok!").arg(raw));
+		auto_connect_info_->show();
+	}
+	refresh();
+}
+
+void ChatPanel::sync_from_destinations()
+{
+	PluginState &st = plugin();
+	bool changed = false;
+	for (size_t i = 0; i < st.cfg.destinations.size(); ++i) {
+		const Destination &d = st.cfg.destinations[i];
+		std::string plat = d.platform;
+		if (plat != "twitch" && plat != "kick" && plat != "tiktok")
+			continue;
+		std::string raw = !d.handle.empty() ? d.handle : d.name;
+		if (raw.empty())
+			continue;
+		std::string norm, err;
+		if (!normalize_chat_target(plat, raw, norm, err))
+			continue;
+		bool found = false;
+		for (size_t j = 0; j < st.cfg.chat.sources.size(); ++j) {
+			if (st.cfg.chat.sources[j].platform == plat) {
+				st.cfg.chat.sources[j].target = norm;
+				st.cfg.chat.sources[j].enabled = true;
+				found = true;
+				changed = true;
+				break;
+			}
+		}
+		if (!found && st.cfg.chat.sources.size() < static_cast<size_t>(kMaxChatSources)) {
+			ChatSource s;
+			s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
+			s.platform = plat;
+			s.target = norm;
+			s.enabled = true;
+			st.cfg.chat.sources.push_back(s);
+			changed = true;
+		}
+	}
+	if (changed) {
+		save();
+		if (!st.reader_active) {
+			std::string cerr;
+			plugin_start_reader(cerr);
+		}
+		refresh();
+	}
 }
 
 void ChatPanel::save()
@@ -396,20 +804,77 @@ void ChatPanel::refresh()
 	PluginState &st = plugin();
 	if (!filters_loaded_) {
 		filters_loaded_ = true;
+		start_with_obs_->setChecked(st.cfg.chat.start_with_obs);
+		auto_start_stream_->setChecked(st.cfg.chat.auto_start_with_stream);
 		hide_commands_->setChecked(st.cfg.chat.hide_commands);
 		hide_bots_->setChecked(st.cfg.chat.hide_bots);
 		words_->setPlainText(join_lines(st.cfg.chat.blocked_words));
 		users_->setPlainText(join_lines(st.cfg.chat.blocked_users));
+		if (channel_input_ && channel_input_->text().isEmpty()) {
+			std::string detected_handle;
+			for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i) {
+				if (!st.cfg.chat.sources[i].target.empty()) {
+					detected_handle = st.cfg.chat.sources[i].target;
+					break;
+				}
+			}
+			if (detected_handle.empty()) {
+				for (size_t i = 0; i < st.cfg.destinations.size(); ++i) {
+					if (!st.cfg.destinations[i].handle.empty()) {
+						detected_handle = st.cfg.destinations[i].handle;
+						break;
+					} else if (!st.cfg.destinations[i].name.empty()) {
+						detected_handle = st.cfg.destinations[i].name;
+						break;
+					}
+				}
+			}
+			if (!detected_handle.empty()) {
+				channel_input_->setText(qs(detected_handle));
+			}
+		}
 	}
 	start_with_obs_->setChecked(st.cfg.chat.start_with_obs);
+	auto_start_stream_->setChecked(st.cfg.chat.auto_start_with_stream);
 	bool running = plugin_reader_running();
 	reader_btn_->setText(running ? "Stop chat reader" : "Start chat reader");
 	reader_state_->setText(running ? "Reader running" : "Reader stopped");
 	reader_state_->setStyleSheet(running ? "color:#3ddc84;" : "color:#8a8a96;");
-	if (!st.chat_notice.empty()) {
-		notice_->setText(qs(st.chat_notice));
+	live_reader_btn_->setText(running ? "Stop reader" : "Start reader");
+
+	std::vector<SourceStatus> live = st.chat_hub.sources();
+	bool any_reading = false;
+	bool any_waiting = false;
+	for (size_t k = 0; k < live.size(); ++k) {
+		if (live[k].state == "reading")
+			any_reading = true;
+		else if (live[k].state == "waiting" || live[k].state == "starting")
+			any_waiting = true;
 	}
-	notice_->setVisible(!notice_->text().isEmpty());
+
+	if (any_reading) {
+		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Chat Live"));
+		live_reader_status_->setStyleSheet("color:#3ddc84; font-weight:bold;");
+	} else if (any_waiting) {
+		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Auto-detecting live..."));
+		live_reader_status_->setStyleSheet("color:#38bdf8; font-weight:bold;");
+	} else if (running) {
+		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Reader active"));
+		live_reader_status_->setStyleSheet("color:#38bdf8; font-weight:bold;");
+	} else {
+		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Reader stopped"));
+		live_reader_status_->setStyleSheet("color:#8a8a96; font-weight:bold;");
+	}
+
+	if (st.cfg.chat.sources.empty()) {
+		notice_->setText("No chat sources configured. Enter your channel name above or click 'Auto-sync from Destinations'.");
+		notice_->show();
+	} else if (!st.chat_notice.empty()) {
+		notice_->setText(qs(st.chat_notice));
+		notice_->show();
+	} else {
+		notice_->hide();
+	}
 	std::string url = plugin_chat_url();
 	url_label_->setText(url.empty() ? "The local server is not running." : qs(url));
 
@@ -418,7 +883,7 @@ void ChatPanel::refresh()
 		ids.push_back(st.cfg.chat.sources[i].id);
 	if (ids != row_ids_)
 		rebuild_rows(ids);
-	std::vector<SourceStatus> live = st.chat_hub.sources();
+	live = st.chat_hub.sources();
 	for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i) {
 		const ChatSource &s = st.cfg.chat.sources[i];
 		int row = static_cast<int>(i);
@@ -448,9 +913,98 @@ void ChatPanel::refresh()
 		status->setToolTip(qs(detail));
 		const ChatPlatform *p = find_chat_platform(s.platform);
 		table_->item(row, 2)->setText(p ? qs(p->label) : qs(s.platform));
+		table_->item(row, 2)->setIcon(QIcon(QPixmap::fromImage(create_platform_icon(s.platform, 24))));
 		table_->item(row, 3)->setText(qs(s.target));
 		table_->item(row, 3)->setToolTip(qs(detail));
 	}
+	poll_chat();
+}
+
+void ChatPanel::poll_chat()
+{
+	PluginState &st = plugin();
+	std::vector<ChatMessage> msgs;
+	if (st.chat_hub.wait_for(last_seq_, 0, msgs, 50)) {
+		for (size_t i = 0; i < msgs.size(); ++i) {
+			if (msgs[i].seq > last_seq_)
+				last_seq_ = msgs[i].seq;
+			append_message(msgs[i]);
+		}
+	}
+}
+
+void ChatPanel::append_message(const ChatMessage &m)
+{
+	if (m.author.empty() && m.parts.empty())
+		return;
+
+	PlatformBadge b = badge_for(m.platform);
+	QString c = author_color(m);
+	QString author = qs(m.author).toHtmlEscaped();
+
+	QString time_str;
+	if (m.arrival_ms > 0) {
+		QDateTime dt = QDateTime::fromMSecsSinceEpoch(m.arrival_ms);
+		time_str = dt.toString("HH:mm");
+	} else {
+		time_str = QDateTime::currentDateTime().toString("HH:mm");
+	}
+
+	QString content;
+	for (size_t i = 0; i < m.parts.size(); ++i) {
+		const ChatPart &p = m.parts[i];
+		if (p.emote && !p.url.empty()) {
+			int img_h = std::max(14, static_cast<int>(font_size_ * 1.35));
+			QString alt = qs(p.text).toHtmlEscaped();
+			content += QString("<img src=\"%1\" height=\"%2\" style=\"vertical-align:middle;margin:0 1px;\" alt=\"%3\" title=\"%3\">")
+					   .arg(qs(p.url), QString::number(img_h), alt);
+		} else {
+			content += qs(p.text).toHtmlEscaped();
+		}
+	}
+
+	int ico_size = std::max(14, static_cast<int>(font_size_ * 1.15));
+	QString ico_html = QString("<img src=\"platform://%1\" width=\"%2\" height=\"%2\" style=\"vertical-align:middle; margin-right:5px;\" alt=\"%3\" title=\"%3\">")
+				   .arg(qs(m.platform), QString::number(ico_size), qs(b.label));
+
+	QString html = QString(
+		"<div style=\"margin-bottom:4px; line-height:1.35; font-size:%1px;\">"
+		"%2"
+		"<span style=\"color:#8a8a96; font-size:80%; margin-right:5px;\">%3</span>"
+		"<span style=\"color:%4; font-weight:bold; margin-right:3px;\">%5:</span>"
+		"<span style=\"color:#f2f2f5;\">%6</span>"
+		"</div>")
+		.arg(QString::number(font_size_), ico_html, time_str, c, author, content);
+
+	QScrollBar *bar = chat_browser_->verticalScrollBar();
+	bool was_at_bottom = (bar->value() >= bar->maximum() - 30);
+
+	chat_browser_->append(html);
+
+	if (autoscroll_ && was_at_bottom) {
+		bar->setValue(bar->maximum());
+		pause_scroll_btn_->hide();
+	} else if (!was_at_bottom) {
+		pause_scroll_btn_->show();
+	}
+
+	if (tabs_->currentIndex() != 0) {
+		unread_count_++;
+		tabs_->setTabText(0, QString("Live Chat (%1)").arg(unread_count_));
+	}
+}
+
+void ChatPanel::clear_chat()
+{
+	chat_browser_->clear();
+	unread_count_ = 0;
+	tabs_->setTabText(0, "Live Chat");
+}
+
+void ChatPanel::set_font_scale(int delta)
+{
+	font_size_ = std::max(10, std::min(28, font_size_ + delta));
+	font_size_label_->setText(QString("%1px").arg(font_size_));
 }
 
 } // namespace oms

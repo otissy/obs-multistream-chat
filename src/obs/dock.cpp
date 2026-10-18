@@ -149,6 +149,13 @@ public:
 		kw->setLayout(kl);
 		form->addRow(T("Dialog.Key"), kw);
 		QObject::connect(reveal_, &QPushButton::toggled, [this](bool on) {
+			if (on && key_->text().isEmpty() && !dest_.key_token.empty() && plugin().protector) {
+				std::string plain;
+				if (unlock_key(dest_, *plugin().protector, plain)) {
+					key_->setText(qs(plain));
+					secure_zero(plain);
+				}
+			}
 			key_->setEchoMode(on ? QLineEdit::Normal : QLineEdit::Password);
 			reveal_->setText(on ? T("Dialog.Hide") : T("Dialog.Reveal"));
 		});
@@ -163,9 +170,17 @@ public:
 		OutputManager &mgr = *plugin().mgr;
 		canvas_ = new QComboBox();
 		canvas_->addItem(T("Dialog.CanvasMain"), "");
-		std::vector<std::string> canvases = mgr.canvas_names();
-		for (size_t i = 0; i < canvases.size(); ++i)
-			canvas_->addItem(qs(canvases[i]), qs(canvases[i]));
+		std::vector<CanvasInfo> canvases = mgr.canvases();
+		for (size_t i = 0; i < canvases.size(); ++i) {
+			if (canvases[i].is_main || canvases[i].name.empty())
+				continue;
+			QString label = qs(canvases[i].name);
+			if (canvases[i].width > 0 && canvases[i].height > 0) {
+				label += QString(" (%1x%2%3)").arg(canvases[i].width).arg(canvases[i].height)
+					.arg(canvases[i].width < canvases[i].height ? " - Vertical" : "");
+			}
+			canvas_->addItem(label, qs(canvases[i].name));
+		}
 		if (!d.canvas.empty() && canvas_->findData(qs(d.canvas)) < 0)
 			canvas_->addItem(qs(d.canvas) + " " + T("Dialog.NotAvailable"), qs(d.canvas));
 		canvas_->setCurrentIndex(std::max(0, canvas_->findData(qs(d.canvas))));
@@ -415,6 +430,15 @@ private:
 		if (cur.empty() || cur == prev_default_)
 			url_->setText(qs(next));
 		prev_default_ = next;
+		if (current_platform() == "tiktok" && canvas_->currentIndex() == 0) {
+			for (int i = 0; i < canvas_->count(); ++i) {
+				QString id = canvas_->itemData(i).toString();
+				if (id.contains("vertical", Qt::CaseInsensitive)) {
+					canvas_->setCurrentIndex(i);
+					break;
+				}
+			}
+		}
 		update_hint();
 	}
 
@@ -781,13 +805,19 @@ void MultistreamDock::update_glance(const std::vector<RuntimeView> &views)
 		int reading = 0;
 		for (size_t i = 0; i < src.size(); ++i)
 			reading += src[i].state == "reading" ? 1 : 0;
-		chat = T("Glance.ChatOn").arg(reading).arg(static_cast<int>(src.size()));
+		QString c_on = T("Glance.ChatOn");
+		chat = c_on.contains("%1") ? c_on.arg(reading).arg(static_cast<int>(src.size()))
+					   : QString("chat %1/%2").arg(reading).arg(static_cast<int>(src.size()));
 	}
-	QString line = T("Glance.Streams").arg(live).arg(enabled);
+	QString t_str = T("Glance.Streams");
+	QString line = t_str.contains("%1") ? t_str.arg(live).arg(enabled)
+					    : QString("%1 of %2 live").arg(live).arg(enabled);
 	if (live > 0)
 		line += QString(" | %1 kbps").arg(static_cast<int>(kbps));
-	if (trouble > 0)
-		line += " | " + T("Glance.Trouble").arg(trouble);
+	if (trouble > 0) {
+		QString c_tr = T("Glance.Trouble");
+		line += " | " + (c_tr.contains("%1") ? c_tr.arg(trouble) : QString("%1 in trouble").arg(trouble));
+	}
 	line += " | " + chat;
 	glance_->setText(line);
 	glance_->setStyleSheet(trouble > 0 ? "color:#ffb020;" : live > 0 ? "color:#3ddc84;" : "color:#8a8a96;");

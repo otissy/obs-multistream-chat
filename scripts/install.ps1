@@ -30,13 +30,21 @@ if ($Uninstall) {
   if (Test-Path $Dest) { Remove-Item $Dest -Recurse -Force; Write-Host "removed $Dest" } else { Write-Host 'nothing to remove' }
   return
 }
-if (-not $Dll) { $Dll = (Get-ChildItem (Get-BuildRoot $BuildRoot) -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Select-Object -First 1).FullName }
+if (-not $Dll) { $Dll = (Get-ChildItem (Get-BuildRoot $BuildRoot) -Recurse -Filter obs-multistream-chat.dll -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName }
 if (-not $Dll -or -not (Test-Path $Dll)) { throw 'obs-multistream-chat.dll not found. Run scripts\build.ps1 first (or pass -Dll).' }
 
 $bin = Join-Path $Dest 'bin\64bit'
 New-Item -ItemType Directory -Force $bin | Out-Null
 Copy-Item $Dll (Join-Path $bin 'obs-multistream-chat.dll') -Force
-Copy-Item (Join-Path $Root 'data') (Join-Path $Dest 'data') -Recurse -Force
-Copy-Item (Join-Path $Root 'reader') (Join-Path $Dest 'data\reader') -Recurse -Force
+
+$dataDest = Join-Path $Dest 'data'
+if (Test-Path (Join-Path $dataDest 'data')) { Remove-Item (Join-Path $dataDest 'data') -Recurse -Force }
+New-Item -ItemType Directory -Force $dataDest | Out-Null
+Copy-Item (Join-Path $Root 'data\*') $dataDest -Recurse -Force
+
+$readerDest = Join-Path $dataDest 'reader'
+if (Test-Path (Join-Path $readerDest 'reader')) { Remove-Item (Join-Path $readerDest 'reader') -Recurse -Force }
+New-Item -ItemType Directory -Force $readerDest | Out-Null
+Copy-Item (Join-Path $Root 'reader\*') $readerDest -Recurse -Force
 Write-Host "installed to $Dest"
 Write-Host 'Start OBS, then View > Docks > OBS Multistream Chat.'

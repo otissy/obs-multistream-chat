@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
+
+- New: **In-dock Live Chat feed** in the Chat tab: the streamer can now read their merged chat (Twitch, YouTube, Kick, TikTok, X) directly inside the OBS Studio dock without opening the browser-source overlay.
+- New: **Platform logos in chat**: chat messages and sources table now display crisp vector logos for Twitch, Kick, YouTube, TikTok, and X instead of text tags.
+- New: **Zero-touch channel auto-connect**: enter channel handle once in "My Channel" to automatically configure and enable Twitch, Kick, and TikTok. Automatically auto-syncs from configured destinations.
+- New: **Automatic live stream detection & resilient lifecycle**: chat reader starts automatically when OBS or any destination goes live; gently remains in background standby (`waiting`) for offline channels so it immediately connects when broadcast starts.
+- New: **Windows setup installer executable** (`obs-multistream-chat-0.4.0-windows-x64-setup.exe`) powered by Inno Setup in addition to portable `.zip` archives.
+- New: **Vertical scenes and canvas**: canvas picker displays resolution and vertical tag (e.g. `Vertical (1080x1920 - Vertical)`), auto-selects vertical canvas when TikTok is chosen, and locks encoder to "own" with vertical bitrate defaults.
+- New: **Separate audio tracks**: mixer tracks 1-6 with profile-defined track names from OBS (`[AdvOut] Track<N>Name`), audio bitrate control, and clear routing guidance for Advanced Audio Properties.
+- New: **Stream key reveal and verification**: clicking Reveal in the edit dialog decrypts and reveals the saved DPAPI stream key so the streamer can verify their key at any time.
+- Fixed: Resolved Aitum Stream Suite duplicate DLL conflict and locale file layout bug.
+
 ## 0.3.1 (unreleased): the dock was never registered in OBS
 
 - Fixed: 0.1.0 to 0.3.0 registered the dock from `obs_module_load` and ignored the return value; in the real

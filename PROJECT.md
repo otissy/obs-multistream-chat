@@ -11,6 +11,23 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## 0.4.0 (2026-10-17): Live in-dock chat, vertical scenes & canvas integration, audio tracks, key reveal
+
+- **In-dock Live Chat feed**: the streamer no longer needs to use a browser source overlay to read their own chat;
+  merged chat from all enabled sources (Twitch, YouTube, Kick, TikTok, X) renders in real-time in the dock with
+  platform brand badges, timestamps, high-contrast username colors, emote images, font size scaling, clear button,
+  and smart auto-scroll with pause-on-scroll-up and resume.
+- **Chat tab sub-tabs**: "Live Chat" (full height live stream) and "Sources & Settings" (channels table, filters,
+  blocked words/users, and overlay URL copy for viewers), with an unread badge on Live Chat when on settings.
+- **Vertical scenes & canvas**: canvas picker displays resolution and vertical tag (e.g. `Vertical (1080x1920 - Vertical)`),
+  auto-suggests vertical canvas for TikTok destinations, and locks encoder to "own" with vertical bitrate defaults.
+- **Separate audio tracks**: mixer tracks 1-6 with profile-defined track names from OBS (`[AdvOut] Track<N>Name`),
+  own AAC encoder bitrate control, and clear routing guidance for OBS Advanced Audio Properties.
+- **Stream key reveal & verification**: Reveal button in the destination dialog decrypts and displays the saved DPAPI key;
+  `OBS_FRONTEND_EVENT_PROFILE_CHANGED` listener keeps configuration and canvas/track lists in sync when changing profiles.
+- Built `obs-multistream-chat.dll` (692,224 bytes), package `dist\obs-multistream-chat-0.4.0-windows-x64.zip`
+  (sha-256 `f478e75b8cd500447d511f37720f7d22acea5c34e2f744b3bd9224bce99e417b`). Core suite 145/145, glue/packaging 35/35, chat 98/98.
+
 ## 0.3.1 (2026-10-15): dock registration fix
 
 Root cause of "no dock": registration happened in `obs_module_load` with the result ignored (silent when refused).

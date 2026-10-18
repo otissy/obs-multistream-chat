@@ -145,6 +145,7 @@ void read_chat(const json::Value &root, LoadResult &r)
 	}
 	ChatConfig &cc = r.config.chat;
 	cc.start_with_obs = bool_of(*c, "start_with_obs", false);
+	cc.auto_start_with_stream = bool_of(*c, "auto_start_with_stream", true);
 	cc.hide_commands = bool_of(*c, "hide_commands", false);
 	cc.hide_bots = bool_of(*c, "hide_bots", false);
 	cc.quiet_minutes = int_of(*c, "quiet_minutes", 5, 1, 120);
@@ -570,6 +571,7 @@ bool serialize_config(const Config &cfg, std::string &out, std::string &err)
 	root.set("destinations", arr);
 	json::Value chat = json::Value::object();
 	chat.set("start_with_obs", json::Value::boolean(cfg.chat.start_with_obs));
+	chat.set("auto_start_with_stream", json::Value::boolean(cfg.chat.auto_start_with_stream));
 	chat.set("node_path", json::Value::string(cfg.chat.node_path));
 	chat.set("quiet_minutes", json::Value::number(cfg.chat.quiet_minutes));
 	chat.set("user_agent", json::Value::string(cfg.chat.user_agent));

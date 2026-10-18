@@ -193,6 +193,14 @@ std::vector<std::string> OutputManager::canvas_names() const
 	return names;
 }
 
+std::vector<CanvasInfo> OutputManager::canvases() const
+{
+	std::vector<CanvasInfo> all;
+	CanvasEnum e{&all};
+	obs_enum_canvases(&enum_canvas_cb, &e);
+	return all;
+}
+
 std::vector<EncoderChoice> OutputManager::video_encoders() const
 {
 	std::vector<EncoderChoice> out;
@@ -661,6 +669,16 @@ void OutputManager::tick()
 		last_double_check_ = now;
 		double_warnings_ = fleet_.double_stream_warnings();
 	}
+}
+
+bool OutputManager::any_live() const
+{
+	std::vector<RuntimeView> v = fleet_.views();
+	for (size_t i = 0; i < v.size(); ++i) {
+		if (v[i].state == State::Live || v[i].state == State::Degraded)
+			return true;
+	}
+	return false;
 }
 
 } // namespace oms

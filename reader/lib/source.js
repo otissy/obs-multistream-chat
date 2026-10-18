@@ -245,8 +245,15 @@ class Source extends EventEmitter {
     this._closeTab();
     this.attempts++;
     if (this.attempts > MAX_ATTEMPTS) {
-      this.stopped = true;
-      this._set('error', 'gave up after ' + MAX_ATTEMPTS + ' tries: ' + reason);
+      this._set('waiting', 'Waiting for live broadcast to start; auto-detecting...');
+      this._timer(async () => {
+        this._failed = false;
+        this.attempts = 1;
+        this._reopening = true;
+        this._set('starting', 'checking for live stream');
+        await this._open();
+        this._reopening = false;
+      }, 30000);
       return;
     }
     const wait = delayMs(this.attempts - 1);

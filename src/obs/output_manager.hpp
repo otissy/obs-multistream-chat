@@ -38,6 +38,7 @@ public:
 	void on_main_stream_stopping() { fleet_.on_main_stream_stopping(); }
 	void on_main_stream_stopped();
 	bool main_live() const { return fleet_.main_live(); }
+	bool any_live() const;
 	void start_destination(const std::string &id) { fleet_.start_destination(id); }
 	void stop_destination(const std::string &id) { fleet_.stop_destination(id); }
 	void start_all() { fleet_.start_all(); }
@@ -52,6 +53,7 @@ public:
 
 	// Pickers for the dock.
 	std::vector<std::string> canvas_names() const; // non-main canvases currently registered
+	std::vector<CanvasInfo> canvases() const;
 	std::vector<EncoderChoice> video_encoders() const;
 	std::string track_name(int track) const; // "" when the user did not name it
 	AitumInfo aitum_info() const;

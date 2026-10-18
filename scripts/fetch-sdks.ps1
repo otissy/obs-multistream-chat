@@ -6,8 +6,15 @@
    $env:SSL_CERT_FILE = 'C:\path\to\windows-roots.pem'
 #>
 [CmdletBinding()]
-param([string]$Root = (Split-Path -Parent $PSScriptRoot), [string]$Cache = (Join-Path (Split-Path -Parent $PSScriptRoot) 'build\downloads'))
+param([string]$Root, [string]$Cache)
 $ErrorActionPreference = 'Stop'
+
+if (-not $Root) {
+  $Root = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Location).Path }
+}
+if (-not $Cache) {
+  $Cache = Join-Path $Root 'build\downloads'
+}
 
 $ObsUrl  = 'https://github.com/obsproject/obs-studio/archive/refs/tags/32.2.2.tar.gz'
 $ObsSha  = '35d3cd0979d65664fada7119fdb612eca7c34b61a1623a330caec74bf72626c4'
@@ -37,7 +44,7 @@ if (-not (Test-Path (Join-Path $obsDir 'libobs\obs-module.h'))) {
   $tmp = Join-Path $Cache 'obs-src'
   Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
   New-Item -ItemType Directory -Force $tmp | Out-Null
-  & tar.exe -xzf $tgz -C $tmp --wildcards '*/libobs/*' '*/frontend/api/*'
+  & tar.exe -xzf $tgz -C $tmp
   if ($LASTEXITCODE -ne 0) { throw 'tar failed' }
   $src = Get-ChildItem $tmp -Directory | Select-Object -First 1
   New-Item -ItemType Directory -Force (Join-Path $obsDir 'libobs'), (Join-Path $obsDir 'frontend-api'), (Join-Path $obsDir 'lib') | Out-Null

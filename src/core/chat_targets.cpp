@@ -283,10 +283,15 @@ std::string chat_page_url(const std::string &platform, const std::string &target
 
 const std::vector<std::string> &chat_emote_hosts(const std::string &platform)
 {
-	static const std::vector<std::string> twitch = {"static-cdn.jtvnw.net"};
-	static const std::vector<std::string> youtube = {"yt3.ggpht.com", "yt3.googleusercontent.com", "www.gstatic.com",
-							 "www.youtube.com"};
-	static const std::vector<std::string> kick = {"files.kick.com"};
+	static const std::vector<std::string> twitch = {
+		"static-cdn.jtvnw.net", "cdn.7tv.app", "cdn.betterttv.net", "cdn.frankerfacez.com"
+	};
+	static const std::vector<std::string> youtube = {
+		"yt3.ggpht.com", "yt3.googleusercontent.com", "www.gstatic.com", "www.youtube.com", "cdn.7tv.app"
+	};
+	static const std::vector<std::string> kick = {
+		"files.kick.com", "cdn.7tv.app", "cdn.betterttv.net", "cdn.frankerfacez.com"
+	};
 	static const std::vector<std::string> tiktok = {"*.tiktokcdn.com", "*.tiktokcdn-us.com", "*.ibyteimg.com"};
 	static const std::vector<std::string> x = {"*.twimg.com"};
 	static const std::vector<std::string> none;

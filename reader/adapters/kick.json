@@ -5,24 +5,106 @@
   "title": "Kick popout chat",
   "note": "Selectors cross-checked by reading Social Stream Ninja's sources/kick.js (GPL-3.0, see NOTICE): rows are [data-chat-entry] (the new popout) or [data-index] (virtualised list rows). Kick changes its markup often; run `node reader/index.js --diagnose` to see what matches. When the chat list exists but no message ever matches and the page says the channel is offline, the state is 'offline', not 'quiet'.",
   "url": "https://kick.com/popout/{target}/chat",
-  "hosts": ["kick.com"],
-  "loginPaths": ["/login"],
+  "hosts": [
+    "kick.com"
+  ],
+  "loginPaths": [
+    "/login"
+  ],
   "containerTimeoutSec": 45,
   "noteStates": {
-    "offline": { "state": "offline", "when": "nomsg", "detail": "the chat list is there but the page says the channel is offline, so there are no messages" }
+    "offline": {
+      "state": "offline",
+      "when": "nomsg",
+      "detail": "the chat list is there but the page says the channel is offline, so there are no messages"
+    }
   },
   "engine": {
-    "container": ["#chatroom-messages", "#chatroom"],
-    "item": ["[data-chat-entry]", "[data-index]"],
-    "ignore": [".chatroom-banner", "[class^='deleted-message']"],
-    "id": { "attrs": ["data-chat-entry"] },
-    "author": { "sel": ["button.font-bold[title]", ".chat-entry-username", "button[title]", "button.font-bold"], "color": "inline" },
-    "body": { "sel": [".chat-entry-content", "[class*='break-all']", "span[class*='font-normal']"], "rest": true, "remove": ["button", ".chat-message-identity"] },
-    "emote": { "sel": [".chat-emote-container img", "img[src*='/emotes/']", "img[class*='emote']"], "name": ["alt", "data-emote-name", "title"], "src": ["src"] },
-    "badge": { "sel": [".chat-message-identity img", "[data-state] img"], "name": ["alt", "title", "aria-label"] },
-    "notes": [
-      { "id": "offline", "text": ["is offline", "channel is offline", "stream is offline", "currently offline", "not live"] }
+    "container": [
+      "#chatroom-messages",
+      "#chatroom"
     ],
-    "login": { "sel": [], "text": ["verify you are human", "attention required"] }
+    "item": [
+      "[data-chat-entry]",
+      "[data-index]"
+    ],
+    "ignore": [
+      ".chatroom-banner",
+      "[class^='deleted-message']"
+    ],
+    "id": {
+      "attrs": [
+        "data-chat-entry"
+      ]
+    },
+    "author": {
+      "sel": [
+        "button.font-bold[title]",
+        ".chat-entry-username",
+        "button[title]",
+        "button.font-bold"
+      ],
+      "color": "inline"
+    },
+    "body": {
+      "sel": [
+        ".chat-entry-content",
+        "[class*='break-all']",
+        "span[class*='font-normal']"
+      ],
+      "rest": true,
+      "remove": [
+        "button",
+        ".chat-message-identity"
+      ]
+    },
+    "emote": {
+      "sel": [
+        ".chat-emote-container img",
+        "img[src*='/emotes/']",
+        "img[class*='emote']",
+        "img.seventv-emote",
+        "img.bttv-emote",
+        "[data-7tv-emote]"
+      ],
+      "name": [
+        "alt",
+        "data-emote-name",
+        "title"
+      ],
+      "src": [
+        "src"
+      ]
+    },
+    "badge": {
+      "sel": [
+        ".chat-message-identity img",
+        "[data-state] img"
+      ],
+      "name": [
+        "alt",
+        "title",
+        "aria-label"
+      ]
+    },
+    "notes": [
+      {
+        "id": "offline",
+        "text": [
+          "is offline",
+          "channel is offline",
+          "stream is offline",
+          "currently offline",
+          "not live"
+        ]
+      }
+    ],
+    "login": {
+      "sel": [],
+      "text": [
+        "verify you are human",
+        "attention required"
+      ]
+    }
   }
 }

@@ -1,0 +1,77 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build Windows x64
+    runs-on: windows-2022
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress
+
+      - name: Fetch SDKs and Build
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts\fetch-sdks.ps1
+          
+          # If local OBS is not installed on runner, fetch portable OBS 32.2.2 for libobs headers & DLLs
+          $obsBin = 'C:\Program Files\obs-studio\bin\64bit'
+          if (-not (Test-Path $obsBin)) {
+            Write-Host "Fetching OBS Studio 32.2.2 portable for import library creation..."
+            $obsZipUrl = 'https://github.com/obsproject/obs-studio/releases/download/32.2.2/OBS-Studio-32.2.2-Windows-x64.zip'
+            $obsZipSha = '4d6e40e3ab155f56b30de517380566a206d74b63cdf5ad49aa596924768f97e1'
+            $destZip = "$env:TEMP\OBS-Studio-32.2.2-Windows-x64.zip"
+            curl.exe -sSL -o $destZip $obsZipUrl
+            $hash = (Get-FileHash $destZip -Algorithm SHA256).Hash.ToLower()
+            if ($hash -ne $obsZipSha) { throw "OBS zip SHA256 mismatch: got $hash" }
+            $extractDir = "$env:TEMP\obs-portable"
+            Expand-Archive -Path $destZip -DestinationPath $extractDir -Force
+            $obsBin = "$extractDir\bin\64bit"
+          }
+          
+          powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test -ObsBin $obsBin
+
+      - name: Package installer and zip
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-multistream-chat-windows-x64
+          path: |
+            D:\builds\obs-multistream-chat\dist\*.zip
+            D:\builds\obs-multistream-chat\dist\*.exe
+            D:\builds\obs-multistream-chat\dist\*.sha256
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            D:\builds\obs-multistream-chat\dist\*.zip
+            D:\builds\obs-multistream-chat\dist\*.exe
+            D:\builds\obs-multistream-chat\dist\*.sha256
+          draft: false
+          prerelease: false
+          generate_release_notes: true

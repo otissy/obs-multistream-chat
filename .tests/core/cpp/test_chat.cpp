@@ -233,6 +233,12 @@ TEST(L2, emote_urls_must_be_https_on_the_platforms_own_cdn)
 	CHECK(emote_url_allowed("youtube", "https://www.youtube.com/s/gaming/emoji/7ff574f2/emoji_u1f60d.svg"));
 	CHECK(emote_url_allowed("x", "https://abs-0.twimg.com/emoji/v2/svg/1f600.svg"));
 	CHECK(emote_url_allowed("tiktok", "https://p16-webcast.tiktokcdn.com/img/x.webp"));
+	// third-party emotes (7TV, BTTV, FFZ)
+	CHECK(emote_url_allowed("twitch", "https://cdn.7tv.app/emote/60ae3e54229664e9625808ee/1x.webp"));
+	CHECK(emote_url_allowed("twitch", "https://cdn.betterttv.net/emote/5e9c37517e090362f8b0d9f7/1x"));
+	CHECK(emote_url_allowed("twitch", "https://cdn.frankerfacez.com/emoticon/128054/1"));
+	CHECK(emote_url_allowed("kick", "https://cdn.7tv.app/emote/60ae3e54229664e9625808ee/1x.webp"));
+	CHECK_FALSE(emote_url_allowed("tiktok", "https://cdn.7tv.app/emote/123/1x.webp"));
 	// wrong platform, wrong host
 	CHECK_FALSE(emote_url_allowed("kick", "https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/1.0"));
 	CHECK_FALSE(emote_url_allowed("twitch", "https://evil.example/a.png"));

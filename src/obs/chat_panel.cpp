@@ -841,7 +841,7 @@ void ChatPanel::add_collaborator_dialog()
 
 	PluginState &st = plugin();
 	if (st.cfg.chat.sources.size() >= static_cast<size_t>(kMaxChatSources)) {
-		QMessageBox::information(this, "OBS Multistream Chat", "At most 10 chat sources allowed.");
+		QMessageBox::information(this, "OBS Multistream Chat", "At most 32 chat sources allowed.");
 		return;
 	}
 
@@ -927,7 +927,7 @@ void ChatPanel::add_source()
 {
 	PluginState &st = plugin();
 	if (st.cfg.chat.sources.size() >= static_cast<size_t>(kMaxChatSources)) {
-		QMessageBox::information(this, "OBS Multistream Chat", "At most 10 chat sources.");
+		QMessageBox::information(this, "OBS Multistream Chat", "At most 32 chat sources allowed.");
 		return;
 	}
 	ChatSource s;

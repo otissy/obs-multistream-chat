@@ -5,19 +5,94 @@
   "title": "Twitch popout chat",
   "note": "Selectors cross-checked by reading Social Stream Ninja's sources/twitch.js (GPL-3.0, see NOTICE); not verified against a live page by the author.",
   "url": "https://www.twitch.tv/popout/{target}/chat",
-  "hosts": ["www.twitch.tv"],
-  "loginPaths": ["/login", "/signup"],
+  "hosts": [
+    "www.twitch.tv"
+  ],
+  "loginPaths": [
+    "/login",
+    "/signup"
+  ],
   "containerTimeoutSec": 45,
   "engine": {
-    "container": [".chat-scrollable-area__message-container", ".chat-list--other", ".chat-list--default", ".chat-room__content", "[data-a-target='chat-scroller']", "[data-test-selector='chat-scrollable-area__message-container']"],
-    "item": [".chat-line__message", ".chat-line__message--shared", "[data-a-target='chat-line-message']"],
-    "ignore": [".chat-line__message--deleted-notice"],
-    "id": { "attrs": ["data-mid", "id"] },
-    "author": { "sel": [".chat-author__display-name", "[data-a-target='chat-message-username']", "[data-a-target='chat-author-display-name']", ".chatter-name"], "color": "inline" },
-    "body": { "sel": ["[data-a-target='chat-line-message-body']", "[data-test-selector='chat-line-message-body']", ".message", ".text-fragment"] },
-    "emote": { "sel": ["img.chat-image", "img.chat-line__message--emote", "[data-test-selector='chat-message-emote']"], "name": ["alt"], "src": ["src"] },
-    "badge": { "sel": ["img.chat-badge", "[data-a-target='chat-badge']", ".chat-badge", "[data-a-target='shared-chat-channel-badge']", ".chat-line__shared-chat-indicator"], "name": ["alt", "aria-label", "title", "data-channel"] },
-    "login": { "sel": ["[data-a-target='login-button']"], "text": ["log in to continue", "this content is not available"] }
+    "container": [
+      ".chat-scrollable-area__message-container",
+      ".chat-list--other",
+      ".chat-list--default",
+      ".chat-room__content",
+      "[data-a-target='chat-scroller']",
+      "[data-test-selector='chat-scrollable-area__message-container']"
+    ],
+    "item": [
+      ".chat-line__message",
+      ".chat-line__message--shared",
+      "[data-a-target='chat-line-message']"
+    ],
+    "ignore": [
+      ".chat-line__message--deleted-notice"
+    ],
+    "id": {
+      "attrs": [
+        "data-mid",
+        "id"
+      ]
+    },
+    "author": {
+      "sel": [
+        ".chat-author__display-name",
+        "[data-a-target='chat-message-username']",
+        "[data-a-target='chat-author-display-name']",
+        ".chatter-name"
+      ],
+      "color": "inline"
+    },
+    "body": {
+      "sel": [
+        "[data-a-target='chat-line-message-body']",
+        "[data-test-selector='chat-line-message-body']",
+        ".message",
+        ".text-fragment"
+      ]
+    },
+    "emote": {
+      "sel": [
+        "img.chat-image",
+        "img.chat-line__message--emote",
+        "[data-test-selector='chat-message-emote']",
+        "img.seventv-emote",
+        "img.bttv-emote",
+        "[data-7tv-emote]",
+        ".chat-image__bttv"
+      ],
+      "name": [
+        "alt"
+      ],
+      "src": [
+        "src"
+      ]
+    },
+    "badge": {
+      "sel": [
+        "img.chat-badge",
+        "[data-a-target='chat-badge']",
+        ".chat-badge",
+        "[data-a-target='shared-chat-channel-badge']",
+        ".chat-line__shared-chat-indicator"
+      ],
+      "name": [
+        "alt",
+        "aria-label",
+        "title",
+        "data-channel"
+      ]
+    },
+    "login": {
+      "sel": [
+        "[data-a-target='login-button']"
+      ],
+      "text": [
+        "log in to continue",
+        "this content is not available"
+      ]
+    }
   }
 }
-

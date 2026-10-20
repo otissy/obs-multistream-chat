@@ -210,3 +210,25 @@ test('voice-installer: a manifest pack without a SHA-256, or unknown to the cata
   assert.throws(() => main(write({ shipped: [{ id: 'vits-piper-de_DE-thorsten-high', sha256: '' }], refused: [] })), /SHA-256/);
   assert.throws(() => main(write({ shipped: [{ id: 'nope', sha256: 'a'.repeat(64) }], refused: [] })), /catalogue/);
 });
+
+// ---- unpacking ----------------------------------------------------------------------------------
+test('unpack: streams a multi-megabyte archive through bzip2 | tar, and reports corrupt input and a missing bzip2', { skip: !tarOk && 'no tar' }, async () => {
+  const { unpack } = require('../../scripts/fetch-voices');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-unpack-'));
+  const src = path.join(dir, 'src', 'pack');
+  fs.mkdirSync(src, { recursive: true });
+  const blob = crypto.randomBytes(6 * 1024 * 1024); // incompressible: fills any pipe many times over
+  fs.writeFileSync(path.join(src, 'model.onnx'), blob);
+  const archive = path.join(dir, 'pack.tar.bz2');
+  assert.strictEqual(spawnSync('tar', ['-cjf', archive, '-C', path.join(dir, 'src'), 'pack']).status, 0);
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out);
+  assert.strictEqual(await unpack(archive, out), '');
+  assert.ok(fs.readFileSync(path.join(out, 'pack', 'model.onnx')).equals(blob));
+
+  const bad = path.join(dir, 'bad.tar.bz2');
+  fs.writeFileSync(bad, Buffer.concat([fs.readFileSync(archive).subarray(0, 4096), Buffer.alloc(4096, 7)]));
+  assert.match(await unpack(bad, out), /bzip2 exit [1-9]/);
+
+  assert.match(await unpack(archive, out, { PATH: path.join(dir, 'nowhere') }), /not found on PATH/);
+});

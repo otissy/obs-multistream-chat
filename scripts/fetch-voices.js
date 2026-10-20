@@ -22,7 +22,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn } = require('child_process');
 const { loadCatalogue, packInstalled } = require('../voice/lib/catalogue');
 const { classify } = require('../voice/lib/licence');
 
@@ -51,8 +51,11 @@ function parseArgs(argv) {
   return o;
 }
 
+const DOWNLOAD_MS = 20 * 60 * 1000; // per pack: a stalled transfer fails that pack instead of the whole job
+const UNPACK_MS = 20 * 60 * 1000;
+
 async function download(url, file) {
-  const res = await fetch(url, { redirect: 'follow' });
+  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(DOWNLOAD_MS) });
   if (!res.ok) throw new Error('HTTP ' + res.status + ' for ' + url);
   const hash = crypto.createHash('sha256');
   const out = fs.createWriteStream(file);
@@ -77,6 +80,39 @@ function tarEnv(env = process.env) {
   const git = path.join(env.ProgramFiles || 'C:\\Program Files', 'Git', 'usr', 'bin');
   if (has || !fs.existsSync(path.join(git, 'bzip2.exe'))) return env;
   return { ...env, [key]: [...dirs, git].join(';') };
+}
+
+// "bzip2 -dc archive | tar -xf - -C dest", with both pipes driven from here. Not "tar -xjf": Windows'
+// tar.exe runs bzip2 as a filter of its own and that pipe deadlocks once a real pack (67-350 MB) fills it,
+// which hung CI for hours; small test archives never showed it. Resolves to "" or an error message.
+function unpack(archive, dest, env = tarEnv()) {
+  return new Promise(resolve => {
+    let done = false;
+    let err = '';
+    const finish = msg => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(msg);
+    };
+    const bz = spawn('bzip2', ['-dc', archive], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    const tar = spawn('tar', ['-xf', '-', '-C', dest], { env, stdio: ['pipe', 'ignore', 'pipe'], windowsHide: true });
+    const timer = setTimeout(() => { bz.kill(); tar.kill(); finish('timed out after ' + UNPACK_MS / 60000 + ' min'); }, UNPACK_MS);
+    for (const p of [bz, tar]) {
+      p.stderr.on('data', d => { if (err.length < 400) err += d; });
+      p.on('error', e => { bz.kill(); tar.kill(); finish(e.code === 'ENOENT' ? e.path + ' was not found on PATH' : e.message); });
+    }
+    tar.stdin.on('error', () => {}); // tar quitting early surfaces as its exit code
+    bz.stdout.pipe(tar.stdin);
+    let left = 2;
+    const codes = {};
+    const exit = name => code => {
+      codes[name] = code;
+      if (--left === 0) finish(codes.bzip2 === 0 && codes.tar === 0 ? '' : `bzip2 exit ${codes.bzip2}, tar exit ${codes.tar}: ${err.trim()}`);
+    };
+    bz.on('close', exit('bzip2'));
+    tar.on('close', exit('tar'));
+  });
 }
 
 function sha256File(file) {
@@ -111,8 +147,8 @@ async function fetchPack(pack, o, release, pins, log) {
   }
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(tmp, { recursive: true });
-  const t = spawnSync('tar', ['-xjf', archive, '-C', tmp], { stdio: ['ignore', 'ignore', 'pipe'], env: tarEnv() });
-  if (t.status !== 0) return { refused: 'could not unpack: ' + String(t.stderr).trim().slice(0, 200) };
+  const bad = await unpack(archive, tmp);
+  if (bad) return { refused: 'could not unpack: ' + bad.slice(0, 300) };
   const top = path.join(tmp, pack.id);
   if (!fs.existsSync(top)) return { refused: 'archive does not contain the folder ' + pack.id };
   if (!packInstalled(pack, tmp)) return { refused: 'archive is missing files the catalogue names' };
@@ -165,4 +201,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).then(code => process.exit(code), e => { process.stderr.write('fetch-voices: ' + e.message + '\n'); process.exit(2); });
 }
 
-module.exports = { parseArgs, main, tarEnv };
+module.exports = { parseArgs, main, tarEnv, unpack };

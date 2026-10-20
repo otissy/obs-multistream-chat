@@ -1,8 +1,9 @@
-// Chat voice reader. One worker thread owns COM and a single SAPI voice and speaks queued lines in order.
-//   - each line is spoken to the end (0.4.x released the voice right after an async Speak, so nothing was heard)
-//   - chat text is never parsed as SAPI XML, so a message cannot change the volume or insert silences
-//   - when chat outruns the voice the oldest waiting lines are dropped; long lines are cut
-// Windows only; elsewhere voices() is empty and say() does nothing.
+// Chat voice reader: neural voices (Kokoro and Piper through sherpa-onnx) that run on this PC.
+// The models run in the voice helper (voice\index.js, see VoiceProcess), never inside OBS; this class
+// starts it on the first line, sends it the lines, and plays what comes back (VoicePlayer).
+//   - lines are spoken in order; when chat outruns the voice the helper drops the oldest waiting lines
+//   - chat text is cleaned by the helper (links, emoji, spam runs, length) before it is spoken
+//   - only voices whose pack the installer put in data\voices are offered
 #pragma once
 #include <memory>
 #include <string>
@@ -11,28 +12,27 @@
 namespace oms {
 
 struct TtsVoice {
-	std::string id;   // SAPI token id, "" = the Windows default voice
-	std::string name; // as Windows names it, e.g. "Microsoft Hazel - English (United Kingdom)"
+	std::string id;   // catalogue id, e.g. "kokoro.bf_emma"
+	std::string name; // "English (British): Emma, female"
 };
 
 class ChatSpeaker {
 public:
-	static constexpr size_t kMaxQueued = 5;
-	static constexpr size_t kMaxChars = 300;
-
-	ChatSpeaker();
-	~ChatSpeaker(); // cuts off the current line and joins the worker
+	// node_path: as for the chat reader ("" searches PATH); log_file: where the helper's stderr goes.
+	ChatSpeaker(const std::string &node_path, const std::string &log_file);
+	~ChatSpeaker(); // cuts off the current line and stops the helper
 	ChatSpeaker(const ChatSpeaker &) = delete;
 	ChatSpeaker &operator=(const ChatSpeaker &) = delete;
 
-	// Installed voices: the SAPI 5 desktop voices plus the OneCore voices that Windows adds per language
-	// (Settings > Time & language > Speech > Add voices). Sorted by name, duplicates removed.
+	// The installed voices, sorted by language and accent. Empty when no voice pack is installed.
 	static std::vector<TtsVoice> voices();
 
-	// volume 0..100, rate -10..10; voice_id from voices(), "" for the default voice.
+	// volume 0..100, rate -5..5 (the dock's sliders); voice_id from voices().
 	void say(const std::string &utf8, const std::string &voice_id, int volume, int rate);
 	// Drops the waiting lines and cuts off the one being spoken.
 	void interrupt();
+	// Why the last line could not be spoken ("" when the helper is running).
+	std::string problem() const;
 
 private:
 	struct Impl;

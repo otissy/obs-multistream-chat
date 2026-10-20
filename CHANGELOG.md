@@ -1,16 +1,25 @@
 ﻿# Changelog
 
-## 0.4.2 (unreleased): the voice reader speaks
+## 0.4.2 (unreleased): neural chat voices, offline, in 43 languages
 
-- Fixed: the voice reader was silent. Each message was spoken with an async SAPI `Speak` on a short-lived thread
-  that released the voice and COM straight after, which cancelled the speech before it played. One worker thread
-  now owns the voice (`src/obs/tts.*`) and waits for each line to finish; Preview cuts off what is playing.
-- Fixed: the voice list was decorative (13 names, none applied). It now lists the voices installed in Windows, the
-  SAPI 5 desktop voices plus the OneCore voices added per language in Settings > Time & language > Speech, and the
-  chosen voice is used. A voice that will not load falls back to the Windows default and is logged.
-- Changed: chat text is never parsed as SAPI XML, so a message cannot change the volume or insert long silences.
-  At most 5 lines wait (the oldest is dropped when chat outruns the voice) and a line is cut at 300 characters.
-- Not verified: built and linked with MinGW only; not yet run in OBS. OneCore voices through SAPI 5 are untested.
+- New: the voice reader speaks with **neural voices that run on this PC** (sherpa-onnx with Kokoro v1.0 and
+  Piper voices) instead of Windows voices. The catalogue (`voice/catalogue.json`) holds 185 voices in 43
+  languages: all 54 Kokoro voices (American and British English, Spanish, French, Hindi, Italian, Japanese,
+  Brazilian Portuguese, Mandarin) and 1-6 Piper voices per locale, with English accents (Scottish, Northern
+  and Southern English, Welsh, South Asian) and regional ones (Flemish, Mexican and Argentinian Spanish,
+  European Portuguese). Only installed packs are offered.
+- New: the models run in a **voice helper** (`voice/index.js`, Node, like the chat reader) that the plugin
+  starts on the first line, in a kill-on-close job, with stdin/stdout pipes. A model error or a clashing
+  `onnxruntime.dll` from another plugin cannot take OBS down. Its stderr goes to `voice-helper.log`.
+- New: `scripts/fetch-voices.js` downloads each voice pack, checks it against a pinned SHA-256
+  (`voice/pins.json`) and ships it only if its own model card names a licence that allows it (no
+  non-commercial, no-derivatives, research-only, bare links or missing licences).
+- Fixed: 0.4.x was silent. Each message was spoken with an async SAPI `Speak` on a short-lived thread that
+  released the voice straight after, cancelling the speech. The 13 voice names in the list were never applied.
+- Changed: chat text is cleaned before it is spoken (links become "a link"; emoji, spam runs and control
+  characters are removed; 300 characters at most). At most 5 lines wait; Preview cuts off what is playing.
+- Not verified: no real voice model has run yet (the build machine fetches them); the plugin side is
+  compile-checked with MinGW only and has not run in OBS.
 
 ## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
 

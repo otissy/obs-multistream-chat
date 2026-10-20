@@ -555,7 +555,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	voice_title->setStyleSheet("font-size:14px; font-weight:bold; color:#f2f2f5;");
 	vl->addWidget(voice_title);
 
-	QLabel *voice_desc = new QLabel("Read incoming chat aloud with any voice installed in Windows, play chime alerts, and check for new releases.");
+	QLabel *voice_desc = new QLabel("Read incoming chat aloud with neural voices that run on this PC (no internet, no account), play chime alerts, and check for new releases.");
 	voice_desc->setWordWrap(true);
 	voice_desc->setStyleSheet("color:#8a8a96; font-size:12px; margin-bottom:4px;");
 	vl->addWidget(voice_desc);
@@ -570,17 +570,19 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	QHBoxLayout *vrow1 = new QHBoxLayout();
 	vrow1->addWidget(new QLabel("Voice:"));
 	tts_voice_ = new QComboBox();
-	tts_voice_->addItem("Windows default voice", QString());
-	for (const TtsVoice &v : ChatSpeaker::voices())
+	std::vector<TtsVoice> installed_voices = ChatSpeaker::voices();
+	for (const TtsVoice &v : installed_voices)
 		tts_voice_->addItem(qs(v.name), qs(v.id));
+	if (installed_voices.empty())
+		tts_voice_->addItem("No voices installed: run the installer again and tick a language", QString());
 	vrow1->addWidget(tts_voice_, 1);
 
 	tts_test_btn_ = new QPushButton("Preview Voice");
 	tts_test_btn_->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
 	vrow1->addWidget(tts_test_btn_);
 	tgl->addLayout(vrow1);
-	QLabel *voice_hint = new QLabel("More languages and accents: Windows Settings > Time & language > Speech > Add voices, "
-					 "then restart OBS.");
+	QLabel *voice_hint = new QLabel("More languages and accents: run the installer again and tick them under Voices. "
+					 "The voice reader needs Node.js, like the chat reader.");
 	voice_hint->setWordWrap(true);
 	voice_hint->setStyleSheet("color:#8a8a96; font-size:11px;");
 	tgl->addWidget(voice_hint);
@@ -671,6 +673,8 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		if (speaker_)
 			speaker_->interrupt();
 		play_tts("Viewer", "Twitch", "Welcome to the stream! The voice reader is ready.");
+		if (speaker_ && !speaker_->problem().empty())
+			QMessageBox::warning(this, "OBS Multistream Chat", qs(speaker_->problem()));
 	});
 	QObject::connect(sound_test_btn_, &QPushButton::clicked, [this]() {
 		std::string st = sound_alert_type_ ? ss(sound_alert_type_->currentData().toString()) : "chime";
@@ -1345,8 +1349,12 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 	int rate = tts_speed_ ? tts_speed_->value() : 0;
 	std::string voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
 
-	if (!speaker_)
-		speaker_ = std::make_unique<ChatSpeaker>();
+	if (!speaker_) {
+		const PluginState &st = plugin();
+		size_t slash = st.config_path.find_last_of("/\\");
+		std::string dir = slash == std::string::npos ? std::string() : st.config_path.substr(0, slash + 1);
+		speaker_ = std::make_unique<ChatSpeaker>(st.cfg.chat.node_path, dir + "voice-helper.log");
+	}
 	speaker_->say(text_to_say, voice, vol, rate);
 #else
 	(void)author;

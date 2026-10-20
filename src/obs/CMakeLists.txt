@@ -14,11 +14,11 @@ foreach(req "${OMS_IMPORT_LIB_DIR}/obs.lib" "${OMS_IMPORT_LIB_DIR}/obs-frontend-
 endforeach()
 
 if(OMS_HAVE_IMPORT_LIBS)
-  add_library(obs-multistream-chat MODULE plugin-main.cpp output_manager.cpp dock.cpp chat_panel.cpp reader_process.cpp tts.cpp)
+  add_library(obs-multistream-chat MODULE plugin-main.cpp output_manager.cpp dock.cpp chat_panel.cpp reader_process.cpp tts.cpp voice_player.cpp voice_process.cpp)
 else()
   message(WARNING "obs.lib / obs-frontend-api.lib not found in ${OMS_IMPORT_LIB_DIR}: compiling the plugin sources only "
                   "(no DLL). Run scripts/make-import-lib.ps1 to produce the DLL.")
-  add_library(obs-multistream-chat OBJECT plugin-main.cpp output_manager.cpp dock.cpp chat_panel.cpp reader_process.cpp tts.cpp)
+  add_library(obs-multistream-chat OBJECT plugin-main.cpp output_manager.cpp dock.cpp chat_panel.cpp reader_process.cpp tts.cpp voice_player.cpp voice_process.cpp)
 endif()
 target_include_directories(obs-multistream-chat PRIVATE
   "${OBS_SDK_DIR}/libobs" "${OBS_SDK_DIR}/frontend-api"
@@ -27,7 +27,7 @@ target_link_libraries(obs-multistream-chat PRIVATE oms_core)
 if(OMS_HAVE_IMPORT_LIBS)
   target_link_libraries(obs-multistream-chat PRIVATE
     "${OMS_IMPORT_LIB_DIR}/obs.lib" "${OMS_IMPORT_LIB_DIR}/obs-frontend-api.lib"
-    version.lib winmm.lib ole32.lib sapi.lib wininet.lib "${QT_SDK_DIR}/lib/Qt6Core.lib" "${QT_SDK_DIR}/lib/Qt6Gui.lib" "${QT_SDK_DIR}/lib/Qt6Widgets.lib")
+    version.lib winmm.lib ole32.lib wininet.lib "${QT_SDK_DIR}/lib/Qt6Core.lib" "${QT_SDK_DIR}/lib/Qt6Gui.lib" "${QT_SDK_DIR}/lib/Qt6Widgets.lib")
   endif()
 target_compile_definitions(obs-multistream-chat PRIVATE PLUGIN_VERSION="${PROJECT_VERSION}" QT_NO_DEBUG QT_NO_KEYWORDS)
 set_target_properties(obs-multistream-chat PROPERTIES PREFIX "" AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)

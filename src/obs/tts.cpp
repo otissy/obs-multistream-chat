@@ -1,256 +1,182 @@
 #include "tts.hpp"
 
-#include <obs-module.h>
+#include "voice.hpp"
+#include "voice_player.hpp"
+#include "voice_process.hpp"
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <sapi.h>
-#endif
+#include <obs-module.h>
 
 #include <algorithm>
 #include <atomic>
-#include <condition_variable>
-#include <deque>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <mutex>
-#include <thread>
+#include <sstream>
 
 namespace oms {
 
-#ifdef _WIN32
-
 namespace {
 
-const wchar_t *const kVoiceCategories[] = {
-	L"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices",         // SAPI 5 desktop voices
-	L"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech_OneCore\\Voices", // per-language voices from Settings
-};
-
-std::wstring widen(const std::string &s)
+std::string module_path(const char *rel)
 {
-	if (s.empty())
-		return std::wstring();
-	int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
-	std::wstring w(n > 0 ? n : 0, L'\0');
-	if (n > 0)
-		MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), &w[0], n);
-	return w;
-}
-
-std::string narrow(const wchar_t *w)
-{
-	if (!w || !*w)
-		return std::string();
-	int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
-	if (n <= 1)
-		return std::string();
-	std::string s(n - 1, '\0');
-	WideCharToMultiByte(CP_UTF8, 0, w, -1, &s[0], n, nullptr, nullptr);
+	char *p = obs_module_file(rel);
+	std::string s = p ? p : "";
+	bfree(p);
 	return s;
 }
 
-void enum_voices(const wchar_t *category, std::vector<TtsVoice> &out)
+// data\voices next to data\voice: obs_module_file() only answers for files that exist
+std::string packs_dir()
 {
-	ISpObjectTokenCategory *cat = nullptr;
-	if (FAILED(CoCreateInstance(CLSID_SpObjectTokenCategory, nullptr, CLSCTX_ALL, IID_ISpObjectTokenCategory,
-				    reinterpret_cast<void **>(&cat))))
-		return;
-	IEnumSpObjectTokens *tokens = nullptr;
-	if (SUCCEEDED(cat->SetId(category, FALSE)) && SUCCEEDED(cat->EnumTokens(nullptr, nullptr, &tokens))) {
-		ISpObjectToken *tok = nullptr;
-		while (tokens->Next(1, &tok, nullptr) == S_OK) {
-			wchar_t *id = nullptr;
-			wchar_t *name = nullptr;
-			if (SUCCEEDED(tok->GetId(&id)) && SUCCEEDED(tok->GetStringValue(nullptr, &name))) {
-				TtsVoice v;
-				v.id = narrow(id);
-				v.name = narrow(name);
-				if (!v.id.empty() && !v.name.empty())
-					out.push_back(v);
-			}
-			CoTaskMemFree(id);
-			CoTaskMemFree(name);
-			tok->Release();
-		}
-		tokens->Release();
-	}
-	cat->Release();
+	const char *d = obs_get_module_data_path(obs_current_module());
+	return d ? std::string(d) + "/voices" : std::string();
 }
 
-// "" selects the Windows default voice. A token that will not load falls back to the default, logged once per change.
-void select_voice(ISpVoice *voice, const std::wstring &id)
+bool exists_utf8(const std::string &p)
 {
-	if (id.empty()) {
-		voice->SetVoice(nullptr);
-		return;
+	std::error_code ec;
+	return std::filesystem::exists(std::filesystem::u8path(p), ec);
+}
+
+bool load_catalogue(voice::Catalogue &cat)
+{
+	std::string file = module_path("voice/catalogue.json");
+	if (file.empty())
+		return false;
+	std::ifstream in(std::filesystem::u8path(file), std::ios::binary);
+	std::stringstream ss;
+	ss << in.rdbuf();
+	std::string err;
+	if (!voice::parse_catalogue(ss.str(), cat, err)) {
+		blog(LOG_WARNING, "[obs-multistream-chat] voice: %s", err.c_str());
+		return false;
 	}
-	ISpObjectToken *tok = nullptr;
-	HRESULT hr = CoCreateInstance(CLSID_SpObjectToken, nullptr, CLSCTX_ALL, IID_ISpObjectToken,
-				      reinterpret_cast<void **>(&tok));
-	if (SUCCEEDED(hr)) {
-		hr = tok->SetId(nullptr, id.c_str(), FALSE);
-		if (SUCCEEDED(hr))
-			hr = voice->SetVoice(tok);
-		tok->Release();
-	}
-	if (FAILED(hr)) {
-		blog(LOG_WARNING, "[obs-multistream-chat] voice reader: the chosen voice did not load (0x%08lx), using the "
-				  "Windows default voice",
-		     static_cast<unsigned long>(hr));
-		voice->SetVoice(nullptr);
-	}
+	return true;
+}
+
+long long now_ms()
+{
+	using namespace std::chrono;
+	return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }
 
 } // namespace
 
 struct ChatSpeaker::Impl {
-	struct Line {
-		std::wstring text;
-		std::wstring voice;
-		int volume;
-		int rate;
-	};
+	std::string node_path;
+	std::string log_file;
+	VoicePlayer player;
+	VoiceProcess proc;
+	uint32_t next_id = 1;
+	long long last_start_try = -100000;
+	mutable std::mutex mu; // problem
+	std::string problem;
 
-	std::mutex mu;
-	std::condition_variable cv;
-	std::deque<Line> queue;
-	std::atomic<bool> stopping{false};
-	std::atomic<bool> cut{false}; // interrupt(): stop the line being spoken
-	std::thread worker;
-
-	void run()
+	void set_problem(const std::string &p)
 	{
-		// Every SAPI call happens on this thread, so the voice never crosses an apartment.
-		HRESULT co = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-		ISpVoice *voice = nullptr;
-		HRESULT hr = CoCreateInstance(CLSID_SpVoice, nullptr, CLSCTX_ALL, IID_ISpVoice,
-					      reinterpret_cast<void **>(&voice));
-		if (FAILED(hr)) {
-			blog(LOG_WARNING, "[obs-multistream-chat] voice reader: no SAPI voice could be created (0x%08lx)",
-			     static_cast<unsigned long>(hr));
-			voice = nullptr;
+		std::lock_guard<std::mutex> lk(mu);
+		problem = p;
+	}
+
+	bool ensure_running()
+	{
+		if (proc.running())
+			return true;
+		// a helper that will not start is retried at most every 10 s, not on every chat line
+		if (now_ms() - last_start_try < 10000)
+			return false;
+		last_start_try = now_ms();
+		std::string js = module_path("voice/index.js");
+		std::string packs = packs_dir();
+		if (js.empty() || packs.empty()) {
+			set_problem("The voice helper or the voice packs are missing from the plugin folder. Re-run the installer.");
+			return false;
 		}
-		bool first = true;
-		std::wstring current;
-		for (;;) {
-			Line line;
-			{
-				std::unique_lock<std::mutex> lk(mu);
-				cv.wait(lk, [this] { return stopping.load() || !queue.empty(); });
-				if (stopping.load())
-					break;
-				line = std::move(queue.front());
-				queue.pop_front();
-				cut = false;
-			}
-			if (!voice)
-				continue;
-			if (first || line.voice != current) {
-				select_voice(voice, line.voice);
-				current = line.voice;
-				first = false;
-			}
-			voice->SetVolume(static_cast<USHORT>(std::clamp(line.volume, 0, 100)));
-			voice->SetRate(std::clamp(line.rate, -10, 10));
-			hr = voice->Speak(line.text.c_str(), SPF_ASYNC | SPF_IS_NOT_XML, nullptr);
-			if (FAILED(hr)) {
-				blog(LOG_WARNING, "[obs-multistream-chat] voice reader: Speak failed (0x%08lx)",
-				     static_cast<unsigned long>(hr));
-				continue;
-			}
-			// Wait for the end of the line, but stay responsive to interrupt() and shutdown.
-			while (voice->WaitUntilDone(100) == S_FALSE) {
-				if (cut.load() || stopping.load()) {
-					voice->Speak(nullptr, SPF_PURGEBEFORESPEAK, nullptr);
-					break;
-				}
-			}
+		std::string err;
+		bool ok = proc.start(node_path, js, packs, log_file,
+				     [this](const voice::Frame &f) {
+					     switch (f.type) {
+					     case voice::FrameType::Audio: player.play(f.payload, f.sample_rate); break;
+					     case voice::FrameType::Error:
+						     blog(LOG_WARNING, "[obs-multistream-chat] voice: line %u: %s",
+							  static_cast<unsigned>(f.id), f.payload.substr(0, 300).c_str());
+						     break;
+					     case voice::FrameType::Ready:
+						     blog(LOG_INFO, "[obs-multistream-chat] voice helper ready %s",
+							  f.payload.substr(0, 100).c_str());
+						     break;
+					     default: break;
+					     }
+				     },
+				     err);
+		if (!ok) {
+			blog(LOG_WARNING, "[obs-multistream-chat] voice helper did not start: %s", err.c_str());
+			set_problem(err);
+			return false;
 		}
-		if (voice) {
-			voice->Speak(nullptr, SPF_PURGEBEFORESPEAK, nullptr);
-			voice->Release();
-		}
-		if (SUCCEEDED(co))
-			CoUninitialize();
+		set_problem("");
+		return true;
 	}
 };
 
-ChatSpeaker::ChatSpeaker() : impl_(new Impl)
+ChatSpeaker::ChatSpeaker(const std::string &node_path, const std::string &log_file) : impl_(new Impl)
 {
-	impl_->worker = std::thread([this] { impl_->run(); });
+	impl_->node_path = node_path;
+	impl_->log_file = log_file;
 }
 
 ChatSpeaker::~ChatSpeaker()
 {
-	{
-		std::lock_guard<std::mutex> lk(impl_->mu);
-		impl_->stopping = true;
-		impl_->queue.clear();
-	}
-	impl_->cv.notify_all();
-	if (impl_->worker.joinable())
-		impl_->worker.join();
+	impl_->player.stop();
+	impl_->proc.stop_blocking(1500);
 }
 
 std::vector<TtsVoice> ChatSpeaker::voices()
 {
 	std::vector<TtsVoice> out;
-	HRESULT co = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-	for (const wchar_t *category : kVoiceCategories)
-		enum_voices(category, out);
-	if (SUCCEEDED(co))
-		CoUninitialize();
-	std::stable_sort(out.begin(), out.end(), [](const TtsVoice &a, const TtsVoice &b) { return a.name < b.name; });
-	out.erase(std::unique(out.begin(), out.end(), [](const TtsVoice &a, const TtsVoice &b) { return a.name == b.name; }),
-		  out.end());
+	voice::Catalogue cat;
+	std::string packs = packs_dir();
+	if (packs.empty() || !exists_utf8(packs) || !load_catalogue(cat))
+		return out;
+	auto installed = [&](const voice::Pack &p) {
+		for (const std::string &f : p.required)
+			if (!exists_utf8(packs + "/" + p.id + "/" + f))
+				return false;
+		return true;
+	};
+	for (const voice::Voice &v : voice::installed_voices(cat, installed)) {
+		TtsVoice t;
+		t.id = v.id;
+		t.name = voice::display_name(v);
+		out.push_back(t);
+	}
 	return out;
 }
 
 void ChatSpeaker::say(const std::string &utf8, const std::string &voice_id, int volume, int rate)
 {
-	Impl::Line line;
-	line.text = widen(utf8);
-	if (line.text.size() > kMaxChars)
-		line.text.resize(kMaxChars);
-	if (line.text.empty())
+	if (utf8.empty() || voice_id.empty())
 		return;
-	line.voice = widen(voice_id);
-	line.volume = volume;
-	line.rate = rate;
-	{
-		std::lock_guard<std::mutex> lk(impl_->mu);
-		while (impl_->queue.size() >= kMaxQueued)
-			impl_->queue.pop_front();
-		impl_->queue.push_back(std::move(line));
-	}
-	impl_->cv.notify_one();
+	if (!impl_->ensure_running())
+		return;
+	impl_->player.set_volume(volume);
+	double speed = 1.0 + 0.1 * std::clamp(rate, -5, 5);
+	if (!impl_->proc.send(voice::say_request(impl_->next_id++, voice_id, utf8, speed)))
+		impl_->set_problem("The voice helper stopped; it restarts on the next line.");
 }
 
 void ChatSpeaker::interrupt()
 {
-	std::lock_guard<std::mutex> lk(impl_->mu);
-	impl_->queue.clear();
-	impl_->cut = true;
+	impl_->player.stop();
+	if (impl_->proc.running())
+		impl_->proc.send(voice::flush_request());
 }
 
-#else // !_WIN32
-
-struct ChatSpeaker::Impl {};
-
-ChatSpeaker::ChatSpeaker() : impl_(new Impl) {}
-ChatSpeaker::~ChatSpeaker() = default;
-std::vector<TtsVoice> ChatSpeaker::voices()
+std::string ChatSpeaker::problem() const
 {
-	return std::vector<TtsVoice>();
+	std::lock_guard<std::mutex> lk(impl_->mu);
+	return impl_->problem;
 }
-void ChatSpeaker::say(const std::string &, const std::string &, int, int) {}
-void ChatSpeaker::interrupt() {}
-
-#endif
 
 } // namespace oms

@@ -1,0 +1,140 @@
+#!/usr/bin/env node
+'use strict';
+// Downloads the voice packs that go into the installer, and checks each one twice before it ships:
+//   1. the archive's SHA-256 must match voice/pins.json (a pack without a pin is refused, unless
+//      --record-pins is given, which records it: do that once, review, commit the pins)
+//   2. the pack's own MODEL_CARD / README / LICENSE must name a licence that allows shipping
+//      (voice/lib/licence.js); a pack whose catalogue licence is "unverified" and has no such text
+//      is refused
+// Refused packs are listed and left out; the voices in them simply do not appear in the plugin.
+//
+//   node scripts/fetch-voices.js --out <dir> [--packs id,id | --all] [--record-pins]
+//        [--allow-lessac-derived] [--release <base url>]
+//
+// Writes <out>/<pack id>/ (unpacked), <out>/manifest.json and <out>/LICENCES.md (for NOTICE).
+// Exit codes: 0 every requested pack shipped, 1 some were refused, 2 bad usage.
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const { loadCatalogue, packInstalled } = require('../voice/lib/catalogue');
+const { classify } = require('../voice/lib/licence');
+
+const ROOT = path.resolve(__dirname, '..');
+const CATALOGUE = path.join(ROOT, 'voice', 'catalogue.json');
+const PINS = path.join(ROOT, 'voice', 'pins.json');
+const LICENCE_FILES = /^(MODEL_CARD|README(\.md|\.txt)?|LICEN[CS]E(\.md|\.txt)?)$/i;
+
+function parseArgs(argv) {
+  const o = { packs: null, recordPins: false, allowLessac: false, catalogue: CATALOGUE, pins: PINS };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--out') o.out = argv[++i];
+    else if (a === '--packs') o.packs = argv[++i].split(',').filter(Boolean);
+    else if (a === '--all') o.packs = null;
+    else if (a === '--record-pins') o.recordPins = true;
+    else if (a === '--allow-lessac-derived') o.allowLessac = true;
+    else if (a === '--release') o.release = argv[++i];
+    else if (a === '--catalogue') o.catalogue = argv[++i];
+    else if (a === '--pins') o.pins = argv[++i];
+    else throw new Error('unknown argument: ' + a);
+  }
+  if (!o.out) throw new Error('--out <dir> is required');
+  if (o.release && !/^https:\/\/|^http:\/\/127\.0\.0\.1:\d+\//.test(o.release)) throw new Error('--release must be https (or http://127.0.0.1 in tests)');
+  return o;
+}
+
+async function download(url, file) {
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' for ' + url);
+  const hash = crypto.createHash('sha256');
+  const out = fs.createWriteStream(file);
+  let bytes = 0;
+  for await (const chunk of res.body) {
+    hash.update(chunk);
+    bytes += chunk.length;
+    if (!out.write(chunk)) await new Promise(r => out.once('drain', r));
+  }
+  await new Promise((r, j) => out.end(e => (e ? j(e) : r())));
+  return { sha256: hash.digest('hex'), bytes };
+}
+
+function sha256File(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function licenceText(dir) {
+  return fs.readdirSync(dir).filter(f => LICENCE_FILES.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n\n');
+}
+
+// first lines of the model card, kept in LICENCES.md as the attribution
+function attribution(text) {
+  return text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 12).join('\n');
+}
+
+async function fetchPack(pack, o, release, pins, log) {
+  const dl = path.join(o.out, '.download');
+  const tmp = path.join(o.out, '.unpack', pack.id);
+  fs.mkdirSync(dl, { recursive: true });
+  const archive = path.join(dl, pack.id + '.tar.bz2');
+  const pin = pins[pack.id];
+  let got;
+  if (pin && fs.existsSync(archive) && sha256File(archive) === pin.sha256) got = { sha256: pin.sha256, bytes: fs.statSync(archive).size };
+  else got = await download(release + pack.id + '.tar.bz2', archive);
+  if (!pin) {
+    if (!o.recordPins) return { refused: 'no pin in voice/pins.json (run once with --record-pins, review, commit)' };
+    pins[pack.id] = { sha256: got.sha256, bytes: got.bytes };
+    log('pinned ' + pack.id + ' ' + got.sha256);
+  } else if (got.sha256 !== pin.sha256) {
+    return { refused: 'SHA-256 mismatch: got ' + got.sha256 + ', pinned ' + pin.sha256 };
+  }
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.mkdirSync(tmp, { recursive: true });
+  const t = spawnSync('tar', ['-xjf', archive, '-C', tmp], { stdio: ['ignore', 'ignore', 'pipe'] });
+  if (t.status !== 0) return { refused: 'could not unpack: ' + String(t.stderr).trim().slice(0, 200) };
+  const top = path.join(tmp, pack.id);
+  if (!fs.existsSync(top)) return { refused: 'archive does not contain the folder ' + pack.id };
+  if (!packInstalled(pack, tmp)) return { refused: 'archive is missing files the catalogue names' };
+  const text = licenceText(top);
+  let lic = classify(text);
+  if (!lic.ok && !text.trim() && pack.licence !== 'unverified') lic = { ok: true, licence: pack.licence + ' (from the catalogue; the pack has no licence file)', warn: '' };
+  if (!lic.ok) return { refused: 'licence: ' + lic.reason };
+  if (lic.warn && !o.allowLessac) return { refused: 'licence: ' + lic.warn };
+  const dest = path.join(o.out, pack.id);
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.renameSync(top, dest);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return { licence: lic.licence, warn: lic.warn || '', sha256: got.sha256, bytes: got.bytes, attribution: attribution(text) };
+}
+
+async function main(argv, log = m => process.stdout.write(m + '\n')) {
+  const o = parseArgs(argv);
+  const cat = loadCatalogue(o.catalogue);
+  const release = o.release || JSON.parse(fs.readFileSync(o.catalogue, 'utf8')).release;
+  const pins = fs.existsSync(o.pins) ? JSON.parse(fs.readFileSync(o.pins, 'utf8')) : {};
+  const wanted = o.packs ? o.packs : [...cat.packs.keys()];
+  for (const id of wanted) if (!cat.packs.has(id)) throw new Error('unknown pack ' + id);
+  fs.mkdirSync(o.out, { recursive: true });
+  const shipped = [];
+  const refused = [];
+  for (const id of wanted) {
+    let r;
+    try { r = await fetchPack(cat.packs.get(id), o, release, pins, log); } catch (e) { r = { refused: e.message }; }
+    if (r.refused) { refused.push({ id, reason: r.refused }); log('REFUSED ' + id + ': ' + r.refused); }
+    else { shipped.push({ id, ...r }); log('ok ' + id + ' (' + r.licence + ')'); }
+  }
+  if (o.recordPins) fs.writeFileSync(o.pins, JSON.stringify(Object.fromEntries(Object.entries(pins).sort()), null, 1) + '\n');
+  fs.writeFileSync(path.join(o.out, 'manifest.json'), JSON.stringify({ shipped: shipped.map(({ attribution, ...s }) => s), refused }, null, 1) + '\n');
+  const md = ['# Voice pack licences', '', 'Each pack below ships unchanged from ' + release, ''];
+  for (const s of shipped) md.push('## ' + s.id, '', 'Licence: ' + s.licence + (s.warn ? ' (' + s.warn + ')' : ''), '', '```', s.attribution || '(no model card)', '```', '');
+  fs.writeFileSync(path.join(o.out, 'LICENCES.md'), md.join('\n'));
+  fs.rmSync(path.join(o.out, '.unpack'), { recursive: true, force: true });
+  log(shipped.length + ' shipped, ' + refused.length + ' refused');
+  return refused.length ? 1 : 0;
+}
+
+if (require.main === module) {
+  main(process.argv.slice(2)).then(code => process.exit(code), e => { process.stderr.write('fetch-voices: ' + e.message + '\n'); process.exit(2); });
+}
+
+module.exports = { parseArgs, main };

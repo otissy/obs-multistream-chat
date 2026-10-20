@@ -159,3 +159,45 @@ test('engine: a missing pack fails the line clearly, every time', async () => {
   await assert.rejects(say, /voice pack not installed/);
   await assert.rejects(() => e.speak({ voice: 'nope', text: 'x' }, { onAudio() {}, cancelled: () => false }), /unknown voice/);
 });
+
+// ---- licence gate -----------------------------------------------------------------------------
+const { classify } = require('../../voice/lib/licence');
+
+test('licence: permissive licences named in the card are accepted', () => {
+  const ok = {
+    '* License: CC0': 'CC0-1.0 / public domain',
+    'Dataset: public domain (LibriVox)': 'CC0-1.0 / public domain',
+    '* License: Attribution 4.0 International (CC BY 4.0)': 'CC-BY',
+    'Creative Commons Attribution-ShareAlike 4.0': 'CC-BY-SA',
+    'License: CC-BY-SA-4.0': 'CC-BY-SA',
+    'Licensed under the Apache License, Version 2.0': 'Apache-2.0',
+    'License: MIT': 'MIT',
+    'Open Data Commons Attribution License (ODC-By)': 'CC-BY',
+  };
+  for (const [t, name] of Object.entries(ok)) {
+    const r = classify(t);
+    assert.ok(r.ok, t);
+    assert.strictEqual(r.licence, name, t);
+  }
+});
+
+test('licence: non-commercial, no-derivatives, research-only, bare links and silence are refused', () => {
+  for (const t of [
+    'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0)',
+    'License: CC BY-NC 4.0',
+    'CC BY-ND 4.0',
+    'Attribution-NoDerivatives 4.0',
+    'This dataset may be used for research purposes only.',
+    '* License: https://www.cstr.ed.ac.uk/projects/blizzard/2011/lessac_blizzard2011/license.html',
+    'Trained at MIT. Speakers: 1',
+    '',
+    '   ',
+  ]) assert.strictEqual(classify(t).ok, false, JSON.stringify(t));
+});
+
+test('licence: a voice fine-tuned from Lessac is flagged even when its own data is permissive', () => {
+  const r = classify('* License: CC BY 4.0\n\n## Training\n\nFine-tuned from English lessac medium');
+  assert.ok(r.ok);
+  assert.match(r.warn, /Lessac/);
+  assert.strictEqual(classify('* License: CC BY 4.0\n\nTrained from scratch').warn, '');
+});

@@ -55,10 +55,50 @@ jobs:
           
           powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test -ObsBin $obsBin
 
+      - name: Cache voice pack downloads
+        uses: actions/cache@v4
+        with:
+          path: D:\builds\obs-multistream-chat\voices\.download
+          key: voice-packs-${{ hashFiles('voice/catalogue.json', 'voice/pins.json') }}
+          restore-keys: voice-packs-
+
+      - name: Fetch voice packs (SHA-256 pins + licence gate)
+        shell: powershell
+        run: |
+          $out = 'D:\builds\obs-multistream-chat\voices'
+          # while voice/pins.json is empty the pins are recorded (and uploaded below for review)
+          $record = @()
+          if ((Get-Content voice\pins.json -Raw).Trim() -eq '{}') { $record = @('--record-pins') }
+          node scripts\fetch-voices.js --out $out --all --keep-embedded @record
+          $code = $LASTEXITCODE
+          # the verdicts as annotations, so they can be read without the job log
+          $manifest = "$out\manifest.json"
+          if (Test-Path $manifest) {
+            $m = Get-Content $manifest -Raw | ConvertFrom-Json
+            Write-Host "::notice title=Voice packs::$(@($m.shipped).Count) shipped, $(@($m.refused).Count) refused, $(@($m.skipped).Count) skipped by policy"
+            foreach ($r in @($m.refused)) { Write-Host "::error title=Voice pack refused::$($r.id): $($r.reason)" }
+          } else {
+            Write-Host "::error title=Voice packs::fetch-voices wrote no manifest (exit $code)"
+          }
+          # every catalogue pack is meant to ship (policy.shipAll): a refusal is a pin, download or unpack problem
+          if ($code -ne 0) { throw "fetch-voices exited $code" }
+          Copy-Item voice\pins.json "$out\pins.json"
+          exit 0
+
+      - name: Upload voice pack review files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voice-packs-review
+          path: |
+            D:\builds\obs-multistream-chat\voices\manifest.json
+            D:\builds\obs-multistream-chat\voices\LICENCES.md
+            D:\builds\obs-multistream-chat\voices\pins.json
+
       - name: Package installer and zip
         shell: powershell
         run: |
-          powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+          powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Voices D:\builds\obs-multistream-chat\voices
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

@@ -13,7 +13,6 @@
 #endif
 #include <windows.h>
 #include <mmsystem.h>
-#include <sapi.h>
 #include <wininet.h>
 #endif
 
@@ -556,7 +555,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	voice_title->setStyleSheet("font-size:14px; font-weight:bold; color:#f2f2f5;");
 	vl->addWidget(voice_title);
 
-	QLabel *voice_desc = new QLabel("Speak incoming chat messages out loud in real time with cloned voice profiles & accents, play chime alerts, and check for new releases.");
+	QLabel *voice_desc = new QLabel("Read incoming chat aloud with neural voices that run on this PC (no internet, no account), play chime alerts, and check for new releases.");
 	voice_desc->setWordWrap(true);
 	voice_desc->setStyleSheet("color:#8a8a96; font-size:12px; margin-bottom:4px;");
 	vl->addWidget(voice_desc);
@@ -569,27 +568,24 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	tgl->addWidget(tts_enabled_);
 
 	QHBoxLayout *vrow1 = new QHBoxLayout();
-	vrow1->addWidget(new QLabel("Voice Profile / Accent:"));
+	vrow1->addWidget(new QLabel("Voice:"));
 	tts_voice_ = new QComboBox();
-	tts_voice_->addItem("Natural Windows Speech (Default)", "default");
-	tts_voice_->addItem("TikTok Jessie (Female US, Upbeat)", "tiktok_jessie");
-	tts_voice_->addItem("Twitch Brian (British Male Classic)", "twitch_brian");
-	tts_voice_->addItem("Story Narrator (TikTok Dramatic Male)", "tiktok_narrator");
-	tts_voice_->addItem("Chill Lofi Reader (Soft Female)", "lofi_female");
-	tts_voice_->addItem("American Upbeat (Podcast Host)", "us_podcast");
-	tts_voice_->addItem("British Classic (BBC / RP Standard)", "uk_classic");
-	tts_voice_->addItem("British Conversational (UK Casual)", "uk_casual");
-	tts_voice_->addItem("Indian English (Clear Regional)", "en_in");
-	tts_voice_->addItem("Spanish English (Latin Accent)", "en_es");
-	tts_voice_->addItem("French English (European Accent)", "en_fr");
-	tts_voice_->addItem("Italian English (European Accent)", "en_it");
-	tts_voice_->addItem("Japanese English (Asia Regional)", "en_jp");
+	std::vector<TtsVoice> installed_voices = ChatSpeaker::voices();
+	for (const TtsVoice &v : installed_voices)
+		tts_voice_->addItem(qs(v.name), qs(v.id));
+	if (installed_voices.empty())
+		tts_voice_->addItem("No voices installed: run the installer again and tick a language", QString());
 	vrow1->addWidget(tts_voice_, 1);
 
 	tts_test_btn_ = new QPushButton("Preview Voice");
 	tts_test_btn_->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
 	vrow1->addWidget(tts_test_btn_);
 	tgl->addLayout(vrow1);
+	QLabel *voice_hint = new QLabel("More languages and accents: run the installer again and tick them under Voices. "
+					 "The voice reader needs Node.js, like the chat reader.");
+	voice_hint->setWordWrap(true);
+	voice_hint->setStyleSheet("color:#8a8a96; font-size:11px;");
+	tgl->addWidget(voice_hint);
 
 	QHBoxLayout *vrow2 = new QHBoxLayout();
 	vrow2->addWidget(new QLabel("Volume:"));
@@ -674,7 +670,11 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	QObject::connect(auto_connect_btn_, &QPushButton::clicked, [this]() { auto_connect_channel(); });
 	QObject::connect(add_collab_btn_, &QPushButton::clicked, [this]() { add_collaborator_dialog(); });
 	QObject::connect(tts_test_btn_, &QPushButton::clicked, [this]() {
-		play_tts("Brian", "Twitch", "Welcome to the stream! Voice text-to-speech reader is ready.");
+		if (speaker_)
+			speaker_->interrupt();
+		play_tts("Viewer", "Twitch", "Welcome to the stream! The voice reader is ready.");
+		if (speaker_ && !speaker_->problem().empty())
+			QMessageBox::warning(this, "OBS Multistream Chat", qs(speaker_->problem()));
 	});
 	QObject::connect(sound_test_btn_, &QPushButton::clicked, [this]() {
 		std::string st = sound_alert_type_ ? ss(sound_alert_type_->currentData().toString()) : "chime";
@@ -1347,25 +1347,15 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 
 	int vol = tts_volume_ ? tts_volume_->value() : 85;
 	int rate = tts_speed_ ? tts_speed_->value() : 0;
+	std::string voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
 
-	std::thread([text_to_say, vol, rate]() {
-		HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-		ISpVoice *pVoice = NULL;
-		if (SUCCEEDED(CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void **)&pVoice))) {
-			pVoice->SetVolume(static_cast<USHORT>(vol));
-			pVoice->SetRate(rate);
-
-			int wlen = MultiByteToWideChar(CP_UTF8, 0, text_to_say.c_str(), -1, NULL, 0);
-			if (wlen > 0) {
-				std::vector<wchar_t> wstr(wlen);
-				MultiByteToWideChar(CP_UTF8, 0, text_to_say.c_str(), -1, wstr.data(), wlen);
-				pVoice->Speak(wstr.data(), SPF_ASYNC | SPF_PURGEBEFORESPEAK, NULL);
-			}
-			pVoice->Release();
-		}
-		if (SUCCEEDED(hr))
-			CoUninitialize();
-	}).detach();
+	if (!speaker_) {
+		const PluginState &st = plugin();
+		size_t slash = st.config_path.find_last_of("/\\");
+		std::string dir = slash == std::string::npos ? std::string() : st.config_path.substr(0, slash + 1);
+		speaker_ = std::make_unique<ChatSpeaker>(st.cfg.chat.node_path, dir + "voice-helper.log");
+	}
+	speaker_->say(text_to_say, voice, vol, rate);
 #else
 	(void)author;
 	(void)platform;

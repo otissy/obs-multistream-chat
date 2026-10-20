@@ -205,6 +205,29 @@ busy, and `chat-reader.log` (next to `config.json`) has no errors. It lists stat
 never chat text. When something is wrong, `reader\adapters\<platform>.json` and the status text in the dock
 are where to look; open an issue with the platform and the status text, not with a screenshot of chat.
 
+## Chat voices (voice reader)
+
+The **Voice & Alerts** tab can read chat aloud with neural voices that run on your PC: no internet, no
+account, nothing sent anywhere. They are [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and
+[Piper](https://github.com/OHF-Voice/piper1-gpl) voices run by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx):
+185 voices in 43 languages (`voice/catalogue.json`), including Scottish, Northern and Southern English,
+Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Portuguese.
+
+- **Included in Setup:** Kokoro, 54 voices in American and British English, Spanish, French, Hindi, Italian,
+  Japanese, Brazilian Portuguese and Mandarin. Other languages and accents are ticked in Setup and downloaded
+  then; run Setup again to add more.
+- **Needs Node.js 22+**, like the chat reader. The voices run in a helper of their own
+  (`data\voice\index.js`), never inside OBS, so a voice problem cannot crash OBS. Its log is
+  `voice-helper.log` next to the plugin's `config.json`.
+- Links are read as "a link"; emoji, spam runs ("noooooo") and very long messages are trimmed. When chat
+  is faster than the voice, the oldest waiting lines are skipped. **Preview Voice** cuts off whatever is
+  playing.
+- Every voice pack is checked before it ships: its archive must match a pinned SHA-256, and its own model
+  card must name a licence that allows redistribution and commercial use (`scripts/fetch-voices.js`).
+  Every catalogue voice ships by choice, but the licence check still labels each one: voices marked
+  **[non-commercial]** come under a non-commercial licence (do not use them on a monetised stream), and
+  **[licence unclear]** means the voice's terms could not be confirmed. See NOTICE and `docs\voice-licences.md`.
+
 ## Troubleshooting
 
 - **Dock missing:** View > Docks > OBS Multistream Chat. Check OBS's log (Help > Log Files) for lines starting

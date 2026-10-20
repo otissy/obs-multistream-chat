@@ -419,6 +419,8 @@ OBS browser source.
 | libobs version gate | one-directional: rejects plugins built against a newer libobs; 32.2.2 headers load on 32.2.2+. |
 | Icons | simple-icons 16.35.0 (CC0-1.0 files): twitch, youtube, kick, facebook, tiktok. Trovo does not exist there (404) so Trovo/custom use the plugin's own neutral glyph. Brand names and marks remain their owners' trademarks (see NOTICE). |
 | Platforms | no viewer counts, chat, titles, go-live buttons or health read-back from the platform: no API by design. "Live" means only "OBS has a working RTMP connection and is sending", not "the platform is showing you as live". |
+| Windows tar.exe and bzip2 (2026-10-20) | `C:\Windows\System32\tar.exe` (bsdtar 3.5.2, Windows 10 19045) has no bzip2 inside: it runs `bzip2 -d` from PATH. With PATH = System32 only it fails ("Can't initialize filter; unable to run program bzip2 -d"), for reading and writing. GitHub runners and dev shells hide this (Git's `usr\bin\bzip2.exe`). Voice packs are `.tar.bz2`, so: `fetch-voices.js` appends Git's `usr\bin` to tar's PATH (`tarEnv`), and Setup undoes bzip2 with its own 7-Zip (`ArchiveExtraction=full`, Inno Setup 6.5+, `packaging/voice-extract.iss`) before tar.exe reads the plain `.tar`. Both verified with PATH = System32 only. |
+| Windows PowerShell from pwsh (2026-10-20) | `powershell.exe` started from PowerShell 7 inherits pwsh's `PSModulePath` and loses `Get-FileHash` (fetch-sdks.ps1 fails). Clear `PSModulePath` before starting it. |
 | Shell/Windows | only `RocketLeague.exe` was running at the start of this task; OBS was not running. The plugin must never be loaded into the user's real OBS by an agent. |
 
 ## Sources of truth
@@ -456,6 +458,12 @@ eader). Chat/overlay ladders were not re-run (untouched; they start headless Chr
 - **2026-10-15** - read-only probe `oms_aitum_probe` run on the real active profile's aitum.json: status Ok, 2 canvases, 1 stream output mapped (encoder unset -> obs_x264/4500 default notes, canvas Vertical, no server/key); no key or server printed.
 
 - **2026-10-15** - 0.3.1 built (idle, 2 jobs): core 145/145, glue ladder 20, packaging green; obs-multistream-chat.dll 679936 bytes, sha-256 a88afbc6dea2a387eecc3782d214ecd6f43b984164b2ba4e12a1c914ddef4423; zip dist\obs-multistream-chat-0.3.1-windows-x64.zip sha-256 99b741e3cedb7630bc043b126cbea55c26364ed15fb80c3996a14fc30d6a80c8. Exports obs_module_post_load (checked in the DLL). Still never loaded into OBS.
+
+- **2026-10-20** - voice branch first run on Windows (MSVC, VS 2026): core 150/150; voice ladder 30 green incl. all 54 real Kokoro voices through `voice/index.js` + sherpa-onnx-node 1.13.8 (~0.8 s per line, 2.7-4.6 s of audio each, spectrogram checked); packaging, glue green. Package with Kokoro: zip 338 MB, setup 323 MB (contains `data\voices\kokoro-multi-lang-v1_0`). Still never loaded into OBS.
+- **2026-10-20** - known: unpacking Kokoro in `fetch-voices.js` takes ~15 min on Windows (tar.exe pipes through an external bzip2 slowly). Works; slow on every cache-cold CI run.
+- **2026-10-20** - known: `package.ps1` under Windows PowerShell 5.1 writes zip entries with backslashes (`obs-multistream-chat\data\...`). Windows Explorer copes; some other unzip tools do not. Pre-existing, not fixed.
+- **2026-10-20** - fixed: `voices.generated.iss` started with a `;` comment and is #included inside `[Code]`, so every setup build with voices failed ("'BEGIN' expected", line 1). Same trap guarded in `voice-extract.iss` and by tests.
+- **2026-10-20** - fixed: dead locale key `Col.Source` (unused since 0.4.1) failed the glue ladder.
 
 ## Dropped approaches
 

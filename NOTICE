@@ -21,7 +21,7 @@ twitch.svg, youtube.svg, kick.svg, facebook.svg, tiktok.svg
 generic.svg
   Original work for this project, CC0 1.0. Used for Trovo and custom RTMP.
 
-No other third-party code or artwork is bundled. Build-time SDK headers (OBS Studio 32.2.2,
+Apart from the chat voices below, no other third-party code or artwork is bundled. Build-time SDK headers (OBS Studio 32.2.2,
 GPL-2.0-or-later; Qt 6.11.1 from obs-deps, LGPL-3.0) are fetched by scripts/fetch-sdks.ps1 and are
 not redistributed in the release zip.
 
@@ -65,3 +65,30 @@ used; no code, no expressions and no text were copied, and reader/lib/inject.js 
            copied the difference does not bind this repository, but it is recorded here. If code from
            that project is ever reused, GPL-3.0 compatibility must be checked first.
   The archive was kept outside the repository and is not redistributed.
+
+Chat voices (data/voice/node_modules, data/voices)
+--------------------------------------------------
+sherpa-onnx-node 1.13.8 and sherpa-onnx-win-x64 1.13.8 (k2-fsa, https://github.com/k2-fsa/sherpa-onnx)
+  Licence: Apache-2.0. From the npm registry, pinned by integrity (scripts/package.ps1). The native
+  package contains sherpa-onnx-c-api.dll, sherpa-onnx-cxx-api.dll and ONNX Runtime (onnxruntime.dll,
+  onnxruntime_providers_shared.dll; Microsoft, MIT licence), and espeak-ng phoneme data ships inside
+  each voice pack (espeak-ng, GPL-3.0-or-later; the plugin is GPL-2.0-or-later and the helper is a
+  separate program that loads it).
+Voice packs (data/voices/<pack>): unchanged archives from the k2-fsa tts-models release
+  (https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models), each pinned by SHA-256
+  (voice/pins.json). Kokoro v1.0 (hexgrad, Apache-2.0) and Piper voices (rhasspy / OHF-Voice; each
+  voice under the licence named in its MODEL_CARD). A pack ships only if its own model card names a
+  licence that allows redistribution and commercial use (scripts/fetch-voices.js); the licence and
+  the opening of each model card are listed in docs/voice-licences.md of the release.
+  Lessac-derived Piper voices: many Piper voices were fine-tuned from Piper's "lessac" voice, which
+  was trained on the Lessac Technologies Blizzard Challenge data (CSTR, University of Edinburgh),
+  licensed for non-commercial use. Whether that licence carries over to a voice fine-tuned on other
+  data is unsettled. The maintainer chose to ship these voices (voice/catalogue.json, policy); they
+  are marked "fine-tuned from Lessac" in docs/voice-licences.md.
+  All other voices: the maintainer also chose to ship every voice in the catalogue whatever its
+  licence verdict (policy shipAll). Packs whose model card names a non-commercial licence (for
+  example CC BY-NC-SA 4.0, or the lessac voice's Blizzard licence) or no licence that could be
+  confirmed are listed in docs/voice-licences.md as "not cleared", and the dock shows their voices
+  with "[non-commercial]" or "[licence unclear]". Using a [non-commercial] voice on a monetised stream
+  may breach its licence. Never shipped: the Georgian RHVoice voice "Natia", whose licence forbids
+  including it in products.

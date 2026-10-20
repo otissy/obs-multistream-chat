@@ -1,0 +1,322 @@
+{
+ "kokoro-multi-lang-v1_0": {
+  "sha256": "c5f7e2d2caf082bc1d20fb70334a61d99d20b484500aad32e7cf84c128ea3298",
+  "bytes": 349906910
+ },
+ "vits-piper-ar_JO-kareem-medium": {
+  "sha256": "9ebbcea30e0fbd588f7b2cb45ee897d6aeb1bf5791cbc037a7b5a3f641e3dbce",
+  "bytes": 67177830
+ },
+ "vits-piper-ca_ES-upc_ona-medium": {
+  "sha256": "b6c50f22e13cfc72ce51c496d22b987adf6704047f6d342968197b4b0b3127a5",
+  "bytes": 67223188
+ },
+ "vits-piper-cs_CZ-jirka-medium": {
+  "sha256": "321aafd83dd89b3d5b2c36c5898e0710d4f472f3c191cb7f73901a89b7f8539f",
+  "bytes": 67212775
+ },
+ "vits-piper-cy_GB-gwryw_gogleddol-medium": {
+  "sha256": "f31f90afc4f28e9a768309f0b1c87272ef178936b32dd181aa1aa3a0eeddd187",
+  "bytes": 67230234
+ },
+ "vits-piper-da_DK-talesyntese-medium": {
+  "sha256": "f2e2cbcdb2b21e76f93635b35105d07b37997ace434d7289d04b689a97c19bd0",
+  "bytes": 67185257
+ },
+ "vits-piper-de_DE-kerstin-low": {
+  "sha256": "4bfe121d5f690a3b87acecd7ae1e70b48f4589ce6ae9f45a1809e6eb19fad97b",
+  "bytes": 67107768
+ },
+ "vits-piper-de_DE-thorsten-high": {
+  "sha256": "dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a",
+  "bytes": 115591546
+ },
+ "vits-piper-de_DE-thorsten_emotional-medium": {
+  "sha256": "4e55e6c7ba21700b6fb71e9544e1615bb348f74114799d23395826fdb33ee6f7",
+  "bytes": 80215792
+ },
+ "vits-piper-el_GR-rapunzelina-low": {
+  "sha256": "bb868070a9ba0d7220b3d7c9291a998c2f60accdb73525bd63b8751b86dd4839",
+  "bytes": 67105521
+ },
+ "vits-piper-en_GB-alan-medium": {
+  "sha256": "a48d4017da0f77668b27bed63fe6e04dd64c6397e1fadad4f460efb0ef7c9012",
+  "bytes": 67220121
+ },
+ "vits-piper-en_GB-alba-medium": {
+  "sha256": "fcd45962906933eec4431d3688f7d74aaac8713c87c6717f91fd3b23463aa1a1",
+  "bytes": 67212349
+ },
+ "vits-piper-en_GB-aru-medium": {
+  "sha256": "15b6e7a545d899167a688a054b95730ec8cdfd35d27d00bab1dc5234c4a451a0",
+  "bytes": 80309222
+ },
+ "vits-piper-en_GB-cori-high": {
+  "sha256": "42922f07738fcde2e49eed4e959635692f73b933de35a6b7c1010162ff566292",
+  "bytes": 115574061
+ },
+ "vits-piper-en_GB-jenny_dioco-medium": {
+  "sha256": "a0888024569bafbefc05a4b48ddf8419d8dbbf3205f4af37cf7c6f1a87cc20c5",
+  "bytes": 67225842
+ },
+ "vits-piper-en_GB-northern_english_male-medium": {
+  "sha256": "2bb2c1e709f58c11f17c693b3b38f500e110e7f54f2651774ec48b8d41f12c55",
+  "bytes": 67210490
+ },
+ "vits-piper-en_GB-semaine-medium": {
+  "sha256": "b2a1e39062fce8f7fb14b7fa5fb93d89c58e3af2245270387f408099f5a2da9f",
+  "bytes": 80241918
+ },
+ "vits-piper-en_GB-southern_english_female-medium": {
+  "sha256": "cea2dcbe8a8e2a44a4bab6824e10dc38fcd5cf84458e8b3f3e5be1c5fb804512",
+  "bytes": 80275090
+ },
+ "vits-piper-en_GB-southern_english_male-medium": {
+  "sha256": "f5525a6fd9a2fc0ab930ea70da6e3bcf207922a9f701acb0324ba2f59e4ca9ba",
+  "bytes": 80299212
+ },
+ "vits-piper-en_GB-vctk-medium": {
+  "sha256": "abafd35bdab0a72a3c6b947228ae3cccdf3624db83313c77d1abb5cbc75e1f64",
+  "bytes": 80488085
+ },
+ "vits-piper-en_US-amy-medium": {
+  "sha256": "9a5d1fc497f85e8022b785bff5f8105203b1e33099ee6265203efc70b0cb0264",
+  "bytes": 67223746
+ },
+ "vits-piper-en_US-joe-medium": {
+  "sha256": "261b903a1fb2ce621e2b5b14233cd41223c3b9f9590f896c11daee4df22d9bd3",
+  "bytes": 67169394
+ },
+ "vits-piper-en_US-kristin-medium": {
+  "sha256": "c2206f572df2956c50b1ae3367eebce3853c663e890cba8048cd62b1e4dbe6c7",
+  "bytes": 67259230
+ },
+ "vits-piper-en_US-kusal-medium": {
+  "sha256": "e683c4a9a0c1ca28c81cbec77b51fe987cf70efa97edc3ace4c1783083012c33",
+  "bytes": 67219292
+ },
+ "vits-piper-en_US-l2arctic-medium": {
+  "sha256": "d6cde876d7a04502c5f2cb7e2f7413c0040629bc0ba6a5c07b32f27c02c96ed0",
+  "bytes": 80314104
+ },
+ "vits-piper-en_US-lessac-high": {
+  "sha256": "8619d204c7005866fe4f420181dfa79622af6a6222389f0b0818d2af31e0db0e",
+  "bytes": 115545841
+ },
+ "vits-piper-en_US-libritts_r-medium": {
+  "sha256": "10dc268f3e371696d721486123e2705a9fc1faa113491979fde4d88dba1f1b1c",
+  "bytes": 82038311
+ },
+ "vits-piper-en_US-norman-medium": {
+  "sha256": "1f32065d480abe9abc7c7f91442125d0b34c1cc065d1e600466cac408eabf3b8",
+  "bytes": 67203672
+ },
+ "vits-piper-en_US-ryan-high": {
+  "sha256": "6a71edf4d308b9cb2eaeadc8d1f3c6bf96120ecb7fe52c29a2b6e139c59760ed",
+  "bytes": 115630708
+ },
+ "vits-piper-es_AR-daniela-high": {
+  "sha256": "71cbf6b7f646ab74f3c51336151abef41e6c54467ac929ffdb19ed706a07dd7b",
+  "bytes": 115562134
+ },
+ "vits-piper-es_ES-davefx-medium": {
+  "sha256": "a3f6beb54a9cb893279f72978a22f807a4d9fc9c7848157b524d5cc7b7f58b22",
+  "bytes": 67184952
+ },
+ "vits-piper-es_ES-sharvard-medium": {
+  "sha256": "b30a7a83df0518f0ee1c7039506648cade99f1f9b498fc49ed2ced2e2536bb5a",
+  "bytes": 80318184
+ },
+ "vits-piper-es_MX-ald-medium": {
+  "sha256": "c60cf7bc853eb01a875fba0756523fecf9d9f46c763b19785d223fc981fb4fb6",
+  "bytes": 67196497
+ },
+ "vits-piper-es_MX-claude-high": {
+  "sha256": "ec33fb689c248fe64810aab564cba97babf0f506672cfd404928d46e751a4721",
+  "bytes": 67207890
+ },
+ "vits-piper-eu_ES-maider-medium": {
+  "sha256": "60493b81a7f117ea96b6efc841d7465c1d4107ea72ef553ff91f92f72fbd95c1",
+  "bytes": 67247291
+ },
+ "vits-piper-fa_IR-amir-medium": {
+  "sha256": "46af65c1cdd86ec300db3998f2bf31a68d9e38da930c0655c1ff6f610e84f864",
+  "bytes": 67180373
+ },
+ "vits-piper-fi_FI-harri-medium": {
+  "sha256": "a7fd608e73983c366a5e0bcd13382e6529a6749f67efc406b5a7f9021e3a8b1d",
+  "bytes": 67205198
+ },
+ "vits-piper-fr_FR-siwis-medium": {
+  "sha256": "375909aa30842b3a4efa10b1beb1d761af792960ae6873b4d53889f96c66195b",
+  "bytes": 67207459
+ },
+ "vits-piper-fr_FR-tom-medium": {
+  "sha256": "3d8258ef8466b5d5f2cc46c06e1415d3d01c9cbaeed8b6d5b3d152073672472c",
+  "bytes": 67202955
+ },
+ "vits-piper-hi_IN-pratham-medium": {
+  "sha256": "2084d321e1d2752f2b64ed3012ba27751df01a80da46f52920098cdcb7e35648",
+  "bytes": 67238438
+ },
+ "vits-piper-hi_IN-priyamvada-medium": {
+  "sha256": "399d91cc97eb288725633261f26b715f9a971e3bf7ec4fa1d7910cd0080d37eb",
+  "bytes": 67240610
+ },
+ "vits-piper-hu_HU-anna-medium": {
+  "sha256": "c67b13e57b71eca19098fe499afc35ebce8f63a0b524017c786af2025821216a",
+  "bytes": 67167701
+ },
+ "vits-piper-hu_HU-imre-medium": {
+  "sha256": "7be44b928bb26b03e403660894cd8210828dd8a0e9dccc4bade4a1632fc4f8c4",
+  "bytes": 67218203
+ },
+ "vits-piper-id_ID-news_tts-medium": {
+  "sha256": "634b0169fe41c368e9fafe128f30647f9e0301e852ce503cd78146db524f1f12",
+  "bytes": 67243848
+ },
+ "vits-piper-is_IS-steinn-medium": {
+  "sha256": "22acffbaf4b919881ec463126eda7bf14f7dc8d4beb0cc84e161760702ada328",
+  "bytes": 67377681
+ },
+ "vits-piper-is_IS-ugla-medium": {
+  "sha256": "2d2295b13746758620ef02ee35294ff1096d94fd01cb055c53f70de17a222519",
+  "bytes": 67376655
+ },
+ "vits-piper-it_IT-paola-medium": {
+  "sha256": "7541f75778afa164e44e34baaef63befad7698595df26a95ca944b63ef1a16b4",
+  "bytes": 67221173
+ },
+ "vits-piper-it_IT-riccardo-x_low": {
+  "sha256": "8ad0791558ae2b3e96054fc5756ae3ae2f6457fb1765bc01f43bbab85e0a7021",
+  "bytes": 26496614
+ },
+ "vits-piper-ka_GE-natia-medium": {
+  "sha256": "18e34c601f4be13e5132ec772e2cbcfa47ca6a4aaaf995dd5baefe014f5a0256",
+  "bytes": 67209457
+ },
+ "vits-piper-kk_KZ-issai-high": {
+  "sha256": "6c59955f7f5e3fc50b130ced59a430eb4ef62d69155af4ce836db0dde4a42682",
+  "bytes": 129278805
+ },
+ "vits-piper-ku_TR-berfin_renas-medium": {
+  "sha256": "b72695bc6f1ac30eba67bc096c5cc5be0ddafac948efc3231f217d1c49b7cfaa",
+  "bytes": 80263336
+ },
+ "vits-piper-lb_LU-marylux-medium": {
+  "sha256": "f11117fc121db0d5c4dc46e07eac7b1d8ea719b04f0b381836a23050310ea5a4",
+  "bytes": 67184319
+ },
+ "vits-piper-lv_LV-aivars-medium": {
+  "sha256": "a0df58c9924761e201ef75d82473b90bde32c5372267e9b4c628fdd267cf2508",
+  "bytes": 67196173
+ },
+ "vits-piper-ml_IN-arjun-medium": {
+  "sha256": "3058d098e8b1ffcdd6069e96b1d492f319333235912a627c309c7c54cea59acf",
+  "bytes": 67222458
+ },
+ "vits-piper-ml_IN-meera-medium": {
+  "sha256": "c8d870441e60870b7e8781c26eb22104aff51587b63bee94aba5e5f6c9fbb71f",
+  "bytes": 67195010
+ },
+ "vits-piper-ne_NP-google-medium": {
+  "sha256": "73c1e093451867779ec2b55cc3666de2db058019a2e7760e8c8f294a42caca2a",
+  "bytes": 80242801
+ },
+ "vits-piper-nl_BE-nathalie-medium": {
+  "sha256": "c7484313abea395243e872196bc75181c07aad8120b8a61e0f6f4b3863b6a7c8",
+  "bytes": 67226472
+ },
+ "vits-piper-nl_NL-alex-medium": {
+  "sha256": "52be645a8617eda0e592c604eb67f419fcb09376310c3ec7fc781beeb8e84bb6",
+  "bytes": 67172584
+ },
+ "vits-piper-nl_NL-pim-medium": {
+  "sha256": "e78ed301bf6fc66561a04c110754cd6928d772630a3b80b09a83f89410130171",
+  "bytes": 67240538
+ },
+ "vits-piper-nl_NL-ronnie-medium": {
+  "sha256": "d2cc688abf46054eba1d47b3b1406c742ccf66732cd47998a3ee727c1b96c09f",
+  "bytes": 67194164
+ },
+ "vits-piper-no_NO-talesyntese-medium": {
+  "sha256": "dcb7c36b7222e290cca1fd4cdecb474e7fd651dc5b0d3d42c33d416a8e62018b",
+  "bytes": 67194829
+ },
+ "vits-piper-pl_PL-darkman-medium": {
+  "sha256": "444727aa46eb6db645a2bc88fe73868e4bd7596b7f56ca39fad5ef53c41210d4",
+  "bytes": 67215635
+ },
+ "vits-piper-pl_PL-gosia-medium": {
+  "sha256": "75bd34dcbdc4dd98d763954756b4b34b4208100497c836381542e4d73dcefa9c",
+  "bytes": 67211182
+ },
+ "vits-piper-pt_BR-cadu-medium": {
+  "sha256": "aba78157d4b89acc17ddef15a70f4b2474f4c189d4de6035002ac7fec9d5d303",
+  "bytes": 67207562
+ },
+ "vits-piper-pt_BR-faber-medium": {
+  "sha256": "7add3f923ad6bc25ca8a192805fd1a64d1b3893e4611c4a9719545a825039a83",
+  "bytes": 67183065
+ },
+ "vits-piper-pt_PT-tugao-medium": {
+  "sha256": "6b4f0a7bfc957bef26d6ac0703a8fa1ba659c8ab2df8b294f20206551859070c",
+  "bytes": 67195014
+ },
+ "vits-piper-ro_RO-mihai-medium": {
+  "sha256": "cfbee3cdc25cf063339f69e189f4d93cc3be6610d267567537323ced3cf87f4d",
+  "bytes": 67182137
+ },
+ "vits-piper-ru_RU-dmitri-medium": {
+  "sha256": "c86d0803737de13d441923ff3b3f309482fab8d7af3ec85949942809eb9a3660",
+  "bytes": 67188551
+ },
+ "vits-piper-ru_RU-irina-medium": {
+  "sha256": "1fc0f54e5e084fe287c07909f2f6e0ba6d857864cf800e3ab80286a4e8233008",
+  "bytes": 67153308
+ },
+ "vits-piper-sk_SK-lili-medium": {
+  "sha256": "a00dfbca5d34733862a59d9e309f4e94a92fccc9337c2b124de9a241b604fc0d",
+  "bytes": 67183092
+ },
+ "vits-piper-sl_SI-artur-medium": {
+  "sha256": "df805f31c4513864edebf7e287cf0b54d72788fc661ed73f88dc4e5aabc5efd5",
+  "bytes": 67025668
+ },
+ "vits-piper-sq_AL-edon-medium": {
+  "sha256": "2d7a3b3647a499ad40a28662edd5ff50eb8594ad7ace94a5d3525e280212bf99",
+  "bytes": 67191820
+ },
+ "vits-piper-sr_RS-serbski_institut-medium": {
+  "sha256": "b8c100e5ff885d11ff96ad92a953f4b82e1cd649f9ac60a77ae4553d37507b2b",
+  "bytes": 80298557
+ },
+ "vits-piper-sv_SE-lisa-medium": {
+  "sha256": "78b5f6808e513d545d9284a015075ef31f09623e6c08d6186a29a1997aa577d7",
+  "bytes": 67223955
+ },
+ "vits-piper-sv_SE-nst-medium": {
+  "sha256": "5aed0f5ab75135fc3ba6a4f3567e171d72df753305b08a01ca42f79411587f67",
+  "bytes": 67144884
+ },
+ "vits-piper-sw_CD-lanfrica-medium": {
+  "sha256": "93196704a0ae0c984806059480775d69dcc2419d0d545cddd0903d244dc66a72",
+  "bytes": 67217230
+ },
+ "vits-piper-tr_TR-dfki-medium": {
+  "sha256": "b63babaefcdd63202c7079aba25b72a2013825ad5895e2aeff03d1ae5a5b3bbf",
+  "bytes": 67201221
+ },
+ "vits-piper-uk_UA-ukrainian_tts-medium": {
+  "sha256": "92be6ff21ebb1cbcc0c71121a6437db8d060cee5785287aaa6a19a2548f59c03",
+  "bytes": 80355083
+ },
+ "vits-piper-ur_PK-fasih-medium": {
+  "sha256": "de64e03109f3c896b7cf910db6d9ffd2703e3d665580d9a19bedbf3e0760d0e4",
+  "bytes": 67227718
+ },
+ "vits-piper-vi_VN-vais1000-medium": {
+  "sha256": "fa1367710767d36ed5cf13b4a449e20c35ffd12791c2e47c2e64142bfa55551a",
+  "bytes": 67154040
+ }
+}

@@ -1,5 +1,35 @@
 ﻿# Changelog
 
+## 0.4.2 (unreleased): neural chat voices, offline, in 43 languages
+
+- New: the voice reader speaks with **neural voices that run on this PC** (sherpa-onnx with Kokoro v1.0 and
+  Piper voices) instead of Windows voices. The catalogue (`voice/catalogue.json`) holds 185 voices in 43
+  languages: all 54 Kokoro voices (American and British English, Spanish, French, Hindi, Italian, Japanese,
+  Brazilian Portuguese, Mandarin) and 1-6 Piper voices per locale, with English accents (Scottish, Northern
+  and Southern English, Welsh, South Asian) and regional ones (Flemish, Mexican and Argentinian Spanish,
+  European Portuguese). Only installed packs are offered.
+- New: the models run in a **voice helper** (`voice/index.js`, Node, like the chat reader) that the plugin
+  starts on the first line, in a kill-on-close job, with stdin/stdout pipes. A model error or a clashing
+  `onnxruntime.dll` from another plugin cannot take OBS down. Its stderr goes to `voice-helper.log`.
+- New: `scripts/fetch-voices.js` downloads each voice pack, checks it against a pinned SHA-256
+  (`voice/pins.json`) and ships it only if its own model card names a licence that allows it (no
+  non-commercial, no-derivatives, research-only, bare links or missing licences). Voices fine-tuned from
+  Piper's Lessac voice ship by the maintainer's decision, and so does every other catalogue voice
+  (`policy` in the catalogue; see NOTICE); voices that did not clear the check are labelled
+  [non-commercial] or [licence unclear] in the dock. The pin is enforced for every pack.
+- Fixed: 0.4.x was silent. Each message was spoken with an async SAPI `Speak` on a short-lived thread that
+  released the voice straight after, cancelling the speech. The 13 voice names in the list were never applied.
+- Changed: chat text is cleaned before it is spoken (links become "a link"; emoji, spam runs and control
+  characters are removed; 300 characters at most). At most 5 lines wait; Preview cuts off what is playing.
+- Fixed: voice packs ticked in Setup could never be unpacked on a normal PC. Windows' `tar.exe` cannot read
+  `.tar.bz2` without a `bzip2` on PATH; Setup now undoes the bzip2 layer with its own 7-Zip, then tar reads
+  the plain `.tar`. The build stops if the included Kokoro pack did not ship, instead of making a setup
+  without voices.
+- Fixed: a setup build with voices failed to compile (the generated voice list began with a `;` comment
+  inside `[Code]`).
+- Verified on Windows: all 54 Kokoro voices speak through the real helper; the plugin compiles with MSVC and
+  the core suite passes 150/150. Not verified: the plugin has not run in OBS; Piper voices await the licence review.
+
 ## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
 
 - New: **In-dock Live Chat feed** in the Chat tab: the streamer can now read their merged chat (Twitch, YouTube, Kick, TikTok, X) directly inside the OBS Studio dock without opening the browser-source overlay.

@@ -2,11 +2,13 @@
 // No Q_OBJECT (functor connects only), like the rest of the dock.
 #pragma once
 #include "chat_hub.hpp"
+#include "tts.hpp"
 
 #include <QImage>
 #include <QWidget>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -106,6 +108,7 @@ private:
 	QPushButton *check_updates_btn_ = nullptr;
 	QLabel *update_status_lbl_ = nullptr;
 	QPushButton *download_update_btn_ = nullptr;
+	std::unique_ptr<ChatSpeaker> speaker_; // created on the first line to read
 };
 
 } // namespace oms

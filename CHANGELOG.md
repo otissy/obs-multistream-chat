@@ -1,5 +1,17 @@
 ﻿# Changelog
 
+## 0.4.2 (unreleased): the voice reader speaks
+
+- Fixed: the voice reader was silent. Each message was spoken with an async SAPI `Speak` on a short-lived thread
+  that released the voice and COM straight after, which cancelled the speech before it played. One worker thread
+  now owns the voice (`src/obs/tts.*`) and waits for each line to finish; Preview cuts off what is playing.
+- Fixed: the voice list was decorative (13 names, none applied). It now lists the voices installed in Windows, the
+  SAPI 5 desktop voices plus the OneCore voices added per language in Settings > Time & language > Speech, and the
+  chosen voice is used. A voice that will not load falls back to the Windows default and is logged.
+- Changed: chat text is never parsed as SAPI XML, so a message cannot change the volume or insert long silences.
+  At most 5 lines wait (the oldest is dropped when chat outruns the voice) and a line is cut at 300 characters.
+- Not verified: built and linked with MinGW only; not yet run in OBS. OneCore voices through SAPI 5 are untested.
+
 ## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
 
 - New: **In-dock Live Chat feed** in the Chat tab: the streamer can now read their merged chat (Twitch, YouTube, Kick, TikTok, X) directly inside the OBS Studio dock without opening the browser-source overlay.

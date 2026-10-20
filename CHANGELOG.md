@@ -18,8 +18,14 @@
   released the voice straight after, cancelling the speech. The 13 voice names in the list were never applied.
 - Changed: chat text is cleaned before it is spoken (links become "a link"; emoji, spam runs and control
   characters are removed; 300 characters at most). At most 5 lines wait; Preview cuts off what is playing.
-- Not verified: no real voice model has run yet (the build machine fetches them); the plugin side is
-  compile-checked with MinGW only and has not run in OBS.
+- Fixed: voice packs ticked in Setup could never be unpacked on a normal PC. Windows' `tar.exe` cannot read
+  `.tar.bz2` without a `bzip2` on PATH; Setup now undoes the bzip2 layer with its own 7-Zip, then tar reads
+  the plain `.tar`. The build stops if the included Kokoro pack did not ship, instead of making a setup
+  without voices.
+- Fixed: a setup build with voices failed to compile (the generated voice list began with a `;` comment
+  inside `[Code]`).
+- Verified on Windows: all 54 Kokoro voices speak through the real helper; the plugin compiles with MSVC and
+  the core suite passes 150/150. Not verified: the plugin has not run in OBS; Piper voices await the licence review.
 
 ## 0.4.0 (2026-10-18): live chat dock, platform logos, zero-touch auto-connect, vertical canvas, separate audio tracks
 

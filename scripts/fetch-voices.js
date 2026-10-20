@@ -62,6 +62,19 @@ async function download(url, file) {
   return { sha256: hash.digest('hex'), bytes };
 }
 
+// Windows' own tar.exe has no bzip2 inside: it runs "bzip2 -d" from PATH and fails on a stock PC.
+// Git for Windows (here and on the GitHub runners) has one in usr\bin; it is appended, not prepended,
+// so "tar" still resolves to the system tar.exe and not Git's.
+function tarEnv(env = process.env) {
+  if (process.platform !== 'win32') return env;
+  const key = Object.keys(env).find(k => k.toUpperCase() === 'PATH') || 'PATH';
+  const dirs = String(env[key] || '').split(';').filter(Boolean);
+  const has = dirs.some(d => fs.existsSync(path.join(d, 'bzip2.exe')));
+  const git = path.join(env.ProgramFiles || 'C:\\Program Files', 'Git', 'usr', 'bin');
+  if (has || !fs.existsSync(path.join(git, 'bzip2.exe'))) return env;
+  return { ...env, [key]: [...dirs, git].join(';') };
+}
+
 function sha256File(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
@@ -93,7 +106,7 @@ async function fetchPack(pack, o, release, pins, log) {
   }
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(tmp, { recursive: true });
-  const t = spawnSync('tar', ['-xjf', archive, '-C', tmp], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const t = spawnSync('tar', ['-xjf', archive, '-C', tmp], { stdio: ['ignore', 'ignore', 'pipe'], env: tarEnv() });
   if (t.status !== 0) return { refused: 'could not unpack: ' + String(t.stderr).trim().slice(0, 200) };
   const top = path.join(tmp, pack.id);
   if (!fs.existsSync(top)) return { refused: 'archive does not contain the folder ' + pack.id };
@@ -142,4 +155,4 @@ if (require.main === module) {
   main(process.argv.slice(2)).then(code => process.exit(code), e => { process.stderr.write('fetch-voices: ' + e.message + '\n'); process.exit(2); });
 }
 
-module.exports = { parseArgs, main };
+module.exports = { parseArgs, main, tarEnv };

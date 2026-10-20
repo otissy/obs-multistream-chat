@@ -222,3 +222,27 @@ test('licence: a voice fine-tuned from Lessac is flagged even when its own data 
   assert.match(r.warn, /Lessac/);
   assert.strictEqual(classify('* License: CC BY 4.0\n\nTrained from scratch').warn, '');
 });
+
+// ---- fetch-voices: a bzip2 for Windows' tar.exe ----------------------------------------------------
+const { tarEnv } = require('../../scripts/fetch-voices');
+
+test('tarEnv: appends a bzip2 folder after the system dirs, so "tar" is still the system tar', { skip: process.platform !== 'win32' && 'Windows only' }, () => {
+  const pf = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-pf-'));
+  const git = path.join(pf, 'Git', 'usr', 'bin');
+  fs.mkdirSync(git, { recursive: true });
+  fs.writeFileSync(path.join(git, 'bzip2.exe'), '');
+  const sys = 'C:\Windows\System32';
+  const e = tarEnv({ Path: sys, ProgramFiles: pf });
+  assert.deepStrictEqual(e.Path.split(';'), [sys, git], 'kept the PATH key spelling, appended Git last');
+  assert.ok(!('PATH' in e), 'no second PATH key next to Path');
+  // a bzip2 already on PATH: unchanged
+  const own = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-own-'));
+  fs.writeFileSync(path.join(own, 'bzip2.exe'), '');
+  const env2 = { PATH: sys + ';' + own, ProgramFiles: pf };
+  assert.strictEqual(tarEnv(env2), env2);
+  // no Git bzip2 either: unchanged (tar then fails and the pack is refused, loudly)
+  const env3 = { PATH: sys, ProgramFiles: path.join(pf, 'nowhere') };
+  assert.strictEqual(tarEnv(env3), env3);
+  fs.rmSync(pf, { recursive: true, force: true });
+  fs.rmSync(own, { recursive: true, force: true });
+});

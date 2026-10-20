@@ -11,9 +11,17 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { ROOT } = require('./helpers');
-const { main } = require('../../scripts/fetch-voices');
+const { main, tarEnv } = require('../../scripts/fetch-voices');
 
-const tarOk = spawnSync('tar', ['--version']).status === 0;
+// the fixture needs a tar that can write bzip2: on Windows that is tar.exe plus a bzip2 that
+// tarEnv() finds (Git's), exactly what fetch-voices itself unpacks with
+const tarOk = spawnSync('tar', ['--version']).status === 0 && (() => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-bz2-'));
+  fs.writeFileSync(path.join(d, 'f'), 'x');
+  const r = spawnSync('tar', ['-cjf', path.join(d, 'f.tar.bz2'), '-C', d, 'f'], { env: tarEnv() });
+  fs.rmSync(d, { recursive: true, force: true });
+  return r.status === 0;
+})();
 
 // a small catalogue with three Piper packs: good licence, non-commercial, no licence at all
 function fixture() {
@@ -31,7 +39,7 @@ function fixture() {
     fs.writeFileSync(path.join(src, 'tokens.txt'), 'a 1');
     if (card) fs.writeFileSync(path.join(src, 'MODEL_CARD'), '# Model card for ' + name + '\n\n' + card);
     const archive = path.join(dir, id + '.tar.bz2');
-    assert.strictEqual(spawnSync('tar', ['-cjf', archive, '-C', path.join(dir, 'src'), id]).status, 0);
+    assert.strictEqual(spawnSync('tar', ['-cjf', archive, '-C', path.join(dir, 'src'), id], { env: tarEnv() }).status, 0);
     served.set('/' + id + '.tar.bz2', fs.readFileSync(archive));
   }
   fs.writeFileSync(path.join(dir, 'catalogue.json'), JSON.stringify(cat));
@@ -50,7 +58,7 @@ function serve(served) {
   return new Promise(r => server.listen(0, '127.0.0.1', () => r({ server, hits, base: 'http://127.0.0.1:' + server.address().port + '/' })));
 }
 
-test('fetch-voices: pins are required, recorded on request, and then enforced', { skip: !tarOk && 'no tar' }, async () => {
+test('fetch-voices: pins are required, recorded on request, and then enforced', { skip: !tarOk && 'no tar that can write bzip2' }, async () => {
   const { dir, served } = fixture();
   const { server, hits, base } = await serve(served);
   const out = path.join(dir, 'out');
@@ -122,6 +130,8 @@ test('voice-installer: shipped packs become unticked download components per lan
   assert.deepStrictEqual(g.embedded, ['kokoro-multi-lang-v1_0']);
   assert.deepStrictEqual(g.languages, ['Dutch', 'English', 'German', 'Portuguese']);
   const t = g.text;
+  // #included inside [Code]: the first line must be a section header, never a ';' comment
+  assert.strictEqual(t.split('\r\n')[0], '[Components]');
   assert.match(t, /Name: "voices\\included"; Description: "Included: Chinese, English, French, Hindi, Italian, Japanese, Portuguese, Spanish"/);
   // download components carry no Types, so they start unticked
   const german = t.split('\r\n').find(l => l.startsWith('Name: "voices\\german"'));

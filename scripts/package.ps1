@@ -67,7 +67,8 @@ if ($Voices) {
   New-Item -ItemType Directory -Force (Join-Path $tree 'data\voices') | Out-Null
   foreach ($id in $embed) {
     if ($shipped -contains $id) { Copy-Item (Join-Path $Voices $id) (Join-Path $tree "data\voices\$id") -Recurse }
-    else { Write-Warning "embedded voice pack $id was not shipped by fetch-voices (see manifest.json)" }
+    # a setup without its included voices would install fine and then never speak: stop the build instead
+    else { throw "embedded voice pack $id was not shipped by fetch-voices (see manifest.json in $Voices)" }
   }
   Copy-Item (Join-Path $Voices 'LICENCES.md') (Join-Path $tree 'docs\voice-licences.md')
 } else {

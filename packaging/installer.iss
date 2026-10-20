@@ -12,6 +12,11 @@
   #define MyAppURL "https://github.com/otissy/obs-multistream-chat"
 #endif
 
+; ArchiveExtraction=full (voice-extract.iss) arrived in Inno Setup 6.5
+#if Ver < EncodeVer(6,5,0)
+  #error Inno Setup 6.5 or newer is needed (ArchiveExtraction=full unpacks the voice packs)
+#endif
+
 #ifndef SourceTree
   #define SourceTree "D:\builds\obs-multistream-chat\dist\stage\obs-multistream-chat"
 #endif
@@ -40,6 +45,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
 CloseApplications=yes
 CloseApplicationsFilter=obs64.exe
+ArchiveExtraction=full
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -63,7 +69,8 @@ Type: filesandordirs; Name: "{commonappdata}\obs-studio\plugins\obs-multistream"
 ; The voice helper and its runtime (sherpa-onnx) are in data\voice. Voice packs go to data\voices:
 ; some are included in this setup, the rest are components that are downloaded when ticked (each
 ; checked against the SHA-256 that scripts/fetch-voices.js pinned after its licence check), then
-; unpacked with Windows' own tar.exe. scripts/voice-installer.js writes that list.
+; unpacked by voice-extract.iss (Setup's 7-Zip for the bzip2 layer, then tar.exe). scripts/voice-installer.js
+; writes that list.
 [Code]
 var
   VoiceDownloads: TDownloadWizardPage;
@@ -80,22 +87,7 @@ begin
   VoiceDownloadCount := VoiceDownloadCount + 1;
 end;
 
-procedure ExtractVoicePack(const BaseName: String);
-var
-  Archive, Dest: String;
-  Code: Integer;
-begin
-  Archive := ExpandConstant('{tmp}\' + BaseName);
-  if not FileExists(Archive) then
-    Exit;
-  Dest := ExpandConstant('{app}\data\voices');
-  ForceDirectories(Dest);
-  if not Exec(ExpandConstant('{sys}\tar.exe'), '-xjf "' + Archive + '" -C "' + Dest + '"', '', SW_HIDE,
-              ewWaitUntilTerminated, Code) or (Code <> 0) then
-    SuppressibleMsgBox('The voice pack ' + BaseName + ' could not be unpacked (tar exit ' + IntToStr(Code) +
-                       '). Its voices will be missing; run Setup again to retry.', mbError, MB_OK, IDOK);
-  DeleteFile(Archive);
-end;
+#include "voice-extract.iss"
 
 #if FileExists(AddBackslash(SourcePath) + "voices.generated.iss")
   #include "voices.generated.iss"

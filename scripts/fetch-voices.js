@@ -99,7 +99,7 @@ async function fetchPack(pack, o, release, pins, log) {
   if (!fs.existsSync(top)) return { refused: 'archive does not contain the folder ' + pack.id };
   if (!packInstalled(pack, tmp)) return { refused: 'archive is missing files the catalogue names' };
   const text = licenceText(top);
-  let lic = classify(text);
+  let lic = classify(text, pack.licenceEvidence);
   if (!lic.ok && !text.trim() && pack.licence !== 'unverified') lic = { ok: true, licence: pack.licence + ' (from the catalogue; the pack has no licence file)', warn: '' };
   if (!lic.ok) return { refused: 'licence: ' + lic.reason };
   if (lic.warn && !o.allowLessac) return { refused: 'licence: ' + lic.warn };
@@ -107,7 +107,9 @@ async function fetchPack(pack, o, release, pins, log) {
   fs.rmSync(dest, { recursive: true, force: true });
   if (!o.keep || o.keep.includes(pack.id)) fs.renameSync(top, dest);
   fs.rmSync(tmp, { recursive: true, force: true });
-  return { licence: lic.licence, warn: lic.warn || '', sha256: got.sha256, bytes: got.bytes, attribution: attribution(text) };
+  const ev = pack.licenceEvidence;
+  const extra = ev && lic.licence.includes('(looked up: ') ? '\n\nDataset terms (' + ev.source + '):\n' + ev.quote + (ev.attribution ? '\nAttribution: ' + ev.attribution : '') : '';
+  return { licence: lic.licence, warn: lic.warn || '', sha256: got.sha256, bytes: got.bytes, attribution: attribution(text) + extra };
 }
 
 async function main(argv, log = m => process.stdout.write(m + '\n')) {

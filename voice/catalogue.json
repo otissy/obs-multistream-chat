@@ -66,6 +66,12 @@
     "model": "en_GB-jenny_dioco-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
+   },
+   "licenceEvidence": {
+    "licence": "Jenny (Dioco) dataset terms (commercial use permitted, attribution required)",
+    "source": "https://github.com/dioco-group/jenny-tts-dataset",
+    "quote": "Commercial use is permitted. Attribution is required in software/websites/projects/interfaces (including voice interfaces) that generate audio in response to user action using this dataset. The voice is to be called \"Jenny\", where practical \"Jenny (Dioco)\".",
+    "attribution": "Jenny (Dioco)"
    }
   },
   {
@@ -486,6 +492,12 @@
     "model": "it_IT-riccardo-x_low.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
+   },
+   "licenceEvidence": {
+    "licence": "M-AILABS Speech Dataset licence (BSD-style, commercial use permitted)",
+    "source": "https://www.caito.de/2019/01/03/the-m-ailabs-speech-dataset/",
+    "quote": "Redistribution and use in any form, including any commercial use, with or without modification are permitted provided that the following conditions are met: redistributions must retain the copyright notice. Copyright (c) 2017-2019 by the original creators @ M-AILABS.",
+    "attribution": "Copyright (c) 2017-2019 by the original creators @ M-AILABS"
    }
   },
   {
@@ -1582,7 +1594,7 @@
   },
   {
    "id": "piper.en_GB-jenny_dioco-medium",
-   "name": "Jenny",
+   "name": "Jenny (Dioco)",
    "locale": "en-GB",
    "language": "English",
    "accent": "British",

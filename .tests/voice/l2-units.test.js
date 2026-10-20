@@ -204,6 +204,17 @@ test('licence: non-commercial, no-derivatives, research-only, bare links and sil
   ]) assert.strictEqual(classify(t).ok, false, JSON.stringify(t));
 });
 
+test('licence: looked-up evidence counts only for a card that names no licence and refuses nothing', () => {
+  const ev = { licence: 'M-AILABS licence', source: 'https://www.caito.de/x', quote: 'commercial use permitted' };
+  const r = classify('* License: See URL\n\nTrained from scratch.', ev);
+  assert.ok(r.ok);
+  assert.match(r.licence, /M-AILABS licence \(looked up: https:\/\/www\.caito\.de\/x\)/);
+  assert.strictEqual(classify('* License: See URL', { licence: 'x' }).ok, false, 'evidence needs a source');
+  assert.strictEqual(classify('License: CC BY-NC 4.0', ev).ok, false, 'the card refusing wins over evidence');
+  assert.strictEqual(classify('', ev).ok, false, 'no card at all is still refused');
+  assert.match(classify('* License: See URL\n\nFinetuned from U.S. English lessac voice (medium quality).', ev).warn, /Lessac/);
+});
+
 test('licence: a voice fine-tuned from Lessac is flagged even when its own data is permissive', () => {
   const r = classify('* License: CC BY 4.0\n\n## Training\n\nFine-tuned from English lessac medium');
   assert.match(classify('* License: https://creativecommons.org/licenses/by/4.0/\n\n## Training\n\nFinetuned from U.S. English lessac voice (medium quality).').warn, /Lessac/);

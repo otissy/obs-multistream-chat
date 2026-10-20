@@ -23,15 +23,17 @@ const ALLOW = [
 // Piper voices fine-tuned from the Lessac checkpoint: the dataset licence (Blizzard) restricts use.
 const DERIVED_WARN = /fine[\s-]?tun(ed|ing) (from|on)[^\n]*lessac/i;
 
-function classify(text) {
+// evidence: the catalogue's licenceEvidence for the pack ({ licence, source, quote }), for a model card
+// that names no licence ("License: See URL") when the dataset's own terms were looked up by hand. It is
+// used only when the card refuses nothing itself; the Lessac check still applies.
+function classify(text, evidence) {
   const t = String(text || '');
   if (!t.trim()) return { ok: false, licence: '', reason: 'no licence text in the pack' };
   for (const [re, why] of REFUSE) if (re.test(t)) return { ok: false, licence: why, reason: why };
-  for (const [re, name] of ALLOW) {
-    if (re.test(t)) {
-      const warn = DERIVED_WARN.test(t) ? 'fine-tuned from Lessac (Blizzard dataset licence): check before shipping' : '';
-      return { ok: true, licence: name, reason: '', warn };
-    }
+  const warn = DERIVED_WARN.test(t) ? 'fine-tuned from Lessac (Blizzard dataset licence): check before shipping' : '';
+  for (const [re, name] of ALLOW) if (re.test(t)) return { ok: true, licence: name, reason: '', warn };
+  if (evidence && evidence.licence && evidence.source) {
+    return { ok: true, licence: evidence.licence + ' (looked up: ' + evidence.source + ')', reason: '', warn };
   }
   return { ok: false, licence: '', reason: 'no recognised licence named (a bare link does not count)' };
 }

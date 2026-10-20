@@ -23,11 +23,11 @@ const tarOk = spawnSync('tar', ['--version']).status === 0 && (() => {
   return r.status === 0;
 })();
 
-// a small catalogue with three Piper packs: good licence, non-commercial, no licence at all
-function fixture() {
+// a small catalogue of Piper packs: good licence, non-commercial, no licence at all (or the given ones)
+function fixture(packs = [['vits-piper-en_GB-good-medium', '* License: CC BY 4.0\n'], ['vits-piper-en_GB-nc-medium', 'License: CC BY-NC-SA 4.0\n'], ['vits-piper-en_GB-none-medium', null]], policy) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-fetch-'));
-  const packs = [['vits-piper-en_GB-good-medium', '* License: CC BY 4.0\n'], ['vits-piper-en_GB-nc-medium', 'License: CC BY-NC-SA 4.0\n'], ['vits-piper-en_GB-none-medium', null]];
   const cat = { schema: 1, release: 'https://unused.example/', packs: [], voices: [] };
+  if (policy) cat.policy = policy;
   const served = new Map();
   for (const [id, card] of packs) {
     const name = id.replace('vits-piper-', '');
@@ -93,6 +93,33 @@ test('fetch-voices: pins are required, recorded on request, and then enforced', 
   } finally {
     server.close();
   }
+});
+
+test('fetch-voices: a Lessac-derived pack ships only when the catalogue policy allows it', { skip: !tarOk && 'no tar' }, async () => {
+  const card = '* License: https://creativecommons.org/licenses/by/4.0/\n\n## Training\n\nFinetuned from U.S. English lessac voice (medium quality).\n';
+  for (const [policy, want] of [[undefined, 1], [{ allowLessacDerived: true }, 0]]) {
+    const { dir, served } = fixture([['vits-piper-en_GB-tuned-medium', card]], policy);
+    const { server, base } = await serve(served);
+    try {
+      const out = path.join(dir, 'out');
+      const code = await main(['--out', out, '--catalogue', path.join(dir, 'catalogue.json'), '--pins', path.join(dir, 'pins.json'), '--release', base, '--record-pins'], () => {});
+      assert.strictEqual(code, want, JSON.stringify(policy));
+      const m = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8'));
+      if (want) assert.match(m.refused[0].reason, /Lessac/);
+      else {
+        assert.match(m.shipped[0].warn, /Lessac/);
+        assert.match(fs.readFileSync(path.join(out, 'LICENCES.md'), 'utf8'), /Licence: CC-BY \(fine-tuned from Lessac/);
+      }
+    } finally {
+      server.close();
+    }
+  }
+});
+
+test('the shipped catalogue records the maintainer\'s Lessac decision', () => {
+  const c = JSON.parse(fs.readFileSync(path.join(ROOT, 'voice', 'catalogue.json'), 'utf8'));
+  assert.strictEqual(c.policy.allowLessacDerived, true);
+  assert.match(c.policy.decision, /otiyyy/);
 });
 
 test('fetch-voices: bad usage is refused before anything is downloaded', async () => {

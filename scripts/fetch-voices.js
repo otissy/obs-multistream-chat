@@ -10,6 +10,8 @@
 //
 //   node scripts/fetch-voices.js --out <dir> [--packs id,id | --all] [--record-pins]
 //        [--keep-embedded] [--allow-lessac-derived] [--release <base url>]
+// Voices fine-tuned from Lessac ship when the catalogue's policy.allowLessacDerived says so (it does: the
+// maintainer's decision is recorded there) or --allow-lessac-derived is given.
 //
 // Writes <out>/<pack id>/ (unpacked), <out>/manifest.json and <out>/LICENCES.md (for NOTICE).
 // --keep-embedded: every pack is still checked, but only the ones the setup embeds stay unpacked
@@ -128,7 +130,9 @@ async function fetchPack(pack, o, release, pins, log) {
 async function main(argv, log = m => process.stdout.write(m + '\n')) {
   const o = parseArgs(argv);
   const cat = loadCatalogue(o.catalogue);
-  const release = o.release || JSON.parse(fs.readFileSync(o.catalogue, 'utf8')).release;
+  const raw = JSON.parse(fs.readFileSync(o.catalogue, 'utf8'));
+  const release = o.release || raw.release;
+  if (raw.policy && raw.policy.allowLessacDerived === true) o.allowLessac = true;
   const pins = fs.existsSync(o.pins) ? JSON.parse(fs.readFileSync(o.pins, 'utf8')) : {};
   const wanted = o.packs ? o.packs : [...cat.packs.keys()];
   for (const id of wanted) if (!cat.packs.has(id)) throw new Error('unknown pack ' + id);

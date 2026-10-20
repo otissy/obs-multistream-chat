@@ -13,7 +13,8 @@
   `onnxruntime.dll` from another plugin cannot take OBS down. Its stderr goes to `voice-helper.log`.
 - New: `scripts/fetch-voices.js` downloads each voice pack, checks it against a pinned SHA-256
   (`voice/pins.json`) and ships it only if its own model card names a licence that allows it (no
-  non-commercial, no-derivatives, research-only, bare links or missing licences).
+  non-commercial, no-derivatives, research-only, bare links or missing licences). Voices fine-tuned from
+  Piper's Lessac voice ship by the maintainer's decision (`policy` in the catalogue; see NOTICE).
 - Fixed: 0.4.x was silent. Each message was spoken with an async SAPI `Speak` on a short-lived thread that
   released the voice straight after, cancelling the speech. The 13 voice names in the list were never applied.
 - Changed: chat text is cleaned before it is spoken (links become "a link"; emoji, spam runs and control

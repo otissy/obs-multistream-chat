@@ -2,6 +2,10 @@
  "schema": 1,
  "release": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/",
  "note": "Pack licences marked unverified are checked against each pack's MODEL_CARD by scripts/fetch-voices.js; a pack that fails is not shipped.",
+ "policy": {
+  "allowLessacDerived": true,
+  "decision": "otiyyy, 2026-10-20: ship Piper voices fine-tuned from the Lessac checkpoint. The Lessac (Blizzard) dataset itself is licensed for non-commercial use; whether that carries over to fine-tuned voices is unsettled. The Lessac voice itself, trained directly on that data, is still not shipped."
+ },
  "packs": [
   {
    "id": "kokoro-multi-lang-v1_0",

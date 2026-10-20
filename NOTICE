@@ -80,3 +80,9 @@ Voice packs (data/voices/<pack>): unchanged archives from the k2-fsa tts-models 
   voice under the licence named in its MODEL_CARD). A pack ships only if its own model card names a
   licence that allows redistribution and commercial use (scripts/fetch-voices.js); the licence and
   the opening of each model card are listed in docs/voice-licences.md of the release.
+  Lessac-derived Piper voices: many Piper voices were fine-tuned from Piper's "lessac" voice, which
+  was trained on the Lessac Technologies Blizzard Challenge data (CSTR, University of Edinburgh),
+  licensed for non-commercial use. Whether that licence carries over to a voice fine-tuned on other
+  data is unsettled. The maintainer chose to ship these voices (voice/catalogue.json, policy); they
+  are marked "fine-tuned from Lessac" in docs/voice-licences.md. The lessac voice itself is not
+  shipped.

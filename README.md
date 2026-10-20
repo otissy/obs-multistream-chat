@@ -224,7 +224,8 @@ Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Port
   playing.
 - Every voice pack is checked before it ships: its archive must match a pinned SHA-256, and its own model
   card must name a licence that allows redistribution and commercial use (`scripts/fetch-voices.js`).
-  Non-commercial and research-only voices are left out.
+  Non-commercial and research-only voices are left out. Voices fine-tuned from Piper's Lessac voice are
+  shipped by choice, although the Lessac dataset is licensed non-commercial (see NOTICE).
 
 ## Troubleshooting
 

@@ -124,7 +124,7 @@ test('engine: streams one chunk per sentence, with the voice\'s speaker id and l
   assert.strictEqual(n, chunks.reduce((a, c) => a + c[0], 0));
   const line = read().find(x => x.text);
   assert.strictEqual(line.sid, 21);
-  assert.strictEqual(line.lang, 'en-gb');
+  assert.strictEqual(line.lang, 'en-GB-x-rp'); // espeak-ng has no 'en-gb' voice name
   assert.ok(read()[0].lexicon.endsWith('lexicon-gb-en.txt,' + path.join(path.dirname(read()[0].load), 'lexicon-zh.txt')));
 });
 
@@ -173,6 +173,10 @@ test('licence: permissive licences named in the card are accepted', () => {
     'Licensed under the Apache License, Version 2.0': 'Apache-2.0',
     'License: MIT': 'MIT',
     'Open Data Commons Attribution License (ODC-By)': 'CC-BY',
+    '* License: https://creativecommons.org/licenses/by/4.0/': 'CC-BY',
+    '* License: https://creativecommons.org/licenses/by-sa/4.0/deed.en': 'CC-BY-SA',
+    'License: https://creativecommons.org/publicdomain/zero/1.0/': 'CC0-1.0 / public domain',
+    'https://www.apache.org/licenses/LICENSE-2.0': 'Apache-2.0',
   };
   for (const [t, name] of Object.entries(ok)) {
     const r = classify(t);
@@ -186,6 +190,8 @@ test('licence: non-commercial, no-derivatives, research-only, bare links and sil
     'Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0)',
     'License: CC BY-NC 4.0',
     'CC BY-ND 4.0',
+    '* License: https://creativecommons.org/licenses/by-nc-sa/4.0/',
+    '* License: https://creativecommons.org/licenses/by-nd/4.0/',
     'Attribution-NoDerivatives 4.0',
     'This dataset may be used for research purposes only.',
     '* License: https://www.cstr.ed.ac.uk/projects/blizzard/2011/lessac_blizzard2011/license.html',
@@ -197,6 +203,7 @@ test('licence: non-commercial, no-derivatives, research-only, bare links and sil
 
 test('licence: a voice fine-tuned from Lessac is flagged even when its own data is permissive', () => {
   const r = classify('* License: CC BY 4.0\n\n## Training\n\nFine-tuned from English lessac medium');
+  assert.match(classify('* License: https://creativecommons.org/licenses/by/4.0/\n\n## Training\n\nFinetuned from U.S. English lessac voice (medium quality).').warn, /Lessac/);
   assert.ok(r.ok);
   assert.match(r.warn, /Lessac/);
   assert.strictEqual(classify('* License: CC BY 4.0\n\nTrained from scratch').warn, '');

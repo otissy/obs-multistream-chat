@@ -1,8 +1,9 @@
 'use strict';
 // Decides from a voice pack's own MODEL_CARD / README / LICENSE text whether the plugin may ship it.
 // Shipping means streamers use it on monetised streams, so anything non-commercial, no-derivatives,
-// research-only or simply unstated is refused. Only licences named in the text count; a bare URL
-// does not (it is what research-only datasets such as the Blizzard/Lessac corpus give).
+// research-only or simply unstated is refused. A licence counts when it is named, or linked by its
+// canonical URL (creativecommons.org, apache.org, opensource.org); any other link does not (it is what
+// research-only datasets such as the Blizzard/Lessac corpus give).
 const REFUSE = [
   [/non[\s-]?commercial|\bBY[\s-]?NC\b|\bNC[\s-]?(SA|ND)\b/i, 'non-commercial'],
   [/no[\s-]?derivatives|\bBY[\s-]?ND\b/i, 'no-derivatives'],
@@ -10,11 +11,11 @@ const REFUSE = [
 ];
 
 const ALLOW = [
-  [/\bCC0\b|creative commons zero|public[\s-]domain/i, 'CC0-1.0 / public domain'],
-  [/\bCC[\s-]?BY[\s-]?SA\b|attribution[\s-]sharealike|share[\s-]?alike/i, 'CC-BY-SA'],
-  [/\bCC[\s-]?BY\b|creative commons attribution|attribution 4\.0|\bODC[\s-]?By\b/i, 'CC-BY'],
-  [/apache(\s+license)?[\s,-]*(version\s*)?2(\.0)?/i, 'Apache-2.0'],
-  [/\bMIT\s+licen[cs]e\b|licen[cs]e\s*:\s*MIT\b/i, 'MIT'],
+  [/\bCC0\b|creative commons zero|public[\s-]domain|creativecommons\.org\/publicdomain\/(zero|mark)\//i, 'CC0-1.0 / public domain'],
+  [/\bCC[\s-]?BY[\s-]?SA\b|attribution[\s-]sharealike|share[\s-]?alike|creativecommons\.org\/licenses\/by-sa\//i, 'CC-BY-SA'],
+  [/\bCC[\s-]?BY\b|creative commons attribution|attribution 4\.0|\bODC[\s-]?By\b|creativecommons\.org\/licenses\/by\//i, 'CC-BY'],
+  [/apache(\s+license)?[\s,-]*(version\s*)?2(\.0)?|apache\.org\/licenses\/LICENSE-2\.0/i, 'Apache-2.0'],
+  [/\bMIT\s+licen[cs]e\b|licen[cs]e\s*:\s*MIT\b|opensource\.org\/licenses?\/MIT/i, 'MIT'],
   [/\bBSD[\s-]?\d[\s-]?clause\b|\bBSD\s+licen[cs]e\b/i, 'BSD'],
 ];
 

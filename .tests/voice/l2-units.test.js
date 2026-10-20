@@ -177,6 +177,7 @@ test('licence: permissive licences named in the card are accepted', () => {
     '* License: https://creativecommons.org/licenses/by-sa/4.0/deed.en': 'CC-BY-SA',
     'License: https://creativecommons.org/publicdomain/zero/1.0/': 'CC0-1.0 / public domain',
     'https://www.apache.org/licenses/LICENSE-2.0': 'Apache-2.0',
+    '* License: http://unlicense.org': 'Unlicense',
   };
   for (const [t, name] of Object.entries(ok)) {
     const r = classify(t);
@@ -196,6 +197,8 @@ test('licence: non-commercial, no-derivatives, research-only, bare links and sil
     'This dataset may be used for research purposes only.',
     '* License: https://www.cstr.ed.ac.uk/projects/blizzard/2011/lessac_blizzard2011/license.html',
     'Trained at MIT. Speakers: 1',
+    '* License: See URL',
+    '* License: AGPLv3 See URL',
     '',
     '   ',
   ]) assert.strictEqual(classify(t).ok, false, JSON.stringify(t));

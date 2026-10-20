@@ -12,6 +12,7 @@ const REFUSE = [
 
 const ALLOW = [
   [/\bCC0\b|creative commons zero|public[\s-]domain|creativecommons\.org\/publicdomain\/(zero|mark)\//i, 'CC0-1.0 / public domain'],
+  [/unlicense\.org|\bthe unlicense\b/i, 'Unlicense'],
   [/\bCC[\s-]?BY[\s-]?SA\b|attribution[\s-]sharealike|share[\s-]?alike|creativecommons\.org\/licenses\/by-sa\//i, 'CC-BY-SA'],
   [/\bCC[\s-]?BY\b|creative commons attribution|attribution 4\.0|\bODC[\s-]?By\b|creativecommons\.org\/licenses\/by\//i, 'CC-BY'],
   [/apache(\s+license)?[\s,-]*(version\s*)?2(\.0)?|apache\.org\/licenses\/LICENSE-2\.0/i, 'Apache-2.0'],

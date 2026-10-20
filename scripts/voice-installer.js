@@ -3,7 +3,7 @@
 // Writes the voice part of the installer (packaging/voices.generated.iss, #included by installer.iss)
 // from the packs that scripts/fetch-voices.js shipped (its manifest.json: licence-checked and pinned).
 //   - embedded packs are staged in data\voices by scripts/package.ps1, so they are in the zip and the
-//     setup alike (offline install): Kokoro and a few English accents
+//     setup alike (offline install): Kokoro, 54 voices in 8 languages including American and British English
 //   - every other shipped pack is a component per language, unticked; Setup downloads the ones that
 //     are ticked from the k2-fsa release, checks each against its pinned SHA-256, and unpacks it with
 //     Windows' own tar.exe into {app}\data\voices
@@ -15,12 +15,7 @@ const path = require('path');
 const { loadCatalogue } = require('../voice/lib/catalogue');
 
 const ROOT = path.resolve(__dirname, '..');
-const DEFAULT_EMBED = [
-  'kokoro-multi-lang-v1_0',
-  'vits-piper-en_GB-alba-medium',
-  'vits-piper-en_GB-northern_english_male-medium',
-  'vits-piper-en_GB-southern_english_female-medium',
-];
+const DEFAULT_EMBED = ['kokoro-multi-lang-v1_0'];
 
 function parseArgs(argv) {
   const o = { catalogue: path.join(ROOT, 'voice', 'catalogue.json'), embed: DEFAULT_EMBED };

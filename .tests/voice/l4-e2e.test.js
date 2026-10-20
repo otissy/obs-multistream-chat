@@ -119,8 +119,8 @@ test('voice-installer: shipped packs become unticked download components per lan
     refused: [{ id: 'vits-piper-en_US-lessac-high', reason: 'licence' }],
   };
   const g = generate(cat, manifest, 'https://example.test/r/', DEFAULT_EMBED);
-  assert.deepStrictEqual(g.embedded, ['kokoro-multi-lang-v1_0', 'vits-piper-en_GB-alba-medium']);
-  assert.deepStrictEqual(g.languages, ['Dutch', 'German', 'Portuguese']);
+  assert.deepStrictEqual(g.embedded, ['kokoro-multi-lang-v1_0']);
+  assert.deepStrictEqual(g.languages, ['Dutch', 'English', 'German', 'Portuguese']);
   const t = g.text;
   assert.match(t, /Name: "voices\\included"; Description: "Included: Chinese, English, French, Hindi, Italian, Japanese, Portuguese, Spanish"/);
   // download components carry no Types, so they start unticked
@@ -130,7 +130,8 @@ test('voice-installer: shipped packs become unticked download components per lan
   assert.match(t, /AddVoiceDownload\('https:\/\/example\.test\/r\/vits-piper-de_DE-thorsten-high\.tar\.bz2', 'vits-piper-de_DE-thorsten-high\.tar\.bz2', 'c{64}'\)/);
   assert.match(t, /Flemish \(Belgium\)/);
   assert.match(t, /Portuguese \(Portugal\): download, 62 MB/);
-  assert.ok(!/alba-medium\.tar\.bz2/.test(t), 'an embedded pack must not be downloaded');
+  assert.match(t, /English \(Scottish\): download, 60 MB/);
+  assert.ok(!/kokoro-multi-lang-v1_0\.tar\.bz2/.test(t), 'an embedded pack must not be downloaded');
   assert.ok(!/lessac/.test(t), 'a refused pack must not appear');
   // Pascal: no semicolon before else
   assert.ok(!/\);\r\n\s+else/.test(t));

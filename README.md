@@ -213,9 +213,9 @@ account, nothing sent anywhere. They are [Kokoro](https://huggingface.co/hexgrad
 185 voices in 43 languages (`voice/catalogue.json`), including Scottish, Northern and Southern English,
 Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Portuguese.
 
-- **Included in Setup:** Kokoro (American and British English, Spanish, French, Hindi, Italian, Japanese,
-  Brazilian Portuguese, Mandarin) and three English accents. Other languages are ticked in Setup and
-  downloaded then; run Setup again to add more.
+- **Included in Setup:** Kokoro, 54 voices in American and British English, Spanish, French, Hindi, Italian,
+  Japanese, Brazilian Portuguese and Mandarin. Other languages and accents are ticked in Setup and downloaded
+  then; run Setup again to add more.
 - **Needs Node.js 22+**, like the chat reader. The voices run in a helper of their own
   (`data\voice\index.js`), never inside OBS, so a voice problem cannot crash OBS. Its log is
   `voice-helper.log` next to the plugin's `config.json`.

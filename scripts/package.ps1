@@ -52,7 +52,7 @@ foreach ($p in $npmPins) {
   if ($LASTEXITCODE -ne 0) { throw "could not unpack $($p.name)" }
 }
 
-# voice packs that scripts\fetch-voices.js shipped: the embedded ones go in data\voices (zip and setup alike),
+# voice packs that scripts\fetch-voices.js shipped: the embedded one (Kokoro) goes in data\voices (zip and setup alike),
 # the rest become download components of the setup (packaging\voices.generated.iss)
 $voicesIss = Join-Path $Root 'packaging\voices.generated.iss'
 Remove-Item $voicesIss -Force -ErrorAction SilentlyContinue

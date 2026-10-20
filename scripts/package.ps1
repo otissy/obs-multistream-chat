@@ -1,10 +1,11 @@
 <#
  Makes obs-multistream-chat-<version>-windows-x64.zip and setup .exe (+ .sha256).
-   powershell -File scripts\package.ps1 [-Dll path] [-OutDir dir] [-BuildRoot dir] [-PushRelease]
+   powershell -File scripts\package.ps1 [-Dll path] [-OutDir dir] [-BuildRoot dir] [-Voices dir] [-PushRelease]
+ -Voices: the --out folder of scripts\fetch-voices.js (licence-checked, pinned voice packs)
  Default output: <build root>\dist and D:\build
 #>
 [CmdletBinding()]
-param([string]$Dll, [string]$OutDir, [string]$BuildRoot, [switch]$PushRelease, [switch]$SkipInstaller)
+param([string]$Dll, [string]$OutDir, [string]$BuildRoot, [string]$Voices, [switch]$PushRelease, [switch]$SkipInstaller)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 . "$PSScriptRoot\vsenv.ps1"
@@ -22,10 +23,56 @@ $tree = Join-Path $stage 'obs-multistream-chat'
 New-Item -ItemType Directory -Force (Join-Path $tree 'bin\64bit') | Out-Null
 Copy-Item $Dll (Join-Path $tree 'bin\64bit\obs-multistream-chat.dll')
 Copy-Item (Join-Path $Root 'data') (Join-Path $tree 'data') -Recurse
-# the chat reader (plain JavaScript + selector packs) lives next to the data files: obs_module_file("reader/index.js")
-Copy-Item (Join-Path $Root 'reader') (Join-Path $tree 'data\reader') -Recurse
 foreach ($f in 'README.md', 'LICENSE', 'NOTICE', 'CHANGELOG.md') { Copy-Item (Join-Path $Root $f) $tree }
 Copy-Item (Join-Path $Root 'docs') (Join-Path $tree 'docs') -Recurse
+# the chat reader (plain JavaScript + selector packs) lives next to the data files: obs_module_file("reader/index.js")
+Copy-Item (Join-Path $Root 'reader') (Join-Path $tree 'data\reader') -Recurse
+
+# the voice helper (plain JavaScript) plus its runtime from npm: sherpa-onnx-node and the Windows native
+# package (sherpa-onnx-c-api.dll, onnxruntime.dll), pinned by registry integrity and laid out as node_modules
+Copy-Item (Join-Path $Root 'voice') (Join-Path $tree 'data\voice') -Recurse
+$npmPins = @(
+  @{ name = 'sherpa-onnx-node'; ver = '1.13.8'; sri = 'sha512-MsDMBdhLFTZ1GwvcGSSQhnS7g/EA8OMH6IYysCVUOM7j8Icty9KRc0E6YT1A5fWBsZwRfKOeh88QC95aRvS8ag==' },
+  @{ name = 'sherpa-onnx-win-x64'; ver = '1.13.8'; sri = 'sha512-oZF1c9VPOKtMwn83Bboc5XSWL+76BRoyB3eUuVnCknBKxwSULZU2Foia9VHWzU+n4I12rPsP6z6H9Rp1hD9o8g==' }
+)
+$npmCache = Join-Path $Central 'npm-cache'
+New-Item -ItemType Directory -Force $npmCache | Out-Null
+foreach ($p in $npmPins) {
+  $tgz = Join-Path $npmCache "$($p.name)-$($p.ver).tgz"
+  if (-not (Test-Path $tgz)) {
+    curl.exe -sSfL -o $tgz "https://registry.npmjs.org/$($p.name)/-/$($p.name)-$($p.ver).tgz"
+    if ($LASTEXITCODE -ne 0) { throw "could not download $($p.name) $($p.ver)" }
+  }
+  $sha = [System.Security.Cryptography.SHA512]::Create()
+  $sri = 'sha512-' + [Convert]::ToBase64String($sha.ComputeHash([System.IO.File]::ReadAllBytes($tgz)))
+  if ($sri -ne $p.sri) { Remove-Item $tgz -Force; throw "$($p.name) $($p.ver): integrity mismatch ($sri)" }
+  $dest = Join-Path $tree "data\voice\node_modules\$($p.name)"
+  New-Item -ItemType Directory -Force $dest | Out-Null
+  tar -xzf $tgz -C $dest --strip-components=1
+  if ($LASTEXITCODE -ne 0) { throw "could not unpack $($p.name)" }
+}
+
+# voice packs that scripts\fetch-voices.js shipped: the embedded ones go in data\voices (zip and setup alike),
+# the rest become download components of the setup (packaging\voices.generated.iss)
+$voicesIss = Join-Path $Root 'packaging\voices.generated.iss'
+Remove-Item $voicesIss -Force -ErrorAction SilentlyContinue
+if ($Voices) {
+  $manifest = Join-Path $Voices 'manifest.json'
+  if (-not (Test-Path $manifest)) { throw "no manifest.json in ${Voices}: run scripts\fetch-voices.js first" }
+  $gen = Join-Path $Root 'scripts\voice-installer.js'
+  node $gen --manifest $manifest --out $voicesIss
+  if ($LASTEXITCODE -ne 0) { throw 'voice-installer.js failed' }
+  $shipped = (Get-Content $manifest -Raw | ConvertFrom-Json).shipped | ForEach-Object { $_.id }
+  $embed = (node -e "process.stdout.write(require(process.argv[1]).DEFAULT_EMBED.join(','))" $gen).Split(',')
+  New-Item -ItemType Directory -Force (Join-Path $tree 'data\voices') | Out-Null
+  foreach ($id in $embed) {
+    if ($shipped -contains $id) { Copy-Item (Join-Path $Voices $id) (Join-Path $tree "data\voices\$id") -Recurse }
+    else { Write-Warning "embedded voice pack $id was not shipped by fetch-voices (see manifest.json)" }
+  }
+  Copy-Item (Join-Path $Voices 'LICENCES.md') (Join-Path $tree 'docs\voice-licences.md')
+} else {
+  Write-Warning 'no -Voices folder: the package has no voice packs (the dock will say none are installed)'
+}
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $zip = Join-Path $OutDir "obs-multistream-chat-$ver-windows-x64-windows-x64.zip"

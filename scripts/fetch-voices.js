@@ -9,9 +9,11 @@
 // Refused packs are listed and left out; the voices in them simply do not appear in the plugin.
 //
 //   node scripts/fetch-voices.js --out <dir> [--packs id,id | --all] [--record-pins]
-//        [--allow-lessac-derived] [--release <base url>]
+//        [--keep-embedded] [--allow-lessac-derived] [--release <base url>]
 //
 // Writes <out>/<pack id>/ (unpacked), <out>/manifest.json and <out>/LICENCES.md (for NOTICE).
+// --keep-embedded: every pack is still checked, but only the ones the setup embeds stay unpacked
+// (the others are downloaded by Setup itself); saves ~6 GB of disk on the build machine.
 // Exit codes: 0 every requested pack shipped, 1 some were refused, 2 bad usage.
 const crypto = require('crypto');
 const fs = require('fs');
@@ -26,7 +28,7 @@ const PINS = path.join(ROOT, 'voice', 'pins.json');
 const LICENCE_FILES = /^(MODEL_CARD|README(\.md|\.txt)?|LICEN[CS]E(\.md|\.txt)?)$/i;
 
 function parseArgs(argv) {
-  const o = { packs: null, recordPins: false, allowLessac: false, catalogue: CATALOGUE, pins: PINS };
+  const o = { packs: null, recordPins: false, allowLessac: false, keep: null, catalogue: CATALOGUE, pins: PINS };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') o.out = argv[++i];
@@ -34,6 +36,7 @@ function parseArgs(argv) {
     else if (a === '--all') o.packs = null;
     else if (a === '--record-pins') o.recordPins = true;
     else if (a === '--allow-lessac-derived') o.allowLessac = true;
+    else if (a === '--keep-embedded') o.keep = require('./voice-installer').DEFAULT_EMBED;
     else if (a === '--release') o.release = argv[++i];
     else if (a === '--catalogue') o.catalogue = argv[++i];
     else if (a === '--pins') o.pins = argv[++i];
@@ -102,7 +105,7 @@ async function fetchPack(pack, o, release, pins, log) {
   if (lic.warn && !o.allowLessac) return { refused: 'licence: ' + lic.warn };
   const dest = path.join(o.out, pack.id);
   fs.rmSync(dest, { recursive: true, force: true });
-  fs.renameSync(top, dest);
+  if (!o.keep || o.keep.includes(pack.id)) fs.renameSync(top, dest);
   fs.rmSync(tmp, { recursive: true, force: true });
   return { licence: lic.licence, warn: lic.warn || '', sha256: got.sha256, bytes: got.bytes, attribution: attribution(text) };
 }

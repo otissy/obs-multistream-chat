@@ -99,3 +99,47 @@ test('the real catalogue release URL is the k2-fsa tts-models release', () => {
   const c = JSON.parse(fs.readFileSync(path.join(ROOT, 'voice', 'catalogue.json'), 'utf8'));
   assert.strictEqual(c.release, 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/');
 });
+
+// ---- installer voice components -----------------------------------------------------------------
+const { generate, DEFAULT_EMBED } = require('../../scripts/voice-installer');
+const { loadCatalogue } = require('../../voice/lib/catalogue');
+
+test('voice-installer: shipped packs become unticked download components per language; embedded ones do not', () => {
+  const cat = loadCatalogue(path.join(ROOT, 'voice', 'catalogue.json'));
+  const sha = c => c.repeat(64);
+  const manifest = {
+    shipped: [
+      { id: 'kokoro-multi-lang-v1_0', sha256: sha('a'), bytes: 330e6 },
+      { id: 'vits-piper-en_GB-alba-medium', sha256: sha('b'), bytes: 60e6 },
+      { id: 'vits-piper-de_DE-thorsten-high', sha256: sha('c'), bytes: 110e6 },
+      { id: 'vits-piper-de_DE-kerstin-low', sha256: sha('d'), bytes: 60e6 },
+      { id: 'vits-piper-nl_BE-nathalie-medium', sha256: sha('e'), bytes: 62e6 },
+      { id: 'vits-piper-pt_PT-tugao-medium', sha256: sha('f'), bytes: 62e6 },
+    ],
+    refused: [{ id: 'vits-piper-en_US-lessac-high', reason: 'licence' }],
+  };
+  const g = generate(cat, manifest, 'https://example.test/r/', DEFAULT_EMBED);
+  assert.deepStrictEqual(g.embedded, ['kokoro-multi-lang-v1_0', 'vits-piper-en_GB-alba-medium']);
+  assert.deepStrictEqual(g.languages, ['Dutch', 'German', 'Portuguese']);
+  const t = g.text;
+  assert.match(t, /Name: "voices\\included"; Description: "Included: Chinese, English, French, Hindi, Italian, Japanese, Portuguese, Spanish"/);
+  // download components carry no Types, so they start unticked
+  const german = t.split('\r\n').find(l => l.startsWith('Name: "voices\\german"'));
+  assert.ok(german && !/Types:/.test(german), german);
+  assert.match(german, /German \(Germany\): download, 170 MB/);
+  assert.match(t, /AddVoiceDownload\('https:\/\/example\.test\/r\/vits-piper-de_DE-thorsten-high\.tar\.bz2', 'vits-piper-de_DE-thorsten-high\.tar\.bz2', 'c{64}'\)/);
+  assert.match(t, /Flemish \(Belgium\)/);
+  assert.match(t, /Portuguese \(Portugal\): download, 62 MB/);
+  assert.ok(!/alba-medium\.tar\.bz2/.test(t), 'an embedded pack must not be downloaded');
+  assert.ok(!/lessac/.test(t), 'a refused pack must not appear');
+  // Pascal: no semicolon before else
+  assert.ok(!/\);\r\n\s+else/.test(t));
+});
+
+test('voice-installer: a manifest pack without a SHA-256, or unknown to the catalogue, stops the build', () => {
+  const { main } = require('../../scripts/voice-installer');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oms-iss-'));
+  const write = m => { fs.writeFileSync(path.join(dir, 'm.json'), JSON.stringify(m)); return ['--manifest', path.join(dir, 'm.json'), '--out', path.join(dir, 'v.iss')]; };
+  assert.throws(() => main(write({ shipped: [{ id: 'vits-piper-de_DE-thorsten-high', sha256: '' }], refused: [] })), /SHA-256/);
+  assert.throws(() => main(write({ shipped: [{ id: 'nope', sha256: 'a'.repeat(64) }], refused: [] })), /catalogue/);
+});

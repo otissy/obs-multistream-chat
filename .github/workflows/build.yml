@@ -70,11 +70,23 @@ jobs:
           $record = @()
           if ((Get-Content voice\pins.json -Raw).Trim() -eq '{}') { $record = @('--record-pins') }
           node scripts\fetch-voices.js --out $out --all --keep-embedded @record
-          # exit 1 means some packs were refused (listed in manifest.json): they are left out, not a failure
-          if ($LASTEXITCODE -gt 1) { throw 'fetch-voices failed' }
+          $code = $LASTEXITCODE
+          # the verdicts as annotations, so they can be read without the job log
+          $manifest = "$out\manifest.json"
+          if (Test-Path $manifest) {
+            $m = Get-Content $manifest -Raw | ConvertFrom-Json
+            Write-Host "::notice title=Voice packs::$(@($m.shipped).Count) shipped, $(@($m.refused).Count) refused, $(@($m.skipped).Count) skipped by policy"
+            foreach ($r in @($m.refused)) { Write-Host "::error title=Voice pack refused::$($r.id): $($r.reason)" }
+          } else {
+            Write-Host "::error title=Voice packs::fetch-voices wrote no manifest (exit $code)"
+          }
+          # every catalogue pack is meant to ship (policy.shipAll): a refusal is a pin, download or unpack problem
+          if ($code -ne 0) { throw "fetch-voices exited $code" }
           Copy-Item voice\pins.json "$out\pins.json"
+          exit 0
 
       - name: Upload voice pack review files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: voice-packs-review

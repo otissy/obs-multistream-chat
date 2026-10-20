@@ -124,13 +124,14 @@ test('fetch-voices: policy shipAll ships uncleared packs (verdict kept), exclude
     const pins = path.join(dir, 'pins.json');
     const args = ['--out', out, '--catalogue', path.join(dir, 'catalogue.json'), '--pins', pins, '--release', base];
     assert.strictEqual(await main(args, () => {}), 1, 'no pins: nothing ships, shipAll or not');
-    assert.strictEqual(await main([...args, '--record-pins'], () => {}), 1);
+    assert.strictEqual(await main([...args, '--record-pins'], () => {}), 0, 'a policy exclusion is not a failure');
     const m = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8'));
     assert.deepStrictEqual(m.shipped.map(x => x.id).sort(), ['vits-piper-en_GB-good-medium', 'vits-piper-en_GB-nc-medium']);
     const nc = m.shipped.find(x => x.id.includes('-nc-'));
     assert.match(nc.licence, /^not cleared: non-commercial/);
     assert.match(nc.warn, /shipAll/);
-    assert.deepStrictEqual(m.refused, [{ id: 'vits-piper-en_GB-none-medium', reason: 'excluded by the catalogue policy' }]);
+    assert.deepStrictEqual(m.refused, []);
+    assert.deepStrictEqual(m.skipped, [{ id: 'vits-piper-en_GB-none-medium', reason: 'excluded by the catalogue policy' }]);
   } finally {
     server.close();
   }

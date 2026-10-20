@@ -129,7 +129,7 @@ function attribution(text) {
 }
 
 async function fetchPack(pack, o, release, pins, log) {
-  if (o.exclude.includes(pack.id)) return { refused: 'excluded by the catalogue policy' };
+  if (o.exclude.includes(pack.id)) return { skipped: 'excluded by the catalogue policy' };
   const dl = path.join(o.out, '.download');
   const tmp = path.join(o.out, '.unpack', pack.id);
   fs.mkdirSync(dl, { recursive: true });
@@ -181,19 +181,21 @@ async function main(argv, log = m => process.stdout.write(m + '\n')) {
   fs.mkdirSync(o.out, { recursive: true });
   const shipped = [];
   const refused = [];
+  const skipped = []; // left out on purpose (policy.exclude): not a failure
   for (const id of wanted) {
     let r;
     try { r = await fetchPack(cat.packs.get(id), o, release, pins, log); } catch (e) { r = { refused: e.message }; }
-    if (r.refused) { refused.push({ id, reason: r.refused }); log('REFUSED ' + id + ': ' + r.refused); }
+    if (r.skipped) { skipped.push({ id, reason: r.skipped }); log('skipped ' + id + ': ' + r.skipped); }
+    else if (r.refused) { refused.push({ id, reason: r.refused }); log('REFUSED ' + id + ': ' + r.refused); }
     else { shipped.push({ id, ...r }); log('ok ' + id + ' (' + r.licence + ')'); }
   }
   if (o.recordPins) fs.writeFileSync(o.pins, JSON.stringify(Object.fromEntries(Object.entries(pins).sort()), null, 1) + '\n');
-  fs.writeFileSync(path.join(o.out, 'manifest.json'), JSON.stringify({ shipped: shipped.map(({ attribution, ...s }) => s), refused }, null, 1) + '\n');
+  fs.writeFileSync(path.join(o.out, 'manifest.json'), JSON.stringify({ shipped: shipped.map(({ attribution, ...s }) => s), refused, skipped }, null, 1) + '\n');
   const md = ['# Voice pack licences', '', 'Each pack below ships unchanged from ' + release, ''];
   for (const s of shipped) md.push('## ' + s.id, '', 'Licence: ' + s.licence + (s.warn ? ' (' + s.warn + ')' : ''), '', '```', s.attribution || '(no model card)', '```', '');
   fs.writeFileSync(path.join(o.out, 'LICENCES.md'), md.join('\n'));
   fs.rmSync(path.join(o.out, '.unpack'), { recursive: true, force: true });
-  log(shipped.length + ' shipped, ' + refused.length + ' refused');
+  log(shipped.length + ' shipped, ' + refused.length + ' refused, ' + skipped.length + ' skipped by policy');
   return refused.length ? 1 : 0;
 }
 

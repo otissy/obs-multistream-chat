@@ -4,7 +4,11 @@
  "note": "Pack licences marked unverified are checked against each pack's MODEL_CARD by scripts/fetch-voices.js; a pack that fails is not shipped.",
  "policy": {
   "allowLessacDerived": true,
-  "decision": "otiyyy, 2026-10-20: ship Piper voices fine-tuned from the Lessac checkpoint. The Lessac (Blizzard) dataset itself is licensed for non-commercial use; whether that carries over to fine-tuned voices is unsettled. The Lessac voice itself, trained directly on that data, is still not shipped."
+  "decision": "otiyyy, 2026-10-20: ship Piper voices fine-tuned from the Lessac checkpoint. The Lessac (Blizzard) dataset itself is licensed for non-commercial use; whether that carries over to fine-tuned voices is unsettled. The Lessac voice itself, trained directly on that data, is still not shipped. Later the same day otiyyy decided to ship every voice in the catalogue, whatever its licence verdict; voices whose licence is non-commercial or could not be confirmed carry a usage label that the dock shows next to the voice name. Never shipped: ka_GE-natia (RHVoice licence: \"It is prohibited to copy, modify, distribute, sell or use this voice by Organizations and manufacturers for inclusion in their products\").",
+  "shipAll": true,
+  "exclude": [
+   "vits-piper-ka_GE-natia-medium"
+  ]
  },
  "packs": [
   {
@@ -50,7 +54,8 @@
     "model": "en_GB-southern_english_female-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-en_GB-southern_english_male-medium",
@@ -60,7 +65,8 @@
     "model": "en_GB-southern_english_male-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-en_GB-jenny_dioco-medium",
@@ -96,7 +102,8 @@
     "model": "en_GB-alan-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-en_GB-semaine-medium",
@@ -106,7 +113,8 @@
     "model": "en_GB-semaine-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-en_GB-aru-medium",
@@ -136,7 +144,8 @@
     "model": "en_US-ryan-high.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-en_US-amy-medium",
@@ -146,7 +155,8 @@
     "model": "en_US-amy-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-en_US-lessac-high",
@@ -156,7 +166,8 @@
     "model": "en_US-lessac-high.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-en_US-joe-medium",
@@ -196,7 +207,8 @@
     "model": "en_US-kusal-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-en_US-l2arctic-medium",
@@ -206,7 +218,8 @@
     "model": "en_US-l2arctic-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-en_US-libritts_r-medium",
@@ -226,7 +239,8 @@
     "model": "ar_JO-kareem-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-ca_ES-upc_ona-medium",
@@ -256,7 +270,8 @@
     "model": "cy_GB-gwryw_gogleddol-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-da_DK-talesyntese-medium",
@@ -406,6 +421,11 @@
     "model": "fr_FR-tom-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
+   },
+   "licenceEvidence": {
+    "licence": "AGPL-3.0 (stated on the model card)",
+    "source": "https://git.bksp.space/Tjiho/French-tts-model-piper",
+    "quote": "Model card: \"License: AGPLv3 See URL\"."
    }
   },
   {
@@ -416,7 +436,8 @@
     "model": "hi_IN-pratham-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-hi_IN-priyamvada-medium",
@@ -426,7 +447,8 @@
     "model": "hi_IN-priyamvada-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-hu_HU-anna-medium",
@@ -456,7 +478,8 @@
     "model": "id_ID-news_tts-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-is_IS-ugla-medium",
@@ -466,7 +489,8 @@
     "model": "is_IS-ugla-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-is_IS-steinn-medium",
@@ -476,7 +500,8 @@
     "model": "is_IS-steinn-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-it_IT-paola-medium",
@@ -486,7 +511,8 @@
     "model": "it_IT-paola-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-it_IT-riccardo-x_low",
@@ -532,7 +558,8 @@
     "model": "ku_TR-berfin_renas-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-lb_LU-marylux-medium",
@@ -542,7 +569,8 @@
     "model": "lb_LU-marylux-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-lv_LV-aivars-medium",
@@ -562,7 +590,8 @@
     "model": "ml_IN-meera-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-ml_IN-arjun-medium",
@@ -572,7 +601,8 @@
     "model": "ml_IN-arjun-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-ne_NP-google-medium",
@@ -702,7 +732,8 @@
     "model": "ru_RU-irina-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-ru_RU-dmitri-medium",
@@ -752,7 +783,8 @@
     "model": "sr_RS-serbski_institut-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-sv_SE-nst-medium",
@@ -772,7 +804,8 @@
     "model": "sv_SE-lisa-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-sw_CD-lanfrica-medium",
@@ -782,7 +815,8 @@
     "model": "sw_CD-lanfrica-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "licence unclear"
   },
   {
    "id": "vits-piper-tr_TR-dfki-medium",
@@ -792,7 +826,8 @@
     "model": "tr_TR-dfki-medium.onnx",
     "tokens": "tokens.txt",
     "dataDir": "espeak-ng-data"
-   }
+   },
+   "usage": "non-commercial"
   },
   {
    "id": "vits-piper-uk_UA-ukrainian_tts-medium",

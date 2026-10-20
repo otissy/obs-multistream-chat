@@ -11,7 +11,9 @@
 //   node scripts/fetch-voices.js --out <dir> [--packs id,id | --all] [--record-pins]
 //        [--keep-embedded] [--allow-lessac-derived] [--release <base url>]
 // Voices fine-tuned from Lessac ship when the catalogue's policy.allowLessacDerived says so (it does: the
-// maintainer's decision is recorded there) or --allow-lessac-derived is given.
+// maintainer's decision is recorded there) or --allow-lessac-derived is given. policy.shipAll ships every
+// pack whatever its licence verdict (the verdict is still recorded in manifest.json and LICENCES.md);
+// packs in policy.exclude never ship. The SHA-256 pin is enforced either way.
 //
 // Writes <out>/<pack id>/ (unpacked), <out>/manifest.json and <out>/LICENCES.md (for NOTICE).
 // --keep-embedded: every pack is still checked, but only the ones the setup embeds stay unpacked
@@ -30,7 +32,7 @@ const PINS = path.join(ROOT, 'voice', 'pins.json');
 const LICENCE_FILES = /^(MODEL_CARD|README(\.md|\.txt)?|LICEN[CS]E(\.md|\.txt)?)$/i;
 
 function parseArgs(argv) {
-  const o = { packs: null, recordPins: false, allowLessac: false, keep: null, catalogue: CATALOGUE, pins: PINS };
+  const o = { packs: null, recordPins: false, allowLessac: false, shipAll: false, exclude: [], keep: null, catalogue: CATALOGUE, pins: PINS };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') o.out = argv[++i];
@@ -91,6 +93,7 @@ function attribution(text) {
 }
 
 async function fetchPack(pack, o, release, pins, log) {
+  if (o.exclude.includes(pack.id)) return { refused: 'excluded by the catalogue policy' };
   const dl = path.join(o.out, '.download');
   const tmp = path.join(o.out, '.unpack', pack.id);
   fs.mkdirSync(dl, { recursive: true });
@@ -116,8 +119,9 @@ async function fetchPack(pack, o, release, pins, log) {
   const text = licenceText(top);
   let lic = classify(text, pack.licenceEvidence);
   if (!lic.ok && !text.trim() && pack.licence !== 'unverified') lic = { ok: true, licence: pack.licence + ' (from the catalogue; the pack has no licence file)', warn: '' };
+  if (!lic.ok && o.shipAll) lic = { ok: true, licence: 'not cleared: ' + lic.reason, warn: 'shipped by the maintainer\'s decision (catalogue policy shipAll)' };
   if (!lic.ok) return { refused: 'licence: ' + lic.reason };
-  if (lic.warn && !o.allowLessac) return { refused: 'licence: ' + lic.warn };
+  if (lic.warn && !o.allowLessac && !o.shipAll) return { refused: 'licence: ' + lic.warn };
   const dest = path.join(o.out, pack.id);
   fs.rmSync(dest, { recursive: true, force: true });
   if (!o.keep || o.keep.includes(pack.id)) fs.renameSync(top, dest);
@@ -133,6 +137,8 @@ async function main(argv, log = m => process.stdout.write(m + '\n')) {
   const raw = JSON.parse(fs.readFileSync(o.catalogue, 'utf8'));
   const release = o.release || raw.release;
   if (raw.policy && raw.policy.allowLessacDerived === true) o.allowLessac = true;
+  if (raw.policy && raw.policy.shipAll === true) o.shipAll = true;
+  if (raw.policy && Array.isArray(raw.policy.exclude)) o.exclude = raw.policy.exclude;
   const pins = fs.existsSync(o.pins) ? JSON.parse(fs.readFileSync(o.pins, 'utf8')) : {};
   const wanted = o.packs ? o.packs : [...cat.packs.keys()];
   for (const id of wanted) if (!cat.packs.has(id)) throw new Error('unknown pack ' + id);

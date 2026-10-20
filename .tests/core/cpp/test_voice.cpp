@@ -95,6 +95,10 @@ TEST(L2, voice_catalogue_shipped_file_parses_and_lists_installed_voices)
 		CHECK_EQ(v[0].id, std::string("piper.en_GB-alba-medium"));
 		CHECK_EQ(voice::display_name(v[0]), std::string("English (Scottish): Alba, female"));
 	}
+	std::vector<voice::Voice> nc = voice::installed_voices(c, only("vits-piper-en_US-ryan-high"));
+	CHECK_EQ(nc.size(), size_t(1));
+	if (!nc.empty())
+		CHECK_EQ(voice::display_name(nc[0]), std::string("English (American): Ryan, male [non-commercial]"));
 	std::vector<voice::Voice> k = voice::installed_voices(c, only("kokoro-multi-lang-v1_0"));
 	CHECK_EQ(k.size(), size_t(54));
 	for (size_t i = 1; i < k.size(); ++i)

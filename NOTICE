@@ -84,5 +84,11 @@ Voice packs (data/voices/<pack>): unchanged archives from the k2-fsa tts-models 
   was trained on the Lessac Technologies Blizzard Challenge data (CSTR, University of Edinburgh),
   licensed for non-commercial use. Whether that licence carries over to a voice fine-tuned on other
   data is unsettled. The maintainer chose to ship these voices (voice/catalogue.json, policy); they
-  are marked "fine-tuned from Lessac" in docs/voice-licences.md. The lessac voice itself is not
-  shipped.
+  are marked "fine-tuned from Lessac" in docs/voice-licences.md.
+  All other voices: the maintainer also chose to ship every voice in the catalogue whatever its
+  licence verdict (policy shipAll). Packs whose model card names a non-commercial licence (for
+  example CC BY-NC-SA 4.0, or the lessac voice's Blizzard licence) or no licence that could be
+  confirmed are listed in docs/voice-licences.md as "not cleared", and the dock shows their voices
+  with "[non-commercial]" or "[licence unclear]". Using a [non-commercial] voice on a monetised stream
+  may breach its licence. Never shipped: the Georgian RHVoice voice "Natia", whose licence forbids
+  including it in products.

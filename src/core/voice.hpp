@@ -39,6 +39,7 @@ struct Pack {
 	std::string id;
 	std::string engine;                 // "kokoro" or "vits"
 	std::vector<std::string> required;  // files and folders inside the pack folder that must exist
+	std::string usage;                  // "" or a label such as "non-commercial" / "licence unclear"
 };
 
 struct Voice {
@@ -49,6 +50,7 @@ struct Voice {
 	std::string accent;   // Scottish (may be empty)
 	std::string gender;   // female / male / ""
 	std::string pack;
+	std::string usage; // the pack's usage label, shown with the name
 	int sid = 0;
 };
 
@@ -60,7 +62,7 @@ struct Catalogue {
 // Strict: a bad id, an unknown pack, a duplicate or a path leaving its pack folder fails the whole file.
 bool parse_catalogue(const std::string &text, Catalogue &out, std::string &err);
 
-// "English (Scottish): Alba, female"
+// "English (Scottish): Alba, female", plus " [non-commercial]" when the pack carries a usage label
 std::string display_name(const Voice &v);
 
 // The voices whose pack `installed` accepts, sorted by language, accent, then name.

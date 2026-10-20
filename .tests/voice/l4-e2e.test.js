@@ -116,6 +116,35 @@ test('fetch-voices: a Lessac-derived pack ships only when the catalogue policy a
   }
 });
 
+test('fetch-voices: policy shipAll ships uncleared packs (verdict kept), exclude never ships, pins still hold', { skip: !tarOk && 'no tar' }, async () => {
+  const { dir, served } = fixture(undefined, { shipAll: true, exclude: ['vits-piper-en_GB-none-medium'] });
+  const { server, base } = await serve(served);
+  try {
+    const out = path.join(dir, 'out');
+    const pins = path.join(dir, 'pins.json');
+    const args = ['--out', out, '--catalogue', path.join(dir, 'catalogue.json'), '--pins', pins, '--release', base];
+    assert.strictEqual(await main(args, () => {}), 1, 'no pins: nothing ships, shipAll or not');
+    assert.strictEqual(await main([...args, '--record-pins'], () => {}), 1);
+    const m = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8'));
+    assert.deepStrictEqual(m.shipped.map(x => x.id).sort(), ['vits-piper-en_GB-good-medium', 'vits-piper-en_GB-nc-medium']);
+    const nc = m.shipped.find(x => x.id.includes('-nc-'));
+    assert.match(nc.licence, /^not cleared: non-commercial/);
+    assert.match(nc.warn, /shipAll/);
+    assert.deepStrictEqual(m.refused, [{ id: 'vits-piper-en_GB-none-medium', reason: 'excluded by the catalogue policy' }]);
+  } finally {
+    server.close();
+  }
+});
+
+test('the shipped catalogue ships every voice but Natia, and labels the uncleared ones', () => {
+  const c = JSON.parse(fs.readFileSync(path.join(ROOT, 'voice', 'catalogue.json'), 'utf8'));
+  assert.strictEqual(c.policy.shipAll, true);
+  assert.deepStrictEqual(c.policy.exclude, ['vits-piper-ka_GE-natia-medium']);
+  const labels = new Set(c.packs.map(p => p.usage).filter(Boolean));
+  assert.deepStrictEqual([...labels].sort(), ['licence unclear', 'non-commercial']);
+  assert.strictEqual(c.packs.find(p => p.id === 'vits-piper-en_US-ryan-high').usage, 'non-commercial');
+});
+
 test('the shipped catalogue records the maintainer\'s Lessac decision', () => {
   const c = JSON.parse(fs.readFileSync(path.join(ROOT, 'voice', 'catalogue.json'), 'utf8'));
   assert.strictEqual(c.policy.allowLessacDerived, true);

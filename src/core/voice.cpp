@@ -110,6 +110,9 @@ bool parse_catalogue(const std::string &text, Catalogue &out, std::string &err)
 		Pack pk;
 		pk.id = str(p, "id");
 		pk.engine = str(p, "engine");
+		pk.usage = str(p, "usage");
+		if (pk.usage.size() > 40)
+			pk.usage.resize(40);
 		if (!valid_id(pk.id) || !pack_ids.insert(pk.id).second) {
 			err = "catalogue: bad or duplicate pack id";
 			return false;
@@ -158,6 +161,9 @@ bool parse_catalogue(const std::string &text, Catalogue &out, std::string &err)
 			return false;
 		}
 		vc.sid = static_cast<int>(sid->as_int());
+		for (const Pack &pk : out.packs)
+			if (pk.id == vc.pack)
+				vc.usage = pk.usage;
 		out.voices.push_back(vc);
 	}
 	return true;
@@ -171,6 +177,8 @@ std::string display_name(const Voice &v)
 	s += ": " + v.name;
 	if (!v.gender.empty())
 		s += ", " + v.gender;
+	if (!v.usage.empty())
+		s += " [" + v.usage + "]";
 	return s;
 }
 

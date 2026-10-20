@@ -1,0 +1,12 @@
+{
+  "name": "obs-multistream-chat-voice",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Speaks chat lines for the OBS Multistream Chat plugin with neural voices (sherpa-onnx: Kokoro and Piper), offline, on this PC.",
+  "license": "GPL-2.0-or-later",
+  "main": "index.js",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "sherpa-onnx-node": "1.13.8"
+  }
+}

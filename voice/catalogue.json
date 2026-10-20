@@ -1,0 +1,2701 @@
+{
+ "schema": 1,
+ "release": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/",
+ "note": "Pack licences marked unverified are checked against each pack's MODEL_CARD by scripts/fetch-voices.js; a pack that fails is not shipped.",
+ "packs": [
+  {
+   "id": "kokoro-multi-lang-v1_0",
+   "engine": "kokoro",
+   "licence": "Apache-2.0",
+   "files": {
+    "model": "model.onnx",
+    "voices": "voices.bin",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data",
+    "lexicons": {
+     "en-us": "lexicon-us-en.txt,lexicon-zh.txt",
+     "en-gb": "lexicon-gb-en.txt,lexicon-zh.txt"
+    }
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-alba-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-alba-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-northern_english_male-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-northern_english_male-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-southern_english_female-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-southern_english_female-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-southern_english_male-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-southern_english_male-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-jenny_dioco-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-jenny_dioco-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-cori-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-cori-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-alan-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-alan-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-semaine-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-semaine-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-aru-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-aru-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_GB-vctk-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_GB-vctk-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-ryan-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-ryan-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-amy-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-amy-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-lessac-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-lessac-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-joe-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-joe-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-kristin-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-kristin-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-norman-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-norman-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-kusal-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-kusal-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-l2arctic-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-l2arctic-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-en_US-libritts_r-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "en_US-libritts_r-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ar_JO-kareem-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ar_JO-kareem-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ca_ES-upc_ona-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ca_ES-upc_ona-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-cs_CZ-jirka-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "cs_CZ-jirka-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-cy_GB-gwryw_gogleddol-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "cy_GB-gwryw_gogleddol-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-da_DK-talesyntese-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "da_DK-talesyntese-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-de_DE-thorsten-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "de_DE-thorsten-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-de_DE-thorsten_emotional-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "de_DE-thorsten_emotional-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-de_DE-kerstin-low",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "de_DE-kerstin-low.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-el_GR-rapunzelina-low",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "el_GR-rapunzelina-low.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-es_ES-davefx-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "es_ES-davefx-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-es_ES-sharvard-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "es_ES-sharvard-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-es_MX-claude-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "es_MX-claude-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-es_MX-ald-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "es_MX-ald-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-es_AR-daniela-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "es_AR-daniela-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-eu_ES-maider-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "eu_ES-maider-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-fa_IR-amir-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "fa_IR-amir-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-fi_FI-harri-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "fi_FI-harri-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-fr_FR-siwis-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "fr_FR-siwis-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-fr_FR-tom-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "fr_FR-tom-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-hi_IN-pratham-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "hi_IN-pratham-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-hi_IN-priyamvada-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "hi_IN-priyamvada-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-hu_HU-anna-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "hu_HU-anna-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-hu_HU-imre-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "hu_HU-imre-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-id_ID-news_tts-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "id_ID-news_tts-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-is_IS-ugla-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "is_IS-ugla-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-is_IS-steinn-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "is_IS-steinn-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-it_IT-paola-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "it_IT-paola-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-it_IT-riccardo-x_low",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "it_IT-riccardo-x_low.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ka_GE-natia-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ka_GE-natia-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-kk_KZ-issai-high",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "kk_KZ-issai-high.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ku_TR-berfin_renas-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ku_TR-berfin_renas-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-lb_LU-marylux-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "lb_LU-marylux-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-lv_LV-aivars-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "lv_LV-aivars-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ml_IN-meera-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ml_IN-meera-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ml_IN-arjun-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ml_IN-arjun-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ne_NP-google-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ne_NP-google-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-nl_NL-pim-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "nl_NL-pim-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-nl_NL-ronnie-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "nl_NL-ronnie-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-nl_NL-alex-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "nl_NL-alex-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-nl_BE-nathalie-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "nl_BE-nathalie-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-no_NO-talesyntese-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "no_NO-talesyntese-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-pl_PL-gosia-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "pl_PL-gosia-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-pl_PL-darkman-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "pl_PL-darkman-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-pt_BR-faber-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "pt_BR-faber-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-pt_BR-cadu-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "pt_BR-cadu-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-pt_PT-tugao-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "pt_PT-tugao-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ro_RO-mihai-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ro_RO-mihai-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ru_RU-irina-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ru_RU-irina-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ru_RU-dmitri-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ru_RU-dmitri-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sk_SK-lili-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sk_SK-lili-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sl_SI-artur-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sl_SI-artur-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sq_AL-edon-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sq_AL-edon-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sr_RS-serbski_institut-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sr_RS-serbski_institut-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sv_SE-nst-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sv_SE-nst-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sv_SE-lisa-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sv_SE-lisa-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-sw_CD-lanfrica-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "sw_CD-lanfrica-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-tr_TR-dfki-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "tr_TR-dfki-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-uk_UA-ukrainian_tts-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "uk_UA-ukrainian_tts-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-ur_PK-fasih-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "ur_PK-fasih-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  },
+  {
+   "id": "vits-piper-vi_VN-vais1000-medium",
+   "engine": "vits",
+   "licence": "unverified",
+   "files": {
+    "model": "vi_VN-vais1000-medium.onnx",
+    "tokens": "tokens.txt",
+    "dataDir": "espeak-ng-data"
+   }
+  }
+ ],
+ "voices": [
+  {
+   "id": "kokoro.af_alloy",
+   "name": "Alloy",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 0,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_aoede",
+   "name": "Aoede",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 1,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_bella",
+   "name": "Bella",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 2,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_heart",
+   "name": "Heart",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 3,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_jessica",
+   "name": "Jessica",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 4,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_kore",
+   "name": "Kore",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 5,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_nicole",
+   "name": "Nicole",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 6,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_nova",
+   "name": "Nova",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 7,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_river",
+   "name": "River",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 8,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_sarah",
+   "name": "Sarah",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 9,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.af_sky",
+   "name": "Sky",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 10,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_adam",
+   "name": "Adam",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 11,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_echo",
+   "name": "Echo",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 12,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_eric",
+   "name": "Eric",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 13,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_fenrir",
+   "name": "Fenrir",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 14,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_liam",
+   "name": "Liam",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 15,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_michael",
+   "name": "Michael",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 16,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_onyx",
+   "name": "Onyx",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 17,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_puck",
+   "name": "Puck",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 18,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.am_santa",
+   "name": "Santa",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 19,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.bf_alice",
+   "name": "Alice",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 20,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bf_emma",
+   "name": "Emma",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 21,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bf_isabella",
+   "name": "Isabella",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 22,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bf_lily",
+   "name": "Lily",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 23,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bm_daniel",
+   "name": "Daniel",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 24,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bm_fable",
+   "name": "Fable",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 25,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bm_george",
+   "name": "George",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 26,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.bm_lewis",
+   "name": "Lewis",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 27,
+   "lang": "en-gb",
+   "lexicon": "en-gb"
+  },
+  {
+   "id": "kokoro.ef_dora",
+   "name": "Dora",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 28,
+   "lang": "es"
+  },
+  {
+   "id": "kokoro.em_alex",
+   "name": "Alex",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 29,
+   "lang": "es"
+  },
+  {
+   "id": "kokoro.ff_siwis",
+   "name": "Siwis",
+   "locale": "fr-FR",
+   "language": "French",
+   "accent": "France",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 30,
+   "lang": "fr"
+  },
+  {
+   "id": "kokoro.hf_alpha",
+   "name": "Alpha",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 31,
+   "lang": "hi"
+  },
+  {
+   "id": "kokoro.hf_beta",
+   "name": "Beta",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 32,
+   "lang": "hi"
+  },
+  {
+   "id": "kokoro.hm_omega",
+   "name": "Omega",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 33,
+   "lang": "hi"
+  },
+  {
+   "id": "kokoro.hm_psi",
+   "name": "Psi",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 34,
+   "lang": "hi"
+  },
+  {
+   "id": "kokoro.if_sara",
+   "name": "Sara",
+   "locale": "it-IT",
+   "language": "Italian",
+   "accent": "Italy",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 35,
+   "lang": "it"
+  },
+  {
+   "id": "kokoro.im_nicola",
+   "name": "Nicola",
+   "locale": "it-IT",
+   "language": "Italian",
+   "accent": "Italy",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 36,
+   "lang": "it"
+  },
+  {
+   "id": "kokoro.jf_alpha",
+   "name": "Alpha",
+   "locale": "ja-JP",
+   "language": "Japanese",
+   "accent": "Japan",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 37,
+   "lang": "ja"
+  },
+  {
+   "id": "kokoro.jf_gongitsune",
+   "name": "Gongitsune",
+   "locale": "ja-JP",
+   "language": "Japanese",
+   "accent": "Japan",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 38,
+   "lang": "ja"
+  },
+  {
+   "id": "kokoro.jf_nezumi",
+   "name": "Nezumi",
+   "locale": "ja-JP",
+   "language": "Japanese",
+   "accent": "Japan",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 39,
+   "lang": "ja"
+  },
+  {
+   "id": "kokoro.jf_tebukuro",
+   "name": "Tebukuro",
+   "locale": "ja-JP",
+   "language": "Japanese",
+   "accent": "Japan",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 40,
+   "lang": "ja"
+  },
+  {
+   "id": "kokoro.jm_kumo",
+   "name": "Kumo",
+   "locale": "ja-JP",
+   "language": "Japanese",
+   "accent": "Japan",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 41,
+   "lang": "ja"
+  },
+  {
+   "id": "kokoro.pf_dora",
+   "name": "Dora",
+   "locale": "pt-BR",
+   "language": "Portuguese",
+   "accent": "Brazil",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 42,
+   "lang": "pt-br"
+  },
+  {
+   "id": "kokoro.pm_alex",
+   "name": "Alex",
+   "locale": "pt-BR",
+   "language": "Portuguese",
+   "accent": "Brazil",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 43,
+   "lang": "pt-br"
+  },
+  {
+   "id": "kokoro.pm_santa",
+   "name": "Santa",
+   "locale": "pt-BR",
+   "language": "Portuguese",
+   "accent": "Brazil",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 44,
+   "lang": "pt-br"
+  },
+  {
+   "id": "kokoro.zf_xiaobei",
+   "name": "Xiaobei",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 45,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zf_xiaoni",
+   "name": "Xiaoni",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 46,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zf_xiaoxiao",
+   "name": "Xiaoxiao",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 47,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zf_xiaoyi",
+   "name": "Xiaoyi",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "female",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 48,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zm_yunjian",
+   "name": "Yunjian",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 49,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zm_yunxi",
+   "name": "Yunxi",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 50,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zm_yunxia",
+   "name": "Yunxia",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 51,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.zm_yunyang",
+   "name": "Yunyang",
+   "locale": "zh-CN",
+   "language": "Chinese",
+   "accent": "Mandarin",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 52,
+   "lang": "en-us",
+   "lexicon": "en-us"
+  },
+  {
+   "id": "kokoro.em_santa",
+   "name": "Santa",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "gender": "male",
+   "pack": "kokoro-multi-lang-v1_0",
+   "sid": 53,
+   "lang": "es"
+  },
+  {
+   "id": "piper.en_GB-alba-medium",
+   "name": "Alba",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Scottish",
+   "pack": "vits-piper-en_GB-alba-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-northern_english_male-medium",
+   "name": "Northern English",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English",
+   "pack": "vits-piper-en_GB-northern_english_male-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.0",
+   "name": "Southern English 1",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.1",
+   "name": "Southern English 2",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 1,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.2",
+   "name": "Southern English 3",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 2,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.3",
+   "name": "Southern English 4",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 3,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.4",
+   "name": "Southern English 5",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 4,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_female-medium.5",
+   "name": "Southern English 6",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_female-medium",
+   "sid": 5,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.0",
+   "name": "Southern English 1",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.1",
+   "name": "Southern English 2",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 1,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.2",
+   "name": "Southern English 3",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 2,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.3",
+   "name": "Southern English 4",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 3,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.4",
+   "name": "Southern English 5",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 4,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-southern_english_male-medium.5",
+   "name": "Southern English 6",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Southern English",
+   "pack": "vits-piper-en_GB-southern_english_male-medium",
+   "sid": 5,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-jenny_dioco-medium",
+   "name": "Jenny",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-jenny_dioco-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-cori-high",
+   "name": "Cori",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-cori-high",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_GB-alan-medium",
+   "name": "Alan",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-alan-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_GB-semaine-medium.0",
+   "name": "Semaine 1",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-semaine-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.en_GB-semaine-medium.1",
+   "name": "Semaine 2",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-semaine-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.en_GB-semaine-medium.2",
+   "name": "Semaine 3",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-semaine-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.en_GB-semaine-medium.3",
+   "name": "Semaine 4",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "British",
+   "pack": "vits-piper-en_GB-semaine-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.en_GB-aru-medium.0",
+   "name": "ARU 1",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.en_GB-aru-medium.1",
+   "name": "ARU 2",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.en_GB-aru-medium.2",
+   "name": "ARU 3",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.en_GB-aru-medium.3",
+   "name": "ARU 4",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.en_GB-aru-medium.4",
+   "name": "ARU 5",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 4
+  },
+  {
+   "id": "piper.en_GB-aru-medium.5",
+   "name": "ARU 6",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "Northern English (Liverpool)",
+   "pack": "vits-piper-en_GB-aru-medium",
+   "sid": 5
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.0",
+   "name": "VCTK 1",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.1",
+   "name": "VCTK 2",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.2",
+   "name": "VCTK 3",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.3",
+   "name": "VCTK 4",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.4",
+   "name": "VCTK 5",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 4
+  },
+  {
+   "id": "piper.en_GB-vctk-medium.5",
+   "name": "VCTK 6",
+   "locale": "en-GB",
+   "language": "English",
+   "accent": "UK and Ireland mix",
+   "pack": "vits-piper-en_GB-vctk-medium",
+   "sid": 5
+  },
+  {
+   "id": "piper.en_US-ryan-high",
+   "name": "Ryan",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-ryan-high",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_US-amy-medium",
+   "name": "Amy",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-amy-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_US-lessac-high",
+   "name": "Lessac",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-lessac-high",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_US-joe-medium",
+   "name": "Joe",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-joe-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_US-kristin-medium",
+   "name": "Kristin",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-kristin-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.en_US-norman-medium",
+   "name": "Norman",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American",
+   "pack": "vits-piper-en_US-norman-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_US-kusal-medium",
+   "name": "Kusal",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "South Asian English",
+   "pack": "vits-piper-en_US-kusal-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.0",
+   "name": "L2-ARCTIC 1",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.1",
+   "name": "L2-ARCTIC 2",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.2",
+   "name": "L2-ARCTIC 3",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.3",
+   "name": "L2-ARCTIC 4",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.4",
+   "name": "L2-ARCTIC 5",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 4
+  },
+  {
+   "id": "piper.en_US-l2arctic-medium.5",
+   "name": "L2-ARCTIC 6",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "Non-native English (Arabic, Mandarin, Hindi, Korean, Spanish, Vietnamese)",
+   "pack": "vits-piper-en_US-l2arctic-medium",
+   "sid": 5
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.0",
+   "name": "LibriTTS-R 1",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.1",
+   "name": "LibriTTS-R 2",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.2",
+   "name": "LibriTTS-R 3",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.3",
+   "name": "LibriTTS-R 4",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.4",
+   "name": "LibriTTS-R 5",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 4
+  },
+  {
+   "id": "piper.en_US-libritts_r-medium.5",
+   "name": "LibriTTS-R 6",
+   "locale": "en-US",
+   "language": "English",
+   "accent": "American (many speakers)",
+   "pack": "vits-piper-en_US-libritts_r-medium",
+   "sid": 5
+  },
+  {
+   "id": "piper.ar_JO-kareem-medium",
+   "name": "Kareem",
+   "locale": "ar-JO",
+   "language": "Arabic",
+   "accent": "Jordan",
+   "pack": "vits-piper-ar_JO-kareem-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ca_ES-upc_ona-medium",
+   "name": "Ona",
+   "locale": "ca-ES",
+   "language": "Catalan",
+   "accent": "Catalonia",
+   "pack": "vits-piper-ca_ES-upc_ona-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.cs_CZ-jirka-medium",
+   "name": "Jirka",
+   "locale": "cs-CZ",
+   "language": "Czech",
+   "accent": "Czechia",
+   "pack": "vits-piper-cs_CZ-jirka-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.cy_GB-gwryw_gogleddol-medium",
+   "name": "Gwryw Gogleddol",
+   "locale": "cy-GB",
+   "language": "Welsh",
+   "accent": "North Wales",
+   "pack": "vits-piper-cy_GB-gwryw_gogleddol-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.da_DK-talesyntese-medium",
+   "name": "Talesyntese",
+   "locale": "da-DK",
+   "language": "Danish",
+   "accent": "Denmark",
+   "pack": "vits-piper-da_DK-talesyntese-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten-high",
+   "name": "Thorsten",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten-high",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.0",
+   "name": "Thorsten (emotional) 1",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.1",
+   "name": "Thorsten (emotional) 2",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 1,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.2",
+   "name": "Thorsten (emotional) 3",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 2,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.3",
+   "name": "Thorsten (emotional) 4",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 3,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.4",
+   "name": "Thorsten (emotional) 5",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 4,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-thorsten_emotional-medium.5",
+   "name": "Thorsten (emotional) 6",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-thorsten_emotional-medium",
+   "sid": 5,
+   "gender": "male"
+  },
+  {
+   "id": "piper.de_DE-kerstin-low",
+   "name": "Kerstin",
+   "locale": "de-DE",
+   "language": "German",
+   "accent": "Germany",
+   "pack": "vits-piper-de_DE-kerstin-low",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.el_GR-rapunzelina-low",
+   "name": "Rapunzelina",
+   "locale": "el-GR",
+   "language": "Greek",
+   "accent": "Greece",
+   "pack": "vits-piper-el_GR-rapunzelina-low",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.es_ES-davefx-medium",
+   "name": "Davefx",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "pack": "vits-piper-es_ES-davefx-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.es_ES-sharvard-medium.0",
+   "name": "Sharvard 1",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "pack": "vits-piper-es_ES-sharvard-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.es_ES-sharvard-medium.1",
+   "name": "Sharvard 2",
+   "locale": "es-ES",
+   "language": "Spanish",
+   "accent": "Spain",
+   "pack": "vits-piper-es_ES-sharvard-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.es_MX-claude-high",
+   "name": "Claude",
+   "locale": "es-MX",
+   "language": "Spanish",
+   "accent": "Mexico",
+   "pack": "vits-piper-es_MX-claude-high",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.es_MX-ald-medium",
+   "name": "Ald",
+   "locale": "es-MX",
+   "language": "Spanish",
+   "accent": "Mexico",
+   "pack": "vits-piper-es_MX-ald-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.es_AR-daniela-high",
+   "name": "Daniela",
+   "locale": "es-AR",
+   "language": "Spanish",
+   "accent": "Argentina",
+   "pack": "vits-piper-es_AR-daniela-high",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.eu_ES-maider-medium",
+   "name": "Maider",
+   "locale": "eu-ES",
+   "language": "Basque",
+   "accent": "Basque Country",
+   "pack": "vits-piper-eu_ES-maider-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.fa_IR-amir-medium",
+   "name": "Amir",
+   "locale": "fa-IR",
+   "language": "Persian",
+   "accent": "Iran",
+   "pack": "vits-piper-fa_IR-amir-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.fi_FI-harri-medium",
+   "name": "Harri",
+   "locale": "fi-FI",
+   "language": "Finnish",
+   "accent": "Finland",
+   "pack": "vits-piper-fi_FI-harri-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.fr_FR-siwis-medium",
+   "name": "Siwis",
+   "locale": "fr-FR",
+   "language": "French",
+   "accent": "France",
+   "pack": "vits-piper-fr_FR-siwis-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.fr_FR-tom-medium",
+   "name": "Tom",
+   "locale": "fr-FR",
+   "language": "French",
+   "accent": "France",
+   "pack": "vits-piper-fr_FR-tom-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.hi_IN-pratham-medium",
+   "name": "Pratham",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "pack": "vits-piper-hi_IN-pratham-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.hi_IN-priyamvada-medium",
+   "name": "Priyamvada",
+   "locale": "hi-IN",
+   "language": "Hindi",
+   "accent": "India",
+   "pack": "vits-piper-hi_IN-priyamvada-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.hu_HU-anna-medium",
+   "name": "Anna",
+   "locale": "hu-HU",
+   "language": "Hungarian",
+   "accent": "Hungary",
+   "pack": "vits-piper-hu_HU-anna-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.hu_HU-imre-medium",
+   "name": "Imre",
+   "locale": "hu-HU",
+   "language": "Hungarian",
+   "accent": "Hungary",
+   "pack": "vits-piper-hu_HU-imre-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.id_ID-news_tts-medium",
+   "name": "News",
+   "locale": "id-ID",
+   "language": "Indonesian",
+   "accent": "Indonesia",
+   "pack": "vits-piper-id_ID-news_tts-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.is_IS-ugla-medium",
+   "name": "Ugla",
+   "locale": "is-IS",
+   "language": "Icelandic",
+   "accent": "Iceland",
+   "pack": "vits-piper-is_IS-ugla-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.is_IS-steinn-medium",
+   "name": "Steinn",
+   "locale": "is-IS",
+   "language": "Icelandic",
+   "accent": "Iceland",
+   "pack": "vits-piper-is_IS-steinn-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.it_IT-paola-medium",
+   "name": "Paola",
+   "locale": "it-IT",
+   "language": "Italian",
+   "accent": "Italy",
+   "pack": "vits-piper-it_IT-paola-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.it_IT-riccardo-x_low",
+   "name": "Riccardo",
+   "locale": "it-IT",
+   "language": "Italian",
+   "accent": "Italy",
+   "pack": "vits-piper-it_IT-riccardo-x_low",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ka_GE-natia-medium",
+   "name": "Natia",
+   "locale": "ka-GE",
+   "language": "Georgian",
+   "accent": "Georgia",
+   "pack": "vits-piper-ka_GE-natia-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.0",
+   "name": "ISSAI 1",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 0
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.1",
+   "name": "ISSAI 2",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 1
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.2",
+   "name": "ISSAI 3",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 2
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.3",
+   "name": "ISSAI 4",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 3
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.4",
+   "name": "ISSAI 5",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 4
+  },
+  {
+   "id": "piper.kk_KZ-issai-high.5",
+   "name": "ISSAI 6",
+   "locale": "kk-KZ",
+   "language": "Kazakh",
+   "accent": "Kazakhstan",
+   "pack": "vits-piper-kk_KZ-issai-high",
+   "sid": 5
+  },
+  {
+   "id": "piper.ku_TR-berfin_renas-medium",
+   "name": "Berfin Renas",
+   "locale": "ku-TR",
+   "language": "Kurdish",
+   "accent": "Kurmanji",
+   "pack": "vits-piper-ku_TR-berfin_renas-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.lb_LU-marylux-medium",
+   "name": "Marylux",
+   "locale": "lb-LU",
+   "language": "Luxembourgish",
+   "accent": "Luxembourg",
+   "pack": "vits-piper-lb_LU-marylux-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.lv_LV-aivars-medium",
+   "name": "Aivars",
+   "locale": "lv-LV",
+   "language": "Latvian",
+   "accent": "Latvia",
+   "pack": "vits-piper-lv_LV-aivars-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ml_IN-meera-medium",
+   "name": "Meera",
+   "locale": "ml-IN",
+   "language": "Malayalam",
+   "accent": "Kerala",
+   "pack": "vits-piper-ml_IN-meera-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.ml_IN-arjun-medium",
+   "name": "Arjun",
+   "locale": "ml-IN",
+   "language": "Malayalam",
+   "accent": "Kerala",
+   "pack": "vits-piper-ml_IN-arjun-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ne_NP-google-medium.0",
+   "name": "Google 1",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.ne_NP-google-medium.1",
+   "name": "Google 2",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.ne_NP-google-medium.2",
+   "name": "Google 3",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.ne_NP-google-medium.3",
+   "name": "Google 4",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 3
+  },
+  {
+   "id": "piper.ne_NP-google-medium.4",
+   "name": "Google 5",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 4
+  },
+  {
+   "id": "piper.ne_NP-google-medium.5",
+   "name": "Google 6",
+   "locale": "ne-NP",
+   "language": "Nepali",
+   "accent": "Nepal",
+   "pack": "vits-piper-ne_NP-google-medium",
+   "sid": 5
+  },
+  {
+   "id": "piper.nl_NL-pim-medium",
+   "name": "Pim",
+   "locale": "nl-NL",
+   "language": "Dutch",
+   "accent": "Netherlands",
+   "pack": "vits-piper-nl_NL-pim-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.nl_NL-ronnie-medium",
+   "name": "Ronnie",
+   "locale": "nl-NL",
+   "language": "Dutch",
+   "accent": "Netherlands",
+   "pack": "vits-piper-nl_NL-ronnie-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.nl_NL-alex-medium",
+   "name": "Alex",
+   "locale": "nl-NL",
+   "language": "Dutch",
+   "accent": "Netherlands",
+   "pack": "vits-piper-nl_NL-alex-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.nl_BE-nathalie-medium",
+   "name": "Nathalie",
+   "locale": "nl-BE",
+   "language": "Dutch",
+   "accent": "Flemish (Belgium)",
+   "pack": "vits-piper-nl_BE-nathalie-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.no_NO-talesyntese-medium",
+   "name": "Talesyntese",
+   "locale": "no-NO",
+   "language": "Norwegian",
+   "accent": "Norway",
+   "pack": "vits-piper-no_NO-talesyntese-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.pl_PL-gosia-medium",
+   "name": "Gosia",
+   "locale": "pl-PL",
+   "language": "Polish",
+   "accent": "Poland",
+   "pack": "vits-piper-pl_PL-gosia-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.pl_PL-darkman-medium",
+   "name": "Darkman",
+   "locale": "pl-PL",
+   "language": "Polish",
+   "accent": "Poland",
+   "pack": "vits-piper-pl_PL-darkman-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.pt_BR-faber-medium",
+   "name": "Faber",
+   "locale": "pt-BR",
+   "language": "Portuguese",
+   "accent": "Brazil",
+   "pack": "vits-piper-pt_BR-faber-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.pt_BR-cadu-medium",
+   "name": "Cadu",
+   "locale": "pt-BR",
+   "language": "Portuguese",
+   "accent": "Brazil",
+   "pack": "vits-piper-pt_BR-cadu-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.pt_PT-tugao-medium",
+   "name": "Tugão",
+   "locale": "pt-PT",
+   "language": "Portuguese",
+   "accent": "Portugal",
+   "pack": "vits-piper-pt_PT-tugao-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ro_RO-mihai-medium",
+   "name": "Mihai",
+   "locale": "ro-RO",
+   "language": "Romanian",
+   "accent": "Romania",
+   "pack": "vits-piper-ro_RO-mihai-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.ru_RU-irina-medium",
+   "name": "Irina",
+   "locale": "ru-RU",
+   "language": "Russian",
+   "accent": "Russia",
+   "pack": "vits-piper-ru_RU-irina-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.ru_RU-dmitri-medium",
+   "name": "Dmitri",
+   "locale": "ru-RU",
+   "language": "Russian",
+   "accent": "Russia",
+   "pack": "vits-piper-ru_RU-dmitri-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.sk_SK-lili-medium",
+   "name": "Lili",
+   "locale": "sk-SK",
+   "language": "Slovak",
+   "accent": "Slovakia",
+   "pack": "vits-piper-sk_SK-lili-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.sl_SI-artur-medium",
+   "name": "Artur",
+   "locale": "sl-SI",
+   "language": "Slovenian",
+   "accent": "Slovenia",
+   "pack": "vits-piper-sl_SI-artur-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.sq_AL-edon-medium",
+   "name": "Edon",
+   "locale": "sq-AL",
+   "language": "Albanian",
+   "accent": "Albania",
+   "pack": "vits-piper-sq_AL-edon-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.sr_RS-serbski_institut-medium.0",
+   "name": "Serbski Institut 1",
+   "locale": "sr-RS",
+   "language": "Serbian",
+   "accent": "Serbia",
+   "pack": "vits-piper-sr_RS-serbski_institut-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.sr_RS-serbski_institut-medium.1",
+   "name": "Serbski Institut 2",
+   "locale": "sr-RS",
+   "language": "Serbian",
+   "accent": "Serbia",
+   "pack": "vits-piper-sr_RS-serbski_institut-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.sv_SE-nst-medium",
+   "name": "NST",
+   "locale": "sv-SE",
+   "language": "Swedish",
+   "accent": "Sweden",
+   "pack": "vits-piper-sv_SE-nst-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.sv_SE-lisa-medium",
+   "name": "Lisa",
+   "locale": "sv-SE",
+   "language": "Swedish",
+   "accent": "Sweden",
+   "pack": "vits-piper-sv_SE-lisa-medium",
+   "sid": 0,
+   "gender": "female"
+  },
+  {
+   "id": "piper.sw_CD-lanfrica-medium",
+   "name": "Lanfrica",
+   "locale": "sw-CD",
+   "language": "Swahili",
+   "accent": "Congo",
+   "pack": "vits-piper-sw_CD-lanfrica-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.tr_TR-dfki-medium",
+   "name": "DFKI",
+   "locale": "tr-TR",
+   "language": "Turkish",
+   "accent": "Turkey",
+   "pack": "vits-piper-tr_TR-dfki-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.uk_UA-ukrainian_tts-medium.0",
+   "name": "Ukrainian TTS 1",
+   "locale": "uk-UA",
+   "language": "Ukrainian",
+   "accent": "Ukraine",
+   "pack": "vits-piper-uk_UA-ukrainian_tts-medium",
+   "sid": 0
+  },
+  {
+   "id": "piper.uk_UA-ukrainian_tts-medium.1",
+   "name": "Ukrainian TTS 2",
+   "locale": "uk-UA",
+   "language": "Ukrainian",
+   "accent": "Ukraine",
+   "pack": "vits-piper-uk_UA-ukrainian_tts-medium",
+   "sid": 1
+  },
+  {
+   "id": "piper.uk_UA-ukrainian_tts-medium.2",
+   "name": "Ukrainian TTS 3",
+   "locale": "uk-UA",
+   "language": "Ukrainian",
+   "accent": "Ukraine",
+   "pack": "vits-piper-uk_UA-ukrainian_tts-medium",
+   "sid": 2
+  },
+  {
+   "id": "piper.ur_PK-fasih-medium",
+   "name": "Fasih",
+   "locale": "ur-PK",
+   "language": "Urdu",
+   "accent": "Pakistan",
+   "pack": "vits-piper-ur_PK-fasih-medium",
+   "sid": 0,
+   "gender": "male"
+  },
+  {
+   "id": "piper.vi_VN-vais1000-medium",
+   "name": "VAIS1000",
+   "locale": "vi-VN",
+   "language": "Vietnamese",
+   "accent": "Vietnam",
+   "pack": "vits-piper-vi_VN-vais1000-medium",
+   "sid": 0
+  }
+ ]
+}

@@ -4,6 +4,7 @@
 #include "destination.hpp"
 #include "plan.hpp"
 #include "plugin.hpp"
+#include "setup_flow.hpp"
 
 #include <obs-module.h>
 
@@ -14,6 +15,11 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QFrame>
+#include <QGroupBox>
+#include <QDir>
+#include <QFile>
+#include <QThread>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -22,6 +28,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSettings>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -123,10 +130,6 @@ public:
 		platform_->setCurrentIndex(idx < 0 ? 0 : idx);
 		form->addRow(T("Dialog.Platform"), platform_);
 
-		name_ = new QLineEdit(qs(d.name));
-		name_->setMaxLength(64);
-		form->addRow(T("Dialog.Name"), name_);
-
 		url_ = new QLineEdit(qs(d.url));
 		url_->setPlaceholderText("rtmp://... or rtmps://...");
 		form->addRow(T("Dialog.Url"), url_);
@@ -166,8 +169,14 @@ public:
 		handle_->setPlaceholderText(T("Dialog.HandleHint"));
 		form->addRow(T("Dialog.Handle"), handle_);
 
+		name_ = new QLineEdit(qs(d.name));
+		name_->setMaxLength(64);
+		name_->setPlaceholderText(T("Dialog.NameHint"));
+		form->addRow(T("Dialog.Name"), name_);
+
+		QFormLayout *adv = new QFormLayout();
 		// ---- video source -------------------------------------------------------------------
-		form->addRow(heading(T("Dialog.SecVideo")));
+		adv->addRow(heading(T("Dialog.SecVideo")));
 		OutputManager &mgr = *plugin().mgr;
 		canvas_ = new QComboBox();
 		canvas_->addItem(T("Dialog.CanvasMain"), "");
@@ -185,13 +194,13 @@ public:
 		if (!d.canvas.empty() && canvas_->findData(qs(d.canvas)) < 0)
 			canvas_->addItem(qs(d.canvas) + " " + T("Dialog.NotAvailable"), qs(d.canvas));
 		canvas_->setCurrentIndex(std::max(0, canvas_->findData(qs(d.canvas))));
-		form->addRow(T("Dialog.Canvas"), canvas_);
+		adv->addRow(T("Dialog.Canvas"), canvas_);
 
 		encoder_ = new QComboBox();
 		encoder_->addItem(T("Dialog.EncShared"), "shared");
 		encoder_->addItem(T("Dialog.EncOwn"), "own");
 		encoder_->setCurrentIndex(d.encoder == "own" ? 1 : 0);
-		form->addRow(T("Dialog.Encoder"), encoder_);
+		adv->addRow(T("Dialog.Encoder"), encoder_);
 
 		venc_ = new QComboBox();
 		std::vector<EncoderChoice> encs = mgr.video_encoders();
@@ -206,20 +215,20 @@ public:
 		if (venc_->findData(qs(d.video_encoder)) < 0)
 			venc_->addItem(qs(d.video_encoder) + " " + T("Dialog.NotInstalled"), qs(d.video_encoder));
 		venc_->setCurrentIndex(std::max(0, venc_->findData(qs(d.video_encoder))));
-		form->addRow(T("Dialog.VideoEncoder"), venc_);
+		adv->addRow(T("Dialog.VideoEncoder"), venc_);
 
 		bitrate_ = new QSpinBox();
 		bitrate_->setRange(300, 51000);
 		bitrate_->setSuffix(" kbps");
 		bitrate_->setValue(d.bitrate_kbps >= 300 ? d.bitrate_kbps : 4500);
-		form->addRow(T("Dialog.Bitrate"), bitrate_);
+		adv->addRow(T("Dialog.Bitrate"), bitrate_);
 
 		keyint_ = new QSpinBox();
 		keyint_->setRange(0, 10);
 		keyint_->setSuffix(" s");
 		keyint_->setSpecialValueText(T("Dialog.Default"));
 		keyint_->setValue(d.keyint_sec);
-		form->addRow(T("Dialog.Keyint"), keyint_);
+		adv->addRow(T("Dialog.Keyint"), keyint_);
 
 		preset_ = new QLineEdit(qs(d.preset));
 		preset_->setPlaceholderText(T("Dialog.Default"));
@@ -239,7 +248,7 @@ public:
 		pl->addWidget(rate_, 1);
 		QWidget *pw = new QWidget();
 		pw->setLayout(pl);
-		form->addRow(QString(), pw);
+		adv->addRow(QString(), pw);
 
 		width_ = new QSpinBox();
 		width_->setRange(0, 8192);
@@ -265,30 +274,30 @@ public:
 		rl->addWidget(fps_, 1);
 		QWidget *rw = new QWidget();
 		rw->setLayout(rl);
-		form->addRow(T("Dialog.Rescale"), rw);
+		adv->addRow(T("Dialog.Rescale"), rw);
 
 		video_note_ = new QLabel();
 		video_note_->setWordWrap(true);
 		video_note_->setStyleSheet("color: #8a8a96;");
-		form->addRow(QString(), video_note_);
+		adv->addRow(QString(), video_note_);
 
 		// ---- audio ----------------------------------------------------------------------------
-		form->addRow(heading(T("Dialog.SecAudio")));
+		adv->addRow(heading(T("Dialog.SecAudio")));
 		track_ = new QComboBox();
 		track_->addItem(T("Dialog.TrackMain"), 0);
 		for (int t = 1; t <= kMaxAudioTracks; ++t)
 			track_->addItem(qs(track_label(t, mgr.track_name(t))), t);
 		track_->setCurrentIndex(std::max(0, std::min(kMaxAudioTracks, d.audio_track)));
-		form->addRow(T("Dialog.Track"), track_);
+		adv->addRow(T("Dialog.Track"), track_);
 		abitrate_ = new QSpinBox();
 		abitrate_->setRange(64, 320);
 		abitrate_->setSuffix(" kbps");
 		abitrate_->setValue(d.audio_bitrate_kbps);
-		form->addRow(T("Dialog.AudioBitrate"), abitrate_);
+		adv->addRow(T("Dialog.AudioBitrate"), abitrate_);
 		audio_note_ = new QLabel();
 		audio_note_->setWordWrap(true);
 		audio_note_->setStyleSheet("color: #8a8a96;");
-		form->addRow(QString(), audio_note_);
+		adv->addRow(QString(), audio_note_);
 
 		delay_ = new QSpinBox();
 		delay_->setRange(0, 3600);
@@ -302,16 +311,16 @@ public:
 		dl->addWidget(delay_keep_, 1);
 		QWidget *dw = new QWidget();
 		dw->setLayout(dl);
-		form->addRow(T("Dialog.Delay"), dw);
+		adv->addRow(T("Dialog.Delay"), dw);
 
 		// ---- Aitum ----------------------------------------------------------------------------
-		form->addRow(heading(T("Dialog.SecAitum")));
+		adv->addRow(heading(T("Dialog.SecAitum")));
 		aitum_mode_ = new QComboBox();
 		aitum_mode_->addItem(T("Dialog.AitumOff"), "off");
 		aitum_mode_->addItem(T("Dialog.AitumCopy"), "copy");
 		aitum_mode_->addItem(T("Dialog.AitumFollow"), "follow");
 		aitum_mode_->setCurrentIndex(d.aitum_mode == "follow" ? 2 : d.aitum_mode == "copy" ? 1 : 0);
-		form->addRow(T("Dialog.AitumMode"), aitum_mode_);
+		adv->addRow(T("Dialog.AitumMode"), aitum_mode_);
 		aitum_output_ = new QComboBox();
 		aitum_output_->setEditable(true);
 		std::string amsg;
@@ -326,7 +335,7 @@ public:
 		al->addWidget(import_btn_);
 		QWidget *aw = new QWidget();
 		aw->setLayout(al);
-		form->addRow(T("Dialog.AitumOutput"), aw);
+		adv->addRow(T("Dialog.AitumOutput"), aw);
 		aitum_note_ = new QLabel();
 		aitum_note_->setWordWrap(true);
 		aitum_note_->setStyleSheet("color: #8a8a96;");
@@ -342,7 +351,7 @@ public:
 			info += "\n" + qs(amsg);
 		info += "\n" + T("Dialog.AitumNeverTouches");
 		aitum_note_->setText(info);
-		form->addRow(QString(), aitum_note_);
+		adv->addRow(QString(), aitum_note_);
 		QObject::connect(import_btn_, &QPushButton::clicked, [this]() { import_from_aitum(); });
 
 		enabled_ = new QCheckBox(T("Dialog.Enabled"));
@@ -351,6 +360,14 @@ public:
 		auto_->setChecked(d.auto_start);
 		form->addRow(QString(), enabled_);
 		form->addRow(QString(), auto_);
+
+		adv_btn_ = new QPushButton();
+		adv_btn_->setCheckable(true);
+		adv_btn_->setFlat(true);
+		adv_btn_->setStyleSheet("text-align:left; color:#58a6ff; font-weight:bold; padding:6px 0;");
+		adv_box_ = new QWidget();
+		adv_box_->setLayout(adv);
+		QObject::connect(adv_btn_, &QPushButton::toggled, [this](bool on) { show_advanced(on); });
 
 		error_ = new QLabel();
 		error_->setWordWrap(true);
@@ -362,7 +379,13 @@ public:
 		QObject::connect(bb, &QDialogButtonBox::accepted, [this]() { try_accept(); });
 
 		QWidget *body = new QWidget();
-		body->setLayout(form);
+		QVBoxLayout *bl = new QVBoxLayout(body);
+		bl->setContentsMargins(0, 0, 0, 0);
+		bl->addLayout(form);
+		bl->addWidget(adv_btn_);
+		bl->addWidget(adv_box_);
+		bl->addStretch(1);
+		form_ = form;
 		QScrollArea *scroll = new QScrollArea();
 		scroll->setWidgetResizable(true);
 		scroll->setFrameShape(QFrame::NoFrame);
@@ -371,9 +394,14 @@ public:
 		root->addWidget(scroll, 1);
 		root->addWidget(error_);
 		root->addWidget(bb);
-		resize(560, 720);
+		resize(560, 460);
 
 		prev_default_ = default_url_for(current_platform());
+		if (const PlatformPreset *lp = find_preset(current_platform())) {
+			prev_label_ = qs(lp->label);
+			if (name_->text().trimmed().isEmpty())
+				name_->setText(prev_label_);
+		}
 		QObject::connect(platform_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { on_platform_changed(); });
 		QObject::connect(encoder_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { update_enabled(); });
 		QObject::connect(canvas_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { update_enabled(); });
@@ -381,9 +409,26 @@ public:
 		QObject::connect(aitum_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { update_enabled(); });
 		update_hint();
 		update_enabled();
+		// open by itself when this destination already uses anything in it
+		show_advanced(editing && uses_advanced(d));
 	}
 
 	Destination result() const { return dest_; }
+	void open_advanced() { show_advanced(true); }
+	void fill_for_shot(const char *handle)
+	{
+		handle_->setText(QString::fromUtf8(handle));
+		key_->setText("live_000000_test"); // the documented fake key (packaging test)
+	}
+
+	// true when the destination differs from the plain "same picture, same sound as the main stream" setup
+	static bool uses_advanced(const Destination &d)
+	{
+		const PlatformPreset *p = find_preset(d.platform);
+		bool custom_url = p && *p->default_url && !d.url.empty() && d.url != p->default_url;
+		return !d.canvas.empty() || d.encoder == "own" || d.audio_track != 0 || d.delay_sec > 0 || d.aitum_mode != "off" ||
+		       custom_url;
+	}
 
 private:
 	static QLabel *heading(const QString &text)
@@ -402,6 +447,28 @@ private:
 	{
 		const PlatformPreset *p = find_preset(current_platform());
 		hint_->setText(p ? qs(p->url_hint) : QString());
+		update_url_row();
+	}
+	void update_url_row()
+	{
+		const PlatformPreset *p = find_preset(current_platform());
+		bool fixed = p && *p->default_url;
+		bool show = !fixed || (adv_btn_ && adv_btn_->isChecked()) || url_->text().trimmed().isEmpty();
+		form_->setRowVisible(url_, show);
+		form_->setRowVisible(hint_, show && !hint_->text().isEmpty());
+	}
+	void show_advanced(bool on)
+	{
+		if (adv_btn_->isChecked() != on) {
+			bool prev = adv_btn_->blockSignals(true);
+			adv_btn_->setChecked(on);
+			adv_btn_->blockSignals(prev);
+		}
+		adv_btn_->setText(QString::fromUtf8(on ? "\xE2\x96\xBE " : "\xE2\x96\xB8 ") + T("Dialog.Advanced"));
+		adv_box_->setVisible(on);
+		update_url_row();
+		if (on && isVisible())
+			resize(std::max(width(), 760), std::max(height(), 760));
 	}
 	void update_enabled()
 	{
@@ -426,6 +493,11 @@ private:
 	}
 	void on_platform_changed()
 	{
+		const PlatformPreset *np = find_preset(current_platform());
+		QString nm = name_->text().trimmed();
+		if (np && (nm.isEmpty() || nm == prev_label_))
+			name_->setText(qs(np->label));
+		prev_label_ = np ? qs(np->label) : QString();
 		std::string cur = ss(url_->text().trimmed());
 		std::string next = default_url_for(current_platform());
 		if (cur.empty() || cur == prev_default_)
@@ -546,6 +618,10 @@ private:
 	bool editing_;
 	bool imported_ = false;
 	std::string prev_default_;
+	QString prev_label_;
+	QFormLayout *form_ = nullptr;
+	QPushButton *adv_btn_ = nullptr;
+	QWidget *adv_box_ = nullptr;
 	QComboBox *platform_;
 	QLineEdit *name_, *url_, *key_, *handle_, *preset_, *profile_;
 	QLabel *hint_, *error_, *video_note_, *audio_note_, *aitum_note_;
@@ -555,40 +631,69 @@ private:
 	QCheckBox *enabled_, *auto_, *delay_keep_;
 };
 
+// Small per-user UI state next to config.json (not part of the config schema): the "Get started" card.
+QString ui_state_path()
+{
+	char *p = obs_module_config_path("ui-state.ini");
+	QString s = p ? QString::fromUtf8(p) : QString();
+	bfree(p);
+	return s;
+}
+
+bool ui_flag(const char *key)
+{
+	QString p = ui_state_path();
+	return !p.isEmpty() && QSettings(p, QSettings::IniFormat).value(key, false).toBool();
+}
+
+void set_ui_flag(const char *key, bool on)
+{
+	QString p = ui_state_path();
+	if (p.isEmpty())
+		return;
+	QSettings s(p, QSettings::IniFormat);
+	s.setValue(key, on);
+}
+
+QWidget *scrolled(QWidget *page)
+{
+	QScrollArea *sa = new QScrollArea();
+	sa->setWidgetResizable(true);
+	sa->setFrameShape(QFrame::NoFrame);
+	sa->setWidget(page);
+	return sa;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------
 
 MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 {
-	QTabWidget *tabs = new QTabWidget();
-	QWidget *streams_page = new QWidget();
 	chat_panel_ = new ChatPanel(this);
 	QVBoxLayout *outer = new QVBoxLayout(this);
 	outer->setContentsMargins(0, 0, 0, 0);
-	outer->addWidget(tabs);
-	tabs->addTab(streams_page, T("Tab.Streams"));
-	tabs->addTab(chat_panel_, T("Tab.Chat"));
-	QVBoxLayout *root = new QVBoxLayout(streams_page);
-	root->setContentsMargins(6, 6, 6, 6);
+	outer->setSpacing(4);
 
+	// ---- always visible: warnings, the big button and one summary line ---------------------------
+	QWidget *head = new QWidget();
+	QVBoxLayout *hl = new QVBoxLayout(head);
+	hl->setContentsMargins(6, 6, 6, 0);
 	banner_ = new QLabel();
 	banner_->setWordWrap(true);
 	banner_->setStyleSheet("background:#5a3a00; color:#ffd58a; padding:6px; border-radius:4px;");
 	banner_->hide();
-	root->addWidget(banner_);
-
+	hl->addWidget(banner_);
 	notice_ = new QLabel();
 	notice_->setWordWrap(true);
 	notice_->setStyleSheet("background:#3a2530; color:#ffb3c1; padding:6px; border-radius:4px;");
 	notice_->hide();
-	root->addWidget(notice_);
-
+	hl->addWidget(notice_);
 	double_ = new QLabel();
 	double_->setWordWrap(true);
 	double_->setStyleSheet("background:#5a1f1f; color:#ffc9c9; padding:6px; border-radius:4px;");
 	double_->hide();
-	root->addWidget(double_);
+	hl->addWidget(double_);
 
 	// at-a-glance strip for use DURING a stream: one big button and one summary line
 	big_btn_ = new QPushButton();
@@ -596,8 +701,65 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	big_btn_->setStyleSheet("font-size:15px; font-weight:bold;");
 	glance_ = new QLabel();
 	glance_->setWordWrap(true);
-	root->addWidget(big_btn_);
-	root->addWidget(glance_);
+	hl->addWidget(big_btn_);
+	hl->addWidget(glance_);
+
+	// ---- "Get started": three steps, each with the button that does it ---------------------------
+	setup_card_ = new QFrame();
+	setup_card_->setObjectName("omscSetup");
+	setup_card_->setStyleSheet("#omscSetup { background:#1d2433; border:1px solid #2f3b55; border-radius:6px; }");
+	QVBoxLayout *cl = new QVBoxLayout(setup_card_);
+	cl->setContentsMargins(10, 8, 10, 8);
+	cl->setSpacing(6);
+	QHBoxLayout *ct = new QHBoxLayout();
+	setup_title_ = new QLabel();
+	setup_title_->setStyleSheet("font-weight:bold; font-size:13px; color:#f2f2f5;");
+	QPushButton *hide_setup = new QPushButton(T("Setup.Hide"));
+	hide_setup->setFlat(true);
+	hide_setup->setCursor(Qt::PointingHandCursor);
+	hide_setup->setStyleSheet("QPushButton { border:none; background:transparent; color:#9aa4b8; font-size:11px; text-decoration:underline; padding:0 2px; }");
+	ct->addWidget(setup_title_, 1);
+	ct->addWidget(hide_setup);
+	cl->addLayout(ct);
+	const char *step_keys[3] = {"Setup.Step1", "Setup.Step2", "Setup.Step3"};
+	const char *btn_keys[3] = {"Setup.Btn1", "Setup.Btn2", "Setup.Btn3"};
+	for (int i = 0; i < 3; ++i) {
+		QHBoxLayout *r = new QHBoxLayout();
+		step_lbl_[i] = new QLabel();
+		step_lbl_[i]->setWordWrap(true);
+		step_btn_[i] = new QPushButton(T(btn_keys[i]));
+		step_btn_[i]->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
+		step_text_[i] = T(step_keys[i]);
+		r->addWidget(step_lbl_[i], 1);
+		r->addWidget(step_btn_[i]);
+		cl->addLayout(r);
+	}
+	hl->addWidget(setup_card_);
+	outer->addWidget(head);
+
+	// ---- one flat row of tabs --------------------------------------------------------------------
+	tabs_ = new QTabWidget();
+	tabs_->setDocumentMode(true);
+	tabs_->setUsesScrollButtons(true);
+	QWidget *streams_page = new QWidget();
+	QWidget *overlays_page = new QWidget();
+	tab_chat_ = tabs_->addTab(chat_panel_->live_page(), T("Tab.Chat"));
+	tab_streams_ = tabs_->addTab(streams_page, T("Tab.Streams"));
+	tab_sources_ = tabs_->addTab(scrolled(chat_panel_->sources_page()), T("Tab.Sources"));
+	tab_overlays_ = tabs_->addTab(scrolled(overlays_page), T("Tab.Overlays"));
+	tab_voice_ = tabs_->addTab(scrolled(chat_panel_->voice_page()), T("Tab.Voice"));
+	outer->addWidget(tabs_, 1);
+	outer->addWidget(chat_panel_->footer());
+	chat_panel_->attach(tabs_, tab_chat_, [this]() { tabs_->setCurrentIndex(tab_sources_); });
+
+	// ---- Streams ---------------------------------------------------------------------------------
+	QVBoxLayout *root = new QVBoxLayout(streams_page);
+	root->setContentsMargins(6, 6, 6, 6);
+	streams_empty_ = new QLabel(T("Streams.Empty"));
+	streams_empty_->setWordWrap(true);
+	streams_empty_->setStyleSheet("color:#c8c8d0; padding:12px 4px;");
+	streams_empty_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+	root->addWidget(streams_empty_, 1);
 
 	table_ = new QTableWidget(0, 9);
 	QStringList heads;
@@ -609,17 +771,21 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	table_->setSelectionMode(QAbstractItemView::SingleSelection);
 	table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	table_->horizontalHeader()->setStretchLastSection(false);
-	table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+	table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 	table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+	table_->horizontalHeader()->setSectionResizeMode(8, QHeaderView::Fixed);
+	table_->setColumnWidth(8, 64); // the Start/Stop button: cell widgets do not size their column
 	root->addWidget(table_, 1);
 
 	QHBoxLayout *row1 = new QHBoxLayout();
 	QPushButton *add = new QPushButton(T("Btn.Add"));
+	add->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
 	edit_btn_ = new QPushButton(T("Btn.Edit"));
 	remove_btn_ = new QPushButton(T("Btn.Remove"));
-	QPushButton *guide_btn = new QPushButton(QString::fromUtf8("? Audio & Setup Guide"));
-	guide_btn->setStyleSheet("background:#232733; color:#58a6ff; font-weight:bold; border:1px solid #384259; border-radius:3px; padding:3px 10px;");
+	QPushButton *guide_btn = new QPushButton(T("Btn.AudioHelp"));
+	guide_btn->setFlat(true);
+	guide_btn->setStyleSheet("color:#58a6ff;");
 	row1->addWidget(add);
 	row1->addWidget(edit_btn_);
 	row1->addWidget(remove_btn_);
@@ -627,14 +793,50 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	row1->addWidget(guide_btn);
 	root->addLayout(row1);
 
-	QHBoxLayout *row2 = new QHBoxLayout();
-	url_label_ = new QLabel();
-	url_label_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-	url_label_->setStyleSheet("color:#8a8a96;");
-	QPushButton *copy = new QPushButton(T("Btn.CopyUrl"));
-	row2->addWidget(url_label_, 1);
-	row2->addWidget(copy);
-	root->addLayout(row2);
+	// ---- Overlays: both browser-source URLs in one place -----------------------------------------
+	QVBoxLayout *ol = new QVBoxLayout(overlays_page);
+	ol->setContentsMargins(8, 8, 8, 8);
+	ol->setSpacing(10);
+	QLabel *ohow = new QLabel(T("Overlays.How"));
+	ohow->setWordWrap(true);
+	ohow->setStyleSheet("color:#8a8a96;");
+	ol->addWidget(ohow);
+	for (int i = 0; i < 2; ++i) {
+		QGroupBox *g = new QGroupBox(T(i == 0 ? "Overlays.ChatTitle" : "Overlays.IconsTitle"));
+		QVBoxLayout *gl = new QVBoxLayout(g);
+		QLabel *what = new QLabel(T(i == 0 ? "Overlays.ChatWhat" : "Overlays.IconsWhat"));
+		what->setWordWrap(true);
+		gl->addWidget(what);
+		ov_url_[i] = new QLabel();
+		ov_url_[i]->setTextInteractionFlags(Qt::TextSelectableByMouse);
+		ov_url_[i]->setStyleSheet("color:#8a8a96; font-family:Consolas, monospace; font-size:11px;");
+		ov_url_[i]->setWordWrap(true);
+		gl->addWidget(ov_url_[i]);
+		QHBoxLayout *r = new QHBoxLayout();
+		r->addWidget(new QLabel(T("Overlays.Theme")));
+		ov_theme_[i] = new QComboBox();
+		ov_theme_[i]->addItem(T("Overlays.ThemeDark"), "dark");
+		ov_theme_[i]->addItem(T("Overlays.ThemeTransparent"), "transparent");
+		ov_theme_[i]->addItem(T("Overlays.ThemeLight"), "light");
+		r->addWidget(ov_theme_[i]);
+		r->addStretch(1);
+		QPushButton *copy = new QPushButton(T("Overlays.Copy"));
+		copy->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
+		r->addWidget(copy);
+		gl->addLayout(r);
+		QLabel *size = new QLabel(T(i == 0 ? "Overlays.ChatSize" : "Overlays.IconsSize"));
+		size->setWordWrap(true);
+		size->setStyleSheet("color:#8a8a96; font-size:11px;");
+		gl->addWidget(size);
+		ov_copied_[i] = new QLabel(T("Overlays.Copied"));
+		ov_copied_[i]->setStyleSheet("color:#3ddc84;");
+		ov_copied_[i]->hide();
+		gl->addWidget(ov_copied_[i]);
+		ol->addWidget(g);
+		QObject::connect(copy, &QPushButton::clicked, [this, i]() { copy_overlay_url(i); });
+		QObject::connect(ov_theme_[i], QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { refresh(); });
+	}
+	ol->addStretch(1);
 
 	QObject::connect(add, &QPushButton::clicked, [this]() { add_destination(); });
 	QObject::connect(edit_btn_, &QPushButton::clicked, [this]() { edit_selected(); });
@@ -646,7 +848,16 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 		else
 			plugin().mgr->start_all();
 	});
-	QObject::connect(copy, &QPushButton::clicked, [this]() { copy_overlay_url(); });
+	QObject::connect(step_btn_[0], &QPushButton::clicked, [this]() {
+		tabs_->setCurrentIndex(tab_streams_);
+		add_destination();
+	});
+	QObject::connect(step_btn_[1], &QPushButton::clicked, [this]() { tabs_->setCurrentIndex(tab_sources_); });
+	QObject::connect(step_btn_[2], &QPushButton::clicked, [this]() { tabs_->setCurrentIndex(tab_overlays_); });
+	QObject::connect(hide_setup, &QPushButton::clicked, [this]() {
+		set_ui_flag("setup_hidden", true);
+		refresh();
+	});
 	QObject::connect(table_, &QTableWidget::itemSelectionChanged, [this]() {
 		bool any = !selected_id().empty();
 		edit_btn_->setEnabled(any);
@@ -655,6 +866,8 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	edit_btn_->setEnabled(false);
 	remove_btn_->setEnabled(false);
 	refresh();
+	// first run: start where the work is; afterwards on the live chat
+	tabs_->setCurrentIndex(setup_progress(plugin().cfg, ui_flag("overlay_copied")).destination ? tab_chat_ : tab_streams_);
 }
 
 std::string MultistreamDock::selected_id() const
@@ -735,14 +948,43 @@ void MultistreamDock::remove_selected()
 	}
 }
 
-void MultistreamDock::copy_overlay_url()
+void MultistreamDock::copy_overlay_url(int which)
 {
-	std::string url = plugin_overlay_url();
+	std::string url = which == 0 ? plugin_chat_url() : plugin_overlay_url();
 	if (url.empty()) {
 		QMessageBox::warning(this, T("Dock.Title"), T("Msg.NoServer"));
 		return;
 	}
-	QApplication::clipboard()->setText(qs(url + "?theme=dark"));
+	QApplication::clipboard()->setText(overlay_url(which));
+	ov_copied_[which]->show();
+	set_ui_flag("overlay_copied", true);
+	refresh();
+}
+
+// The URL the Copy button puts on the clipboard (theme from the combo; the chat gets readable defaults).
+QString MultistreamDock::overlay_url(int which) const
+{
+	std::string base = which == 0 ? plugin_chat_url() : plugin_overlay_url();
+	if (base.empty())
+		return QString();
+	QString theme = ov_theme_[which]->currentData().toString();
+	return qs(base) + "?theme=" + theme + (which == 0 ? "&font=22&max=30" : "");
+}
+
+void MultistreamDock::update_setup(const Config &cfg)
+{
+	SetupProgress p = setup_progress(cfg, ui_flag("overlay_copied"));
+	bool show = !p.complete() && !ui_flag("setup_hidden");
+	setup_card_->setVisible(show);
+	if (!show)
+		return;
+	setup_title_->setText(T("Setup.Title").arg(p.done()));
+	bool done[3] = {p.destination, p.chat, p.overlay};
+	for (int i = 0; i < 3; ++i) {
+		step_lbl_[i]->setText(QString::fromUtf8(done[i] ? "\xE2\x9C\x94 " : "") + QString("%1. ").arg(i + 1) + step_text_[i]);
+		step_lbl_[i]->setStyleSheet(done[i] ? "color:#3ddc84;" : "color:#e0e0e8;");
+		step_btn_[i]->setVisible(!done[i]);
+	}
 }
 
 void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
@@ -771,6 +1013,8 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 		for (int t = 1; t <= kMaxAudioTracks; ++t)
 			track_cb->addItem(qs(track_label(t, mgr.track_name(t))), t);
 		track_cb->setStyleSheet("QComboBox { padding: 2px 4px; font-size: 11px; }");
+		track_cb->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+		track_cb->setMinimumContentsLength(13);
 		QObject::connect(track_cb, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, id, track_cb](int) {
 			int chosen_track = track_cb->currentData().toInt();
 			PluginState &st = plugin();
@@ -799,6 +1043,7 @@ void MultistreamDock::rebuild_rows(const std::vector<std::string> &ids)
 		}
 	}
 	table_->resizeColumnsToContents();
+	table_->setColumnWidth(8, 64);
 }
 
 // Big start/stop button and the one-line summary: destinations live / total, worst state, chat reader.
@@ -870,8 +1115,20 @@ void MultistreamDock::refresh()
 		dtext += (i ? "\n" : "") + qs(dw[i]);
 	double_->setVisible(!dw.empty());
 	double_->setText(dtext);
-	std::string url = plugin_overlay_url();
-	url_label_->setText(url.empty() ? T("Msg.NoServer") : qs(url));
+	for (int i = 0; i < 2; ++i) {
+		QString u = overlay_url(i);
+		ov_url_[i]->setText(u.isEmpty() ? T("Msg.NoServer") : u);
+	}
+	update_setup(st.cfg);
+	streams_empty_->setVisible(views.empty());
+	bool any_live = false;
+	for (size_t i = 0; i < views.size(); ++i)
+		any_live = any_live || views[i].state != State::Idle;
+	for (int c = 5; c <= 7; ++c)
+		table_->setColumnHidden(c, !any_live);
+	table_->setVisible(!views.empty());
+	big_btn_->setVisible(!views.empty());
+	glance_->setVisible(!views.empty() || plugin_reader_running());
 
 	update_glance(views);
 
@@ -939,7 +1196,7 @@ void MultistreamDock::refresh()
 void MultistreamDock::show_audio_tutorial()
 {
 	QDialog dlg(this);
-	dlg.setWindowTitle("OBS Multi-Stream & Audio Routing Tutorial");
+	dlg.setWindowTitle("Audio tracks per destination");
 	dlg.resize(760, 620);
 	QVBoxLayout *l = new QVBoxLayout(&dlg);
 	QTextBrowser *tb = new QTextBrowser(&dlg);
@@ -947,11 +1204,11 @@ void MultistreamDock::show_audio_tutorial()
 	tb->setStyleSheet("background:#18181f; color:#e0e0e8; font-family:Segoe UI, sans-serif; font-size:13px; line-height:1.5; padding:12px;");
 
 	QString html = R"HTML(
-	<h2 style="color:#58a6ff; margin-top:0;">Multi-Stream & Audio Routing Tutorial</h2>
-	<p>Welcome! This guide explains how to stream to multiple platforms simultaneously with customized audio tracks and video resolutions.</p>
+	<h2 style="color:#58a6ff; margin-top:0;">Audio tracks per destination</h2>
+	<p>How to send a different sound mix to each platform (for example: no music on YouTube).</p>
 
 	<div style="background:#20202c; border-left:4px solid #58a6ff; padding:10px; margin-bottom:14px; border-radius:4px;">
-		<b style="color:#ffffff;">Quick Track Selector:</b> You can change any stream's audio track instantly using the <b>Audio Track dropdown</b> in the Streams table row with zero dialogs!
+		<b style="color:#ffffff;">Quick track choice:</b> each row of the Streams table has an audio-track list; change it there without opening a dialog.
 	</div>
 
 	<h3 style="color:#3ddc84;">1. How Audio Routing Works in OBS</h3>
@@ -1011,36 +1268,148 @@ void MultistreamDock::show_audio_tutorial()
 	<ol>
 		<li>In OBS, open <b>Settings &gt; Output</b>.</li>
 		<li>Set <i>Output Mode</i> to <b>Advanced</b>.</li>
-		<li>Under the <i>Recording</i> or <i>Audio</i> tab, you can name Tracks 1 through 6 (e.g., "Twitch Mix", "No-Copyright", "Voice Only").</li>
-		<li>Our Streams dock automatically reads these names from your OBS profile and displays them in the dropdown!</li>
+		<li>Under the <i>Audio</i> tab, name Tracks 1 to 6 (for example "Twitch Mix", "No music", "Voice only").</li>
+		<li>The Streams tab shows those names in its track lists.</li>
 	</ol>
 
-	<h3 style="color:#3ddc84;">4. Adding Streaming Platforms</h3>
-	<p>Click <b>Add stream</b> below to add any platform:</p>
-	<ul>
-		<li><b>Twitch:</b> Select Twitch preset &gt; paste Stream Key from Twitch Dashboard &gt; Settings &gt; Stream.</li>
-		<li><b>Kick:</b> Select Kick preset &gt; paste Stream Key from Kick Creator Dashboard &gt; Settings &gt; Stream URL &amp; Key.</li>
-		<li><b>YouTube:</b> Select YouTube preset &gt; paste Stream Key from YouTube Studio &gt; Go Live.</li>
-		<li><b>TikTok:</b> Select TikTok preset &gt; paste Server URL and Stream Key from TikTok LIVE Studio or Live access.</li>
-		<li><b>Instagram Live:</b> Select Instagram preset &gt; paste Stream URL and Key from Instagram Live Producer.</li>
-		<li><b>X (Twitter):</b> Select X preset &gt; paste Stream Key from X Media Studio / Live Producer.</li>
-		<li><b>Restream / Custom:</b> Pre-configured RTMP endpoints for multi-broadcasting.</li>
-	</ul>
+		<h3 style="color:#3ddc84;">4. Where each destination gets its sound</h3>
+		<p>Streams tab &gt; select a destination &gt; <b>Edit</b> &gt; <b>Advanced options</b> &gt; <i>Audio track</i>, or use the
+		track list right in the Streams table. A destination that is live keeps its track until it stops.</p>
 
-	<h3 style="color:#3ddc84;">5. Vertical Video &amp; Multi-Canvas (TikTok / Instagram)</h3>
-	<p>If you use Aitum Stream Suite or the OBS Vertical Canvas plugin, you can select that canvas in <b>Edit &gt; Canvas</b>. The destination will automatically encode at vertical 1080x1920 while your main stream remains horizontal 1920x1080!</p>
+		<h3 style="color:#3ddc84;">5. Vertical video (TikTok)</h3>
+		<p>If Aitum Stream Suite (or another plugin) adds a vertical canvas, pick it under <b>Edit &gt; Advanced options &gt;
+		Video source</b>. That destination then gets its own encoder at the vertical size while the main stream stays
+		horizontal. TikTok destinations pick a canvas named "vertical" by themselves.</p>
 	)HTML";
 
 	tb->setHtml(html);
 	l->addWidget(tb, 1);
 	QHBoxLayout *bl = new QHBoxLayout();
 	bl->addStretch(1);
-	QPushButton *close_btn = new QPushButton("Got it, Close", &dlg);
+	QPushButton *close_btn = new QPushButton("Close", &dlg);
 	close_btn->setStyleSheet("padding:6px 18px; font-weight:bold; background:#2f7d4f; color:white; border-radius:4px;");
 	QObject::connect(close_btn, &QPushButton::clicked, &dlg, &QDialog::accept);
 	bl->addWidget(close_btn);
 	l->addLayout(bl);
 	dlg.exec();
+}
+
+// README step pictures (OMSC_SHOTS=<dir>, see plugin-main.cpp). Renders the real dock and dialogs offscreen
+// (WA_DontShowOnScreen), page by page, in the order a first-time user goes through them. With `demo` the
+// destinations and chat channels are sample data held in memory only: nothing here saves the config, and
+// the config is put back at the end. Sample chat lines go through the real hub (ingest + flush).
+void MultistreamDock::capture_screens(const QString &dir, bool demo)
+{
+	QDir().mkpath(dir);
+	PluginState &st = plugin();
+	const Config saved = st.cfg;
+	const bool saved_overlay = ui_flag("overlay_copied"), saved_hidden = ui_flag("setup_hidden");
+	const QSize dock_size(460, 860);
+	auto settle = []() {
+		for (int i = 0; i < 6; ++i)
+			QApplication::processEvents();
+	};
+	auto shot = [&](QWidget *w, const char *name) {
+		settle();
+		w->grab().save(dir + "/" + name + ".png");
+		blog(LOG_INFO, "[obs-multistream-chat] shots: %s", name);
+	};
+	auto make_dock = [&]() {
+		MultistreamDock *d = new MultistreamDock(nullptr);
+		d->setAttribute(Qt::WA_DontShowOnScreen);
+		d->resize(dock_size);
+		d->show();
+		d->refresh();
+		return d;
+	};
+	auto tab = [&](MultistreamDock *d, int idx, const char *name) {
+		d->tabs_->setCurrentIndex(idx);
+		d->refresh();
+		shot(d, name);
+	};
+
+	// 1. first run: nothing set up yet
+	st.cfg.destinations.clear();
+	st.cfg.chat.sources.clear();
+	set_ui_flag("overlay_copied", false);
+	set_ui_flag("setup_hidden", false);
+	st.mgr->sync_with_config();
+	MultistreamDock *d = make_dock();
+	tab(d, d->tab_streams_, "01-first-run");
+
+	// 2-3. the add dialog: basic, then with Advanced open
+	{
+		Destination nd;
+		nd.id = "shot";
+		nd.platform = "twitch";
+		nd.url = find_preset("twitch")->default_url;
+		DestinationDialog dlg(nullptr, nd, false);
+		dlg.setAttribute(Qt::WA_DontShowOnScreen);
+		dlg.show();
+		dlg.fill_for_shot("otiyyy");
+		shot(&dlg, "02-add-destination");
+		dlg.open_advanced();
+		dlg.resize(760, 1000);
+		shot(&dlg, "03-add-destination-advanced");
+		dlg.hide();
+	}
+
+	if (demo) {
+		const char *plats[3][3] = {{"twitch", "Twitch", "otiyyy"}, {"youtube", "YouTube", "otiyyy"}, {"kick", "Kick", "otiyyy"}};
+		for (int i = 0; i < 3; ++i) {
+			Destination x;
+			x.id = std::string("demo") + std::to_string(i + 1);
+			x.platform = plats[i][0];
+			x.name = plats[i][1];
+			x.handle = plats[i][2];
+			x.url = find_preset(x.platform)->default_url;
+			if (x.url.empty())
+				x.url = "rtmps://example.invalid/app";
+			st.cfg.destinations.push_back(x);
+		}
+		st.mgr->sync_with_config();
+	}
+	tab(d, d->tab_streams_, "04-streams");
+
+	if (demo) {
+		std::string t, err;
+		add_chat_source(st.cfg.chat.sources, "twitch", "otiyyy", t, err);
+		add_chat_source(st.cfg.chat.sources, "kick", "otiyyy", t, err);
+		add_chat_source(st.cfg.chat.sources, "twitch", "collab_friend", t, err);
+	}
+	tab(d, d->tab_sources_, "05-chat-sources");
+	tab(d, d->tab_overlays_, "06-overlays");
+	set_ui_flag("overlay_copied", true);
+
+	if (demo) {
+		const char *lines[][4] = {{"twitch", "c1", "SampleViewer", "that save was insane"},
+					  {"kick", "c2", "KickFan", "hello from Kick!"},
+					  {"twitch", "c3", "collab_mod", "gg, both chats in one place"},
+					  {"twitch", "c1", "NightOwl", "what settings do you use?"},
+					  {"kick", "c2", "SampleUser", "W stream"}};
+		std::string body = "{\"v\":1,\"messages\":[";
+		for (size_t i = 0; i < sizeof(lines) / sizeof(lines[0]); ++i) {
+			body += std::string(i ? "," : "") + "{\"platform\":\"" + lines[i][0] + "\",\"source\":\"" + lines[i][1] + "\",\"id\":\"shot" +
+				std::to_string(i) + "\",\"author\":\"" + lines[i][2] + "\",\"parts\":[{\"t\":\"text\",\"v\":\"" + lines[i][3] + "\"}]}";
+		}
+		body += "]}";
+		st.chat_hub.ingest(body);
+		QThread::msleep(2500);
+		st.chat_hub.flush();
+	}
+	delete d;
+	d = make_dock(); // a new dock loads the hub's backlog, like OBS starting with chat already flowing
+	tab(d, d->tab_chat_, "07-chat");
+	tab(d, d->tab_voice_, "08-voice");
+	delete d;
+
+	st.cfg = saved;
+	st.mgr->sync_with_config();
+	set_ui_flag("overlay_copied", saved_overlay);
+	set_ui_flag("setup_hidden", saved_hidden);
+	QFile f(dir + "/done.txt");
+	if (f.open(QIODevice::WriteOnly))
+		f.write("ok\n");
 }
 
 } // namespace oms

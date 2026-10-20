@@ -1,6 +1,34 @@
-﻿# Changelog
+# Changelog
 
-## 0.4.2 (unreleased): neural chat voices, offline, in 43 languages
+## 0.5.0 (unreleased): a dock you can follow from install to live, and neural chat voices
+
+### The dock
+
+- New: a **Get started** card at the top of the dock: 1. add where you stream, 2. add your chat, 3. put chat
+  and icons on stream. Each step has the button that does it and ticks itself off; the card goes away when
+  all three are done (or with *Hide*). Remembered in `ui-state.ini` next to `config.json`, not in the config.
+- Changed: **one row of tabs** instead of tabs inside tabs: Chat (merged chat), Streams, Chat sources,
+  Overlays, Voice. Version and *Check for updates* moved to a line at the bottom.
+- New: **Overlays** tab with both Browser-source links (chat and platform icons), a look (dark, transparent,
+  light), *Copy link* and the size to use.
+- Changed: **Add destination** asks only for platform, stream key, handle and name; the server URL shows only
+  for platforms without one fixed ingest. Canvas, encoder, audio track, delay and Aitum are under
+  **Advanced options**, which opens by itself for a destination that uses any of them.
+- Changed: **one way to add a chat channel** (platform + channel + Add) and **Add my channels from Streams**;
+  one *Start it* choice (when I press Start / when OBS starts / when I go live) instead of two checkboxes.
+- Fixed: *Auto-Connect* added the typed name on Twitch, Kick, TikTok and X at once (three of them usually
+  wrong). Removed.
+- Fixed: *Auto-sync from Destinations* replaced the first chat source of the same platform, so your own handle
+  overwrote a collaborator's channel. The new merge only adds.
+- Fixed: chat sources added by *Auto-Connect*, *+ Add Collaborator* and *Auto-sync* got the id `c<count+1>`,
+  which repeats after a removal; Edit and Remove could then act on the wrong row. Ids are now always free.
+- Fixed: the Chat tab said "Chat Live" while the reader was stopped; time, name and text ran together; the
+  A-/A+ buttons were blank under the dark theme. The audio guide listed Instagram and X presets that do not
+  exist.
+- README: a Quick start with pictures of the real dock (`docs/images/`).
+
+### Neural chat voices, offline, in 43 languages (planned as 0.4.2, never released on its own)
+
 
 - New: the voice reader speaks with **neural voices that run on this PC** (sherpa-onnx with Kokoro v1.0 and
   Piper voices) instead of Windows voices. The catalogue (`voice/catalogue.json`) holds 185 voices in 43

@@ -712,3 +712,16 @@ if (!cpp.cases) {
   test('C++ chat L2: enough cases ran', () => assert.ok(cpp.cases.length >= 28, `only ${cpp.cases.length}\n${cpp.out}`));
   for (const c of cpp.cases) test('C++ ' + c.name, () => assert.ok(c.ok, c.detail));
 }
+
+test('browser search: Chrome first, then Chromium (per user, then system), Edge last; OMSC_CHROME wins', () => {
+  const { candidates } = require('../../reader/lib/chrome');
+  const local = String.raw`C:\Users\u\AppData\Local`, own = String.raw`D:\x\chrome.exe`;
+  const list = candidates({ LOCALAPPDATA: local, OMSC_CHROME: own });
+  assert.strictEqual(list[0], own);
+  const idx = s => list.findIndex(p => p.includes(s));
+  assert.ok(idx('Google') > 0 && idx('Google') < idx('Chromium'), list.join('\n'));
+  assert.ok(list[idx('Chromium')].startsWith(local), 'per-user Chromium before the system one');
+  assert.ok(list.includes(String.raw`C:\Program Files\Chromium\Application\chrome.exe`));
+  assert.ok(list[list.length - 1].endsWith('msedge.exe'));
+  assert.ok(!candidates({}).some(p => p.includes('undefined')), 'no LOCALAPPDATA: no broken entries');
+});

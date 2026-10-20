@@ -48,7 +48,8 @@ foreach ($p in $npmPins) {
   if ($sri -ne $p.sri) { Remove-Item $tgz -Force; throw "$($p.name) $($p.ver): integrity mismatch ($sri)" }
   $dest = Join-Path $tree "data\voice\node_modules\$($p.name)"
   New-Item -ItemType Directory -Force $dest | Out-Null
-  tar -xzf $tgz -C $dest --strip-components=1
+  # Windows' own bsdtar by full path: from Git Bash, GNU tar comes first on PATH and reads 'C:\...' as host:path
+  & (Join-Path $env:SystemRoot 'System32\tar.exe') -xzf $tgz -C $dest --strip-components=1
   if ($LASTEXITCODE -ne 0) { throw "could not unpack $($p.name)" }
 }
 

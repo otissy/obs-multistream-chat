@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.24)
-project(obs-multistream-chat VERSION 0.4.1 LANGUAGES CXX)
+project(obs-multistream-chat VERSION 0.5.0 LANGUAGES CXX)
 if(WIN32)
   enable_language(RC)
 endif()
@@ -45,7 +45,7 @@ add_library(oms_core STATIC
   src/core/json.cpp src/core/secret.cpp src/core/redact.cpp src/core/destination.cpp
   src/core/stats.cpp src/core/health.cpp src/core/config.cpp src/core/state_feed.cpp
   src/core/http_server.cpp src/core/chat_targets.cpp src/core/chat_hub.cpp src/core/random.cpp
-  src/core/aitum.cpp src/core/plan.cpp src/core/fleet.cpp src/core/voice.cpp)
+  src/core/aitum.cpp src/core/plan.cpp src/core/fleet.cpp src/core/voice.cpp src/core/setup_flow.cpp)
 target_include_directories(oms_core PUBLIC src/core)
 find_package(Threads REQUIRED)
 target_link_libraries(oms_core PUBLIC Threads::Threads)
@@ -56,7 +56,7 @@ endif()
 if(OMS_BUILD_TESTS)
   enable_testing()
   add_executable(oms_tests .tests/core/cpp/test_main.cpp .tests/core/cpp/test_basics.cpp
-    .tests/core/cpp/test_health.cpp .tests/core/cpp/test_config.cpp .tests/core/cpp/test_http.cpp .tests/core/cpp/test_chat.cpp .tests/core/cpp/test_aitum.cpp .tests/core/cpp/test_fleet.cpp .tests/core/cpp/test_voice.cpp)
+    .tests/core/cpp/test_health.cpp .tests/core/cpp/test_config.cpp .tests/core/cpp/test_http.cpp .tests/core/cpp/test_chat.cpp .tests/core/cpp/test_aitum.cpp .tests/core/cpp/test_fleet.cpp .tests/core/cpp/test_voice.cpp .tests/core/cpp/test_setup.cpp)
   target_link_libraries(oms_tests PRIVATE oms_core)
   oms_add_version_info(oms_tests "obs-multistream-chat core unit tests (not part of the plugin)" VFT_APP .exe)
   add_executable(oms_fixture_server .tests/core/cpp/fixture_server.cpp)

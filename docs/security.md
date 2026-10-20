@@ -68,7 +68,7 @@ Please report problems privately to the repository owner (otissy) rather than in
 ## The chat reader (since 0.2.0)
 
 **What the reader can do.** It runs as your Windows user, as `node reader\index.js`, started only by
-you (the dock button, or "Start with OBS" if you ticked it). It starts a headless Chrome with a fresh
+you (the Start button, or the "Start it" choice on the Chat sources tab: when OBS starts, or when you go live). It starts a headless Chrome with a fresh
 throw-away profile, opens the chat page of each channel you added (the URL is built from a fixed
 template per platform; a link you type must be on that platform's own host, or it is refused), and
 reads the chat list with a script that cannot click, type, scroll, navigate or send anything (a test

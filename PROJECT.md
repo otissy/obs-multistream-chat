@@ -11,6 +11,27 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## 0.5.0 (2026-10-20): dock overhaul, first load in a real OBS
+
+- **First time the plugin ran inside OBS**: a throw-away portable OBS 32.2.2 (`D:\builds\obs-portable`, zip sha-256 as
+  in Limits) loaded the DLL under the module name `obs-multistream-chat-dev`; log: config loaded, overlay server on
+  127.0.0.1, `dock registered (post load)`, Tools menu entry added. The user's real OBS was never touched: the portable
+  copy's `config\obs-studio\plugin_manager\modules.json` (a JSON array of `{module_name, enabled:false, ...}`) switched
+  off all 10 ProgramData plugins, and the log's "Loaded Modules" lists only bundled modules + the dev build. Not yet
+  run in it: streaming, the chat reader, the voice helper.
+- Dock: one row of tabs (Chat, Streams, Chat sources, Overlays, Voice), a "Get started" card (state in `ui-state.ini`,
+  not config.json), Overlays tab, Add-destination basic/advanced split. Chat sources: one add path +
+  add-only "from Streams" (`src/core/setup_flow.*`, 7 core tests). Fixed: Auto-Connect added a name on 4 platforms,
+  Auto-sync overwrote a collaborator, `c<count+1>` ids repeated after a removal.
+- README pictures: `OMSC_SHOTS=<dir>` (+ `OMSC_SHOTS_DEMO=1`, `OMSC_SHOTS_QUIT=1`) renders each page and dialog
+  offscreen with `QWidget::grab` (WA_DontShowOnScreen) and the OBS window with the dock docked; sample data in memory
+  only. Run with `--portable --multi --disable-updater --minimize-to-tray` so no window shows.
+- Chat reader: Chromium (`%LOCALAPPDATA%\Chromium\...`, `Program Files\Chromium\...`) is searched after Google Chrome
+  and before Edge (the author's PC has Chromium only).
+- Gotchas found by looking at the pictures, not by tests: Qt does not size a table column by its cell widget
+  (fixed width for the Start/Stop column); QTextBrowser ignores `margin-right` on spans; long combo items widen a
+  scroll page past the dock (AdjustToMinimumContentsLengthWithIcon).
+
 ## 0.4.0 (2026-10-17): Live in-dock chat, vertical scenes & canvas integration, audio tracks, key reveal
 
 - **In-dock Live Chat feed**: the streamer no longer needs to use a browser source overlay to read their own chat;
@@ -451,9 +472,9 @@ OBS browser source.
 - **2026-10-14** - chat (0.2.0): none of the five platform adapters has been run against a live page (forbidden while building); fixtures only. TikTok and X are experimental by design. Live checklist in README.
 - **2026-10-14** - chat: the overlay's emote images are fetched by the OBS browser source from the platforms' CDNs (allow-listed by CSP and by the hub); this is the only network traffic the overlay itself makes.
 - **2026-10-14** - chat: the reader's Chrome exposes a loopback DevTools port while it runs (brief asked for WebSocket CDP).
-- **2026-10-14** - 0.2.0 built with `scriptsuild.ps1 -Test`: core suite 122/122 in one process; obs-multistream-chat.dll 537,088 bytes, sha-256 b5344f902067e7fc2a572c9c9380c52983b8eee5ecc35a3f382036b456bc82aa; zip dist\obs-multistream-chat-0.2.0-windows-x64.zip sha-256 e6c79fc231e3255fc2acd0488e9513b2614658eab21bc9a34e55bc1cea5358c1. Still never loaded into OBS; the dock Chat tab and the child-process code compile and link but were not run.
+- **2026-10-14** - 0.2.0 built with `scripts\build.ps1 -Test`: core suite 122/122 in one process; obs-multistream-chat.dll 537,088 bytes, sha-256 b5344f902067e7fc2a572c9c9380c52983b8eee5ecc35a3f382036b456bc82aa; zip dist\obs-multistream-chat-0.2.0-windows-x64.zip sha-256 e6c79fc231e3255fc2acd0488e9513b2614658eab21bc9a34e55bc1cea5358c1. Still never loaded into OBS; the dock Chat tab and the child-process code compile and link but were not run.
 
-- **2026-10-15** - 0.3.0 built with `scriptsuild.ps1 -Test` (idle priority, 2 jobs): core suite 145/145 in one process (was 122); ladders core 190, glue 15, packaging 14 green; obs-multistream-chat.dll 670,208 bytes, sha-256 9679d68d1889cf16f052ebf055b24b2f2c92b9338a8bc6fa5ea713774c24b68f; zip dist\obs-multistream-chat-0.3.0-windows-x64.zip sha-256 e5742b6856bdc39f21e64d04c23f174128fa2d49c9d2093a8e85abbb24100703 (contains data
+- **2026-10-15** - 0.3.0 built with `scripts\build.ps1 -Test` (idle priority, 2 jobs): core suite 145/145 in one process (was 122); ladders core 190, glue 15, packaging 14 green; obs-multistream-chat.dll 670,208 bytes, sha-256 9679d68d1889cf16f052ebf055b24b2f2c92b9338a8bc6fa5ea713774c24b68f; zip dist\obs-multistream-chat-0.3.0-windows-x64.zip sha-256 e5742b6856bdc39f21e64d04c23f174128fa2d49c9d2093a8e85abbb24100703 (contains data
 eader). Chat/overlay ladders were not re-run (untouched; they start headless Chrome). Gotcha: the ladder's `findExe` reuses a stale `tests-vs\Release\oms_tests.exe`; delete it after core changes.
 - **2026-10-15** - read-only probe `oms_aitum_probe` run on the real active profile's aitum.json: status Ok, 2 canvases, 1 stream output mapped (encoder unset -> obs_x264/4500 default notes, canvas Vertical, no server/key); no key or server printed.
 

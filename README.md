@@ -42,7 +42,7 @@ Download and run **`obs-multistream-chat-<version>-windows-x64-setup.exe`** from
 ### Portable ZIP Archive
 Close OBS, extract `obs-multistream-chat-<version>-windows-x64.zip` so that the `obs-multistream-chat` folder ends up in `C:\ProgramData\obs-studio\plugins\`.
 
-Start OBS, then open the dock from **View > Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**).
+Start OBS, then open the dock from **Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**), and follow the [Quick start](#quick-start-5-minutes).
 
 ### Building from Source (Developers)
 Needs Visual Studio Build Tools 2022 with *Desktop development with C++*:
@@ -51,26 +51,84 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Test
 powershell -ExecutionPolicy Bypass -File scripts\package.ps1
 ```
 
+## Quick start (5 minutes)
+
+The pictures are the real dock (0.5.0) in a test copy of OBS 32.2.2, with sample channels and sample chat.
+
+**1. Open the panel.** In OBS: **Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**). Drag it
+next to your other docks. Until you are set up it shows a **Get started** card with the three steps below;
+each has a button that takes you to the right place, and each ticks itself off when it is done.
+
+![The panel docked on the right of OBS, with the Get started card](docs/images/00-obs-window.png)
+
+**2. Add where you stream.** Press **Add destination** (or **Streams > Add...**). Pick the platform, paste its
+stream key (from the platform's dashboard, see the table under [Setup](#setup)) and type the handle you want
+shown on stream. That is all: the server URL is filled in for platforms that have one fixed ingest, and the
+name follows the platform. Your normal OBS stream keeps going to the service in *Settings > Stream*; add
+each *extra* platform here.
+
+| First run | Add a destination |
+|---|---|
+| ![First run: Get started card, empty Streams tab](docs/images/01-first-run.png) | ![Add destination: platform, key, handle](docs/images/02-add-destination.png) |
+
+Need another canvas (vertical TikTok), another audio track, an own encoder, a delay or Aitum's settings?
+Open **Advanced options** in the same dialog ([details](#canvas-encoder-and-audio-track-per-destination-030)).
+It opens by itself when you edit a destination that already uses any of them.
+
+![The dialog with Advanced options open](docs/images/03-add-destination-advanced.png)
+
+**3. Add your chat.** Press **Add chat** (or open the **Chat sources** tab). Pick the platform, type the channel
+(or paste its link) and press **Add**; do the same for a collaborator's channel when you stream together.
+**Add my channels from Streams** adds a chat channel for every Twitch, Kick and TikTok destination that has a
+handle; it only adds what is missing and never changes a channel you added yourself. YouTube needs the id of
+each *live video*, so add that by hand. Under **Chat reader**, choose when it starts: only when you press
+Start, when OBS starts, or when you go live. Read [Merged chat](#merged-chat) once before you use it.
+
+| Streams | Chat sources |
+|---|---|
+| ![Streams tab with three destinations](docs/images/04-streams.png) | ![Chat sources tab: add a channel, the list, the reader](docs/images/05-chat-sources.png) |
+
+**4. Put it on stream.** Open the **Overlays** tab. There are two Browser sources: **Chat on stream** (all chats
+in one box) and **Platform icons** (an icon with your handle per platform, lit only while that destination
+is really sending). Pick a look, press **Copy link**, then in OBS **Sources > + > Browser**, paste it into *URL*
+and use the size shown under it.
+
+![Overlays tab: both links, look and size](docs/images/06-overlays.png)
+
+**5. Go live.** Start your normal OBS stream: destinations with *Start with the main stream* go live with it
+(or press the big **Start all destinations**). The line under the button says how many are live, the total
+bitrate and whether chat is being read. The **Chat** tab shows the merged chat for you, with the platform icon
+on each line; a number on the tab counts lines you have not seen yet.
+
+| Chat | Voice |
+|---|---|
+| ![Chat tab with merged chat from Twitch and Kick](docs/images/07-chat.png) | ![Voice tab: read chat aloud, chime](docs/images/08-voice.png) |
+
+**6. Optional: read chat aloud.** The **Voice** tab reads chat with voices that run on this PC; see
+[Chat voices](#chat-voices-voice-reader). (The picture comes from a test copy without voice packs installed,
+hence "No voices installed".)
+
 ## Finding the panel
 
-- **View > Docks > OBS Multistream Chat**: the dock, like every other.
+- **Docks > OBS Multistream Chat** (OBS 30 and older: *View > Docks*): the dock, like every other.
 - **Tools > OBS Multistream Chat**: opens (or raises) the same panel. If the dock was not registered it opens in
   its own floating window, which you can leave floating or drag into a dock area.
 - The OBS log (Help > Log Files > View Current Log) says which happened: `dock registered`,
   `dock registration returned false`, or `frontend main window not ready`, plus `Tools > OBS Multistream Chat added`.
-- During a stream the panel shows one big **Start/Stop all destinations** button, a line such as
-  `2 of 3 live | 11800 kbps | chat: 3 of 3 sources reading`, and per destination the status dot, canvas / track, bitrate,
-  dropped %, uptime and a Start/Stop button.
+- Layout (0.5.0): the big **Start/Stop all destinations** button and a line such as
+  `2 of 3 live | 11800 kbps | chat: 3 of 3 sources reading` stay at the top; under them one row of tabs:
+  **Chat** (the merged chat for you), **Streams** (destinations: status dot, handle, audio track, and while
+  anything is live bitrate, dropped %, uptime; Start/Stop per row), **Chat sources**, **Overlays**, **Voice**.
+  The version and *Check for updates* are in the line at the bottom.
 
 ## Setup
 
-1. Dock **OBS Multistream Chat** > **Add...**
-2. Pick the platform. The URL is filled in where the platform has one fixed ingest; otherwise paste
-   the URL from the platform's dashboard.
-3. Paste the stream key (masked; **Reveal** shows what you typed). Type the handle you want shown on
-   stream.
-4. Leave **Video encoder mode** on *Shared* unless you want another canvas, another resolution or another
-   audio track for this destination (next section).
+1. **Streams > Add...** (or **Add destination** on the Get started card).
+2. Pick the platform. The server URL is filled in (and hidden) where the platform has one fixed ingest;
+   for Kick, TikTok, Trovo and custom servers the URL field shows: paste it from the platform's dashboard.
+3. Paste the stream key (masked; **Reveal** shows it). Type the handle you want shown on stream.
+4. Leave **Advanced options** closed unless you want another canvas, another resolution, another
+   audio track, a delay or Aitum's settings for this destination (next section).
 5. Start your normal OBS stream. Destinations with *Start with the main stream* go live with it.
 
 ### Canvas, encoder and audio track per destination (0.3.0)
@@ -113,7 +171,7 @@ not be re-checked offline: **confirm them on your dashboard.** Platforms change 
 
 ### Add the overlay to OBS
 
-1. Dock > **Copy overlay URL**.
+1. **Overlays > Platform icons > Copy link** (pick the look first: dark, transparent or light).
 2. OBS: **Sources > + > Browser**, paste the URL, width 900 and height 120 (vertical: see below),
    untick "Shutdown source when not visible" and "Refresh browser when scene becomes active".
 3. Tune it with query options appended to the URL:
@@ -136,14 +194,15 @@ answering, the overlay dims everything instead of showing a stale "live".
 One chat for all your platforms, in one OBS browser source, with an icon per line for the platform it
 came from. Nothing is sent to any platform, you never log in, and no API, token or OAuth is involved.
 
-**How it works.** The dock's **Chat** tab starts `node reader\index.js` as a hidden child process. That
+**How it works.** The **Chat reader** (Chat sources tab) starts `node reader\index.js` as a hidden child process. That
 program opens each chat page you added in a *headless Chrome of its own* (a throw-away profile that is
 deleted when it exits, no extension, no cookies kept, no window), watches the page's chat list, and
 posts the lines it sees to this plugin over `127.0.0.1`. The plugin cleans them (plain text only),
 removes duplicates, puts them in order, applies your blocklist and serves them to the overlay.
 
 **Need:** Node.js 22 or newer (`node` on PATH, or set `chat.node_path` in the plugin's `config.json`) and
-Google Chrome in its normal place. Nothing else is installed or downloaded.
+Google Chrome or Chromium in its normal place (Microsoft Edge as a last resort; the environment variable
+`OMSC_CHROME` can name any other). Nothing else is installed or downloaded.
 
 **Read this first** (details in [docs/limits.md](docs/limits.md) and [docs/security.md](docs/security.md)):
 
@@ -161,16 +220,20 @@ Google Chrome in its normal place. Nothing else is installed or downloaded.
 
 ### Set it up
 
-1. Dock > **Chat** tab > **Add...**: pick the platform and enter the channel (Twitch, Kick), the
+1. **Chat sources > Add a chat channel**: pick the platform and enter the channel (Twitch, Kick), the
    11-character video id or the link of the *live video* (YouTube), the `@username` (TikTok) or the
-   broadcast link `x.com/i/broadcasts/...` (X). Only the platform's own links are accepted.
-2. Press **Start chat reader**. Each source shows its status: *Starting*, *Reading*, *Quiet*, *Page
-   layout changed or login needed*, *Needs login*, *Error*. (It never starts by itself unless you tick
-   **Start with OBS**.) Press the button again, or close OBS, to stop it; Chrome goes with it.
-3. **Copy chat URL**, then in OBS add a **Browser** source with that URL (for example 480 x 720). Options
-   go in the URL: `?theme=dark|light|transparent&font=22&size=24&max=30&fade=0&colors=platform|hash|off&emotes=1&align=bottom&backlog=30`
+   broadcast link `x.com/i/broadcasts/...` (X), then **Add**. Only the platform's own links are accepted;
+   the same channel is never added twice. **Add my channels from Streams** adds one per Twitch, Kick and
+   TikTok destination with a handle, add-only.
+2. **Chat reader > Start chat reader** (or **Start reader** on the Chat tab). Each source shows its status:
+   *Starting*, *Reading*, *Quiet*, *Page layout changed or login needed*, *Needs login*, *Error*.
+   **Start it:** *Only when I press Start*, *When OBS starts* or *When I go live*. Press the button again,
+   or close OBS, to stop it; Chrome goes with it.
+3. **Overlays > Chat on stream > Copy link**, then in OBS add a **Browser** source with that URL (for
+   example 480 x 720). More options go in the URL: `?theme=dark|light|transparent&font=22&size=24&max=30&fade=0&colors=platform|hash|off&emotes=1&align=bottom&backlog=30`
    (`size` = icon pixels, `fade` = seconds until a line disappears, 0 = stay).
-4. Optional: hide commands (`!word`), well-known bots, blocked words and blocked users (Chat tab).
+4. Optional: **Filters** (Chat sources tab) hide commands (`!word`), well-known bots, blocked words and
+   blocked users.
 
 ### Live checklist (to do once, by you)
 
@@ -207,7 +270,7 @@ are where to look; open an issue with the platform and the status text, not with
 
 ## Chat voices (voice reader)
 
-The **Voice & Alerts** tab can read chat aloud with neural voices that run on your PC: no internet, no
+The **Voice** tab can read chat aloud with neural voices that run on your PC: no internet, no
 account, nothing sent anywhere. They are [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) and
 [Piper](https://github.com/OHF-Voice/piper1-gpl) voices run by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx):
 185 voices in 43 languages (`voice/catalogue.json`), including Scottish, Northern and Southern English,
@@ -220,7 +283,7 @@ Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Port
   (`data\voice\index.js`), never inside OBS, so a voice problem cannot crash OBS. Its log is
   `voice-helper.log` next to the plugin's `config.json`.
 - Links are read as "a link"; emoji, spam runs ("noooooo") and very long messages are trimmed. When chat
-  is faster than the voice, the oldest waiting lines are skipped. **Preview Voice** cuts off whatever is
+  is faster than the voice, the oldest waiting lines are skipped. **Preview** cuts off whatever is
   playing.
 - Every voice pack is checked before it ships: its archive must match a pinned SHA-256, and its own model
   card must name a licence that allows redistribution and commercial use (`scripts/fetch-voices.js`).
@@ -230,9 +293,9 @@ Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Port
 
 ## Troubleshooting
 
-- **Dock missing:** View > Docks > OBS Multistream Chat. Check OBS's log (Help > Log Files) for lines starting
+- **Dock missing:** Docks > OBS Multistream Chat (older OBS: View > Docks), or Tools > OBS Multistream Chat. Check OBS's log (Help > Log Files) for lines starting
   `[obs-multistream-chat]`. Keys never appear there.
-- **Start is greyed out:** in *Shared* mode a destination can only start while the main stream is
+- **Start is greyed out:** a destination without a stream key cannot start. In *Shared* mode a destination can only start while the main stream is
   live. Start the main stream, or switch that destination to the x264 encoder.
 - **Stays "Connecting" then "Reconnecting":** wrong URL, wrong key, blocked port (RTMP uses 1935,
   RTMPS 443), or the platform is not accepting the key yet. The tooltip on the status shows the reason.

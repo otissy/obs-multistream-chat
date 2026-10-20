@@ -17,6 +17,9 @@ function candidates(env = process.env) {
   list.push('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
   list.push('C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe');
   if (env.LOCALAPPDATA) list.push(path.join(env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+  // Chromium (some PCs have no Google Chrome): per-user install in LOCALAPPDATA, system-wide in Program Files
+  if (env.LOCALAPPDATA) list.push(path.join(env.LOCALAPPDATA, 'Chromium', 'Application', 'chrome.exe'));
+  list.push('C:\\Program Files\\Chromium\\Application\\chrome.exe');
   list.push('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'); // same engine, last resort
   return list;
 }
@@ -116,4 +119,4 @@ async function launch(opts = {}) {
   return { cdp, proc, dir, close, hasExited: () => exited };
 }
 
-module.exports = { findChrome, launch, cleanStaleProfiles, PREFIX, MARKER };
+module.exports = { candidates, findChrome, launch, cleanStaleProfiles, PREFIX, MARKER };

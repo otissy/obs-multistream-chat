@@ -161,7 +161,8 @@ if (!chromeAvailable() || !findFixtureExe()) {
         assert.deepStrictEqual(Object.keys(info.out).sort(), ['kick', 'tiktok', 'twitch', 'x', 'youtube']);
         for (const [p, v] of Object.entries(info.out)) {
           assert.ok(v.mask.includes(`/icons/${p}.svg`), `${theme} ${p}: ${v.mask}`);
-          assert.ok(v.w >= 20 && v.w <= 30, `${theme} ${p} icon width ${v.w}`);
+          // 0.5.0: a small logo next to the name, 0.8 x the font (otiyyy: "just a tiny logo next to the person"); was 1.1 x
+          assert.ok(v.w >= 16 && v.w <= 19, `${theme} ${p} icon width ${v.w} (font 22: about 18)`);
           assert.notStrictEqual(v.bg, 'rgba(0, 0, 0, 0)', `${theme} ${p} icon has a colour`);
         }
         assert.ok(info.sw <= 420 && info.sh <= 520, `no overflow in ${theme}: ${JSON.stringify(info)}`);

@@ -62,6 +62,32 @@ if (!chromeAvailable()) {
     await waitFor(() => profileDirs().length <= before, 10000);
   });
 
+  test('reader: a YouTube channel (@name) finds its live video by itself; an offline channel says so', async () => {
+    const fake = await startFake();
+    const stub = await startStubMerge();
+    fake.setChannel('livechan', 'Ab3defGhijk');
+    fake.register('youtube', 'Ab3defGhijk', 'youtube');
+    fake.setChannel('quietchan', '');
+    const cfg = writeCfg(stub.port, [{ id: 'c1', platform: 'youtube', target: '@livechan' }, { id: 'c2', platform: 'youtube', target: '@quietchan' }]);
+    const ctl = await start({ config: cfg, testOrigin: fake.origin }, Object.assign({}, process.env, { OMSC_CHAT_TOKEN: TOKEN }), { noStagger: true });
+    try {
+      await waitFor(() => stub.status('c1') && stub.status('c1').state === 'reading' && stub.status('c2') && stub.status('c2').state === 'offline', 25000);
+      fake.append('youtube', 'Ab3defGhijk', BUILD.youtube({ id: 'yt-ch-1', author: 'ChanFan', segments: ['found you'] }));
+      await waitFor(() => stub.messages().length >= 1, 10000);
+      const m = stub.messages()[0];
+      assert.deepStrictEqual([m.platform, m.source, m.author, m.parts[0].v], ['youtube', 'c1', 'ChanFan', 'found you']);
+      assert.strictEqual(fake.pageLoads('/@livechan/live'), 1, 'the channel page is opened once');
+      assert.strictEqual(fake.pageLoads('/live_chat?is_popout=1&v=Ab3defGhijk'), 1, 'then the live video\'s chat');
+      assert.strictEqual(fake.pageLoads('/@quietchan/live'), 1);
+      assert.strictEqual(fake.pageLoads('/live_chat?is_popout=1&v='), 1, 'no chat page for the offline channel');
+      assert.match(stub.status('c2').detail, /@quietchan is not live right now; checking again every 120 s/);
+    } finally {
+      await ctl.shutdown(0);
+      await ctl.done;
+      fake.close(); stub.close(); fs.rmSync(cfg, { force: true });
+    }
+  });
+
   test('reader: a wrong token ends the reader with code 3 and nothing is retried', async () => {
     const fake = await startFake();
     const stub = await startStubMerge({ token: 'a-completely-different-token-value' });

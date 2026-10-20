@@ -1,5 +1,6 @@
 #include "dock.hpp"
 #include "chat_panel.hpp"
+#include "audio_page.hpp"
 #include "aitum.hpp"
 #include "destination.hpp"
 #include "plan.hpp"
@@ -30,6 +31,7 @@
 #include <QScrollArea>
 #include <QSettings>
 #include <QSpinBox>
+#include <QTabBar>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTextBrowser>
@@ -741,10 +743,13 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	tabs_ = new QTabWidget();
 	tabs_->setDocumentMode(true);
 	tabs_->setUsesScrollButtons(true);
+	tabs_->tabBar()->setStyleSheet("QTabBar::tab { padding: 5px 9px; min-width: 0; }"); // six tabs fit a 460 px dock
 	QWidget *streams_page = new QWidget();
 	QWidget *overlays_page = new QWidget();
 	tab_chat_ = tabs_->addTab(chat_panel_->live_page(), T("Tab.Chat"));
 	tab_streams_ = tabs_->addTab(streams_page, T("Tab.Streams"));
+	audio_page_ = new AudioPage(nullptr, [this]() { save_and_sync(); });
+	tab_audio_ = tabs_->addTab(scrolled(audio_page_), T("Tab.Audio"));
 	tab_sources_ = tabs_->addTab(scrolled(chat_panel_->sources_page()), T("Tab.Sources"));
 	tab_overlays_ = tabs_->addTab(scrolled(overlays_page), T("Tab.Overlays"));
 	tab_voice_ = tabs_->addTab(scrolled(chat_panel_->voice_page()), T("Tab.Voice"));
@@ -775,6 +780,7 @@ MultistreamDock::MultistreamDock(QWidget *parent) : QWidget(parent)
 	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 	table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
 	table_->horizontalHeader()->setSectionResizeMode(8, QHeaderView::Fixed);
+	table_->setColumnHidden(4, true); // the audio track is chosen on the Audio tab since 0.5.0
 	table_->setColumnWidth(8, 64); // the Start/Stop button: cell widgets do not size their column
 	root->addWidget(table_, 1);
 
@@ -1120,6 +1126,8 @@ void MultistreamDock::refresh()
 		ov_url_[i]->setText(u.isEmpty() ? T("Msg.NoServer") : u);
 	}
 	update_setup(st.cfg);
+	if (audio_page_)
+		audio_page_->refresh();
 	streams_empty_->setVisible(views.empty());
 	bool any_live = false;
 	for (size_t i = 0; i < views.size(); ++i)
@@ -1370,6 +1378,13 @@ void MultistreamDock::capture_screens(const QString &dir, bool demo)
 		st.mgr->sync_with_config();
 	}
 	tab(d, d->tab_streams_, "04-streams");
+	if (demo) {
+		// sample routing for the Audio picture: Twitch on track 1, YouTube on track 2 (e.g. no music), Kick as the main stream
+		for (size_t i = 0; i < st.cfg.destinations.size(); ++i)
+			st.cfg.destinations[i].audio_track = i == 0 ? 1 : i == 1 ? 2 : 0;
+		st.mgr->sync_with_config();
+	}
+	tab(d, d->tab_audio_, "09-audio");
 
 	if (demo) {
 		std::string t, err;

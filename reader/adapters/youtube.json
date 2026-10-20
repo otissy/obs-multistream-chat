@@ -5,6 +5,8 @@
   "title": "YouTube live chat popout",
   "note": "Selectors cross-checked by reading Social Stream Ninja's sources/youtube.js (GPL-3.0, see NOTICE). The popout form live_chat?is_popout=1&v=<id> is the one that source itself navigates to; `embed_domain` is only needed by the embedded chat iframe, not by the popout. In the EU YouTube may show a cookie-consent page first: the pack sets the consent PREFERENCE cookie SOCS (not a login) and reports 'consent' if the page asks anyway.",
   "url": "https://www.youtube.com/live_chat?is_popout=1&v={target}",
+  "channelUrl": "https://www.youtube.com/@{handle}/live",
+  "channelRecheckSec": 120,
   "hosts": ["www.youtube.com"],
   "consentHosts": ["consent.youtube.com"],
   "cookies": [{ "name": "SOCS", "value": "CAI", "domain": ".youtube.com" }],

@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 class QCheckBox;
@@ -60,6 +61,8 @@ private:
 	void show_add_info(const QString &text, bool good);
 	void start_reader_if_wanted();
 	void reset_unread();
+	void load_voice_settings();
+	void save_voice_settings();
 	void play_tts(const std::string &author, const std::string &platform, const std::string &message);
 	void play_alert_sound(const std::string &type);
 	void check_for_updates();
@@ -125,6 +128,8 @@ private:
 	QPushButton *check_updates_btn_ = nullptr;
 	QLabel *update_status_lbl_ = nullptr;
 	QPushButton *download_update_btn_ = nullptr;
+	std::vector<std::pair<std::string, QComboBox *>> platform_voice_; // platform id -> its voice ("" = main voice)
+	bool loading_voice_ = false;
 	std::unique_ptr<ChatSpeaker> speaker_; // created on the first line to read
 };
 

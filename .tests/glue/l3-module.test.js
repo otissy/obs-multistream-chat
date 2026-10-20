@@ -126,7 +126,7 @@ test('the dock has one row of tabs and the chat panel has none of its own', () =
   const dock = strip(read('src', 'obs', 'dock.cpp'));
   const chat = strip(read('src', 'obs', 'chat_panel.cpp'));
   assert.ok(!/new QTabWidget/.test(chat), 'chat_panel.cpp must not build its own tab bar');
-  for (const t of ['Tab.Chat', 'Tab.Streams', 'Tab.Sources', 'Tab.Overlays', 'Tab.Voice']) assert.ok(dock.includes('T("' + t + '")'), t);
+  for (const t of ['Tab.Chat', 'Tab.Streams', 'Tab.Audio', 'Tab.Sources', 'Tab.Overlays', 'Tab.Voice']) assert.ok(dock.includes('T("' + t + '")'), t);
   assert.match(dock, /chat_panel_->attach\(tabs_, tab_chat_/);
 });
 
@@ -159,4 +159,15 @@ test('every README picture exists and every picture is used', () => {
   for (const u of used) assert.ok(fs.existsSync(path.join(ROOT, u)), u);
   const files = fs.readdirSync(path.join(ROOT, 'docs', 'images')).map(f => 'docs/images/' + f);
   assert.deepStrictEqual(files.filter(f => !used.includes(f)), []);
+});
+
+test('the Setup quick start page shows existing pictures, offline, and Setup offers to open it', () => {
+  const page = read('docs', 'quickstart.html');
+  const pics = [...page.matchAll(/<img src="(images\/[^"]+\.png)"/g)].map(m => m[1]);
+  assert.ok(pics.length >= 8, 'the page shows the step pictures');
+  for (const u of pics) assert.ok(fs.existsSync(path.join(ROOT, 'docs', u)), u);
+  assert.ok(!/<script|https?:\/\/(?!github)/i.test(page.replace(/github\.com\/otissy[^\s<]*/g, '')), 'no scripts, no web resources');
+  const iss = read('packaging', 'installer.iss');
+  assert.ok(iss.includes('Filename: "{app}\\docs\\quickstart.html"; Description: "Open the Quick start guide (with pictures)"; Flags: postinstall shellexec skipifsilent nowait runasoriginaluser'));
+  assert.ok(iss.includes('Source: "{#SourceTree}\\docs\\*"; DestDir: "{app}\\docs"'), 'docs (with the pictures) are installed');
 });

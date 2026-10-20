@@ -32,6 +32,29 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
   (fixed width for the Start/Stop column); QTextBrowser ignores `margin-right` on spans; long combo items widen a
   scroll page past the dock (AdjustToMinimumContentsLengthWithIcon).
 
+## 0.5.0, part 2 (2026-10-20, same release): YouTube by channel, Audio tab, voice per platform, low-memory reader
+
+- **YouTube by channel**: target `@handle` (lower case) or a `UC...` channel id. The reader (source.js `_resolveLive`)
+  opens `youtube.com/@handle/live` (pack `channelUrl`, `channelRecheckSec` 120) before the engine is installed, reads
+  the canonical `watch?v=<id>`, then opens that video's popout chat. No id: state `offline`, look again after 120 s.
+  disabled/replay/stub on a channel source: look again after 120 s. Rules mirrored in reader/lib/targets.js and
+  core/chat_targets.cpp, checked by `.tests/chat/vectors/targets.json` (75 vectors). Bare 11-character input is a
+  video id only when it has a digit, `-` or `_` ("RoyalAscent" = channel). Verified on a real channel (@lofigirl): reading in 2.5 s.
+- **Audio tab** (src/obs/audio_page.*): destination -> track, meters from `obs_add_raw_audio_callback` (planar float, peak per
+  tick, only while the tab is visible), main-stream track from the profile (`[Output] Mode`, `[AdvOut] TrackIndex`, else 1),
+  "silent" after ~5 s below -55 dBFS. The Streams table keeps its track column hidden (column indices unchanged).
+- **Voice per platform** + every Voice-tab setting persisted in `ui-state.ini` (QSettings group `voice`); core
+  `voice_for_platform` falls back to the main voice when a platform's voice is not installed.
+- **Low-memory reader (default)**: all sources share the default browser context, site isolation and per-site renderers
+  off, background throttling off. Benchmarks in docs/benchmarks.md (5 chats 1,243 -> 410 MB; real pages 1,215 -> 829 MB,
+  CPU 2.2 % -> 0.4 %). Off: env `OMSC_READER_LOWMEM=0` (the plugin rewrites chat-reader.json, so a file setting would not stick).
+- **Fixed**: reader config allowed at most 10 sources while the plugin allows 32 (11+ enabled channels = no reader at all);
+  "from Streams" fell back to the destination name, which 0.5.0 fills with the platform label.
+- **Setup**: `docs/quickstart.html` (offline, the README pictures) in the Start menu and offered at the end of Setup.
+- Lesson (2026-10-20): the reader's Chrome profile prefix `oms-chat-profile-` is shared with the user's real OBS reader. A
+  benchmark that filtered by it counted (and a cleanup killed) the user's live reader. Measure and stop only descendants
+  of your own process.
+
 ## 0.4.0 (2026-10-17): Live in-dock chat, vertical scenes & canvas integration, audio tracks, key reveal
 
 - **In-dock Live Chat feed**: the streamer no longer needs to use a browser source overlay to read their own chat;
@@ -485,6 +508,13 @@ eader). Chat/overlay ladders were not re-run (untouched; they start headless Chr
 - **2026-10-20** - known: `package.ps1` under Windows PowerShell 5.1 writes zip entries with backslashes (`obs-multistream-chat\data\...`). Windows Explorer copes; some other unzip tools do not. Pre-existing, not fixed.
 - **2026-10-20** - fixed: `voices.generated.iss` started with a `;` comment and is #included inside `[Code]`, so every setup build with voices failed ("'BEGIN' expected", line 1). Same trap guarded in `voice-extract.iss` and by tests.
 - **2026-10-20** - fixed: dead locale key `Col.Source` (unused since 0.4.1) failed the glue ladder.
+
+- **2026-10-20** - known: `.tests/voice/l4-e2e.test.js` "unpack ... missing bzip2" fails when the ladder is started from
+  PowerShell (no bzip2 on PATH there) and passes from Git Bash and on CI. Not changed in 0.5.0.
+- **2026-10-20** - known: `.tests/packaging` "install.ps1 never touches the real ProgramData plugin folder" fails for an hour
+  after a real install into ProgramData (it compares the folder's mtime with now). Expected after an install, not a regression.
+- **2026-10-20** - unverified: the Audio tab's meters with real audio (the portable OBS had no sources routed), and
+  `peak_to_db` / `db_to_bar` have no unit test (they live in the OBS glue).
 
 ## Dropped approaches
 

@@ -96,7 +96,7 @@ TEST(L2, from_destinations_is_add_only_and_keeps_a_collaborator)
 	s.push_back(src("c1", "twitch", "collab_friend"));
 	std::vector<Destination> d;
 	d.push_back(dest("twitch", "my_channel"));
-	d.push_back(dest("youtube", "My YT"));     // needs a video id: skipped
+	d.push_back(dest("youtube", "My YT"));     // not a channel handle (space): skipped
 	d.push_back(dest("facebook", "me"));       // no chat reader: skipped
 	d.push_back(dest("kick", "", "kickname"));  // no handle: the name is used
 	CHECK_EQ(add_sources_from_destinations(d, s), 2);
@@ -108,6 +108,41 @@ TEST(L2, from_destinations_is_add_only_and_keeps_a_collaborator)
 	// running it again adds nothing
 	CHECK_EQ(add_sources_from_destinations(d, s), 0);
 	CHECK_EQ(s.size(), static_cast<size_t>(3));
+}
+
+TEST(L2, from_destinations_adds_the_youtube_channel_by_handle)
+{
+	std::vector<ChatSource> s;
+	std::vector<Destination> d;
+	d.push_back(dest("youtube", "RoyalAscent"));        // 11 letters: still the channel, never a video id
+	d.push_back(dest("youtube", "@Other_Chan"));
+	d.push_back(dest("youtube", "", "MyYouTubeName"));   // YouTube never falls back to the name
+	CHECK_EQ(add_sources_from_destinations(d, s), 2);
+	CHECK_EQ(s[0].target, std::string("@royalascent"));
+	CHECK_EQ(s[1].target, std::string("@other_chan"));
+	CHECK_EQ(chat_page_url("youtube", s[0].target), std::string("https://www.youtube.com/@royalascent/live"));
+}
+
+TEST(L2, voice_for_platform_uses_the_platform_voice_else_the_main_one)
+{
+	std::vector<std::pair<std::string, std::string>> per = {{"twitch", "kokoro.af_heart"}, {"kick", ""}, {"youtube", "piper.gone"}};
+	std::vector<std::string> installed = {"kokoro.af_heart", "kokoro.bf_emma"};
+	CHECK_EQ(voice_for_platform(per, "twitch", "kokoro.bf_emma", installed), std::string("kokoro.af_heart"));
+	CHECK_EQ(voice_for_platform(per, "kick", "kokoro.bf_emma", installed), std::string("kokoro.bf_emma"));    // "same as main"
+	CHECK_EQ(voice_for_platform(per, "youtube", "kokoro.bf_emma", installed), std::string("kokoro.bf_emma")); // uninstalled
+	CHECK_EQ(voice_for_platform(per, "tiktok", "kokoro.bf_emma", installed), std::string("kokoro.bf_emma"));  // not set
+	CHECK_EQ(voice_for_platform({}, "twitch", "", installed), std::string(""));
+}
+
+TEST(L2, from_destinations_ignores_a_name_that_is_just_the_platform_label)
+{
+	// 0.5.0's dialog fills the name with the platform's label; that is not a channel called "twitch"
+	std::vector<ChatSource> s;
+	std::vector<Destination> d;
+	d.push_back(dest("twitch", "", "Twitch"));
+	d.push_back(dest("kick", "", "kick"));
+	CHECK_EQ(add_sources_from_destinations(d, s), 0);
+	CHECK(s.empty());
 }
 
 TEST(L2, from_destinations_skips_handles_that_are_not_channels)

@@ -5,6 +5,7 @@
 #include "config.hpp"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace oms {
@@ -35,6 +36,11 @@ AddResult add_chat_source(std::vector<ChatSource> &sources, const std::string &p
 // name (Twitch, Kick, TikTok), from its handle (else its name). Add-only: an existing source is never changed
 // or replaced, so a collaborator's channel on the same platform stays. Returns how many were added.
 int add_sources_from_destinations(const std::vector<Destination> &dests, std::vector<ChatSource> &sources);
+
+// The voice that reads a line from `platform`: its own voice when one is set and still installed,
+// else `main_voice`. `per_platform` maps platform id -> voice id ("" = same as the main voice).
+std::string voice_for_platform(const std::vector<std::pair<std::string, std::string>> &per_platform, const std::string &platform,
+			       const std::string &main_voice, const std::vector<std::string> &installed);
 
 // Reader start mode, one choice instead of two checkboxes: 0 = manually, 1 = when OBS starts, 2 = when I go live.
 int reader_start_mode(const ChatConfig &c);

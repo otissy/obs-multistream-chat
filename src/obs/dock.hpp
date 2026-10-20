@@ -16,6 +16,7 @@ class QTableWidget;
 
 namespace oms {
 
+class AudioPage;
 class ChatPanel;
 struct RuntimeView;
 struct Config;
@@ -45,7 +46,8 @@ private:
 	QLabel *double_;
 	QTableWidget *table_;
 	QTabWidget *tabs_ = nullptr;
-	int tab_chat_ = 0, tab_streams_ = 1, tab_sources_ = 2, tab_overlays_ = 3, tab_voice_ = 4;
+	int tab_chat_ = 0, tab_streams_ = 1, tab_audio_ = 2, tab_sources_ = 3, tab_overlays_ = 4, tab_voice_ = 5;
+	AudioPage *audio_page_ = nullptr;
 	QLabel *streams_empty_ = nullptr;
 	QFrame *setup_card_ = nullptr;
 	QLabel *setup_title_ = nullptr;

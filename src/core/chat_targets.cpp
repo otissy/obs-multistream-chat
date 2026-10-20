@@ -133,6 +133,22 @@ bool twitch_name(const std::string &s) { return all_of_class(s, "_", 3, 25); }
 bool kick_name(const std::string &s) { return all_of_class(s, "_-", 3, 25); }
 bool tiktok_name(const std::string &s) { return all_of_class(s, "_.", 2, 24) && s.back() != '.'; }
 bool youtube_id(const std::string &s) { return all_of_class(s, "_-", 11, 11); }
+// YouTube channel handle without the @: 3-30 of a-z 0-9 _ - . , not starting or ending with a dot
+bool youtube_handle(const std::string &s) { return all_of_class(s, "_-.", 3, 30) && s.front() != '.' && s.back() != '.'; }
+// YouTube channel id: UC + 22 of A-Z a-z 0-9 _ -
+bool youtube_channel_id(const std::string &s) { return s.size() == 24 && s.compare(0, 2, "UC") == 0 && all_of_class(s, "_-", 24, 24); }
+bool has_digit_or_dash(const std::string &s) { return s.find_first_of("0123456789_-") != std::string::npos; }
+
+// "@handle" (lower case) or false + err
+bool youtube_channel(const std::string &handle, std::string &target, std::string &err)
+{
+	if (!youtube_handle(handle)) {
+		err = "that is not a valid YouTube channel handle (@name)";
+		return false;
+	}
+	target = "@" + lower(handle);
+	return true;
+}
 bool x_id(const std::string &s) { return all_of_class(s, "_-", 8, 40); }
 
 // TikTok names may contain dots, so a dot alone does not make a TikTok input a link.
@@ -148,7 +164,7 @@ const std::vector<ChatPlatform> &chat_platforms()
 {
 	static const std::vector<ChatPlatform> v = {
 		{"twitch", "Twitch", false, "channel name, or a twitch.tv link"},
-		{"youtube", "YouTube", false, "11-character video id, or a youtube.com / youtu.be link to the live stream"},
+		{"youtube", "YouTube", false, "channel as @name (the live stream is found by itself), or a video id or link"},
 		{"kick", "Kick", false, "channel name, or a kick.com link"},
 		{"tiktok", "TikTok (experimental)", true, "@username, or a tiktok.com live link"},
 		{"x", "X (experimental)", true, "broadcast id, or an x.com/i/broadcasts/... link"}};
@@ -185,11 +201,24 @@ bool normalize_chat_target(const std::string &platform, const std::string &input
 		}
 	}
 	std::string cand;
+	// YouTube: a channel (@handle, or a UC... channel id) is found live by the reader; an 11-character id is one video
+	if (platform == "youtube" && input[0] == '@' && input.find('/') == std::string::npos)
+		return youtube_channel(input.substr(1), target, err);
 	bool is_url = looks_like_url(platform, input);
 	if (!is_url) {
 		cand = input;
 		if (platform == "tiktok" && !cand.empty() && cand[0] == '@')
 			cand = cand.substr(1);
+		if (platform == "youtube") {
+			if (youtube_channel_id(cand)) {
+				target = cand;
+				return true;
+			}
+			// bare 11 characters with a digit, - or _ is a video id; anything else typed bare is a channel name
+			// ("RoyalAscent" is 11 letters: a channel, not a video)
+			if (!(youtube_id(cand) && has_digit_or_dash(cand)))
+				return youtube_channel(cand, target, err);
+		}
 	} else {
 		Url u;
 		if (!parse_url(input, u)) {
@@ -215,6 +244,17 @@ bool normalize_chat_target(const std::string &platform, const std::string &input
 					return false;
 				}
 				cand = u.segs[0];
+			} else if (host_in(u.host, {"youtube.com", "www.youtube.com", "m.youtube.com"}) && !u.segs.empty() &&
+				   !u.segs[0].empty() && u.segs[0][0] == '@') {
+				return youtube_channel(u.segs[0].substr(1), target, err); // youtube.com/@name, /@name/live ...
+			} else if (host_in(u.host, {"youtube.com", "www.youtube.com", "m.youtube.com"}) && u.segs.size() >= 2 &&
+				   u.segs[0] == "channel") {
+				if (!youtube_channel_id(u.segs[1])) {
+					err = "that YouTube channel link has no valid channel id (UC...)";
+					return false;
+				}
+				target = u.segs[1]; // youtube.com/channel/UC...
+				return true;
 			} else if (host_in(u.host, {"youtube.com", "www.youtube.com", "m.youtube.com"})) {
 				if (!u.segs.empty() && (u.segs[0] == "watch" || u.segs[0] == "live_chat"))
 					cand = query_param(u.query, "v");
@@ -270,6 +310,10 @@ std::string chat_page_url(const std::string &platform, const std::string &target
 		return std::string();
 	if (platform == "twitch")
 		return "https://www.twitch.tv/popout/" + t + "/chat";
+	if (platform == "youtube" && t[0] == '@')
+		return "https://www.youtube.com/" + t + "/live"; // the channel: the reader finds the live video there
+	if (platform == "youtube" && youtube_channel_id(t))
+		return "https://www.youtube.com/channel/" + t + "/live";
 	if (platform == "youtube")
 		return "https://www.youtube.com/live_chat?is_popout=1&v=" + t;
 	if (platform == "kick")

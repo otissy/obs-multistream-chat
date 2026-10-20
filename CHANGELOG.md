@@ -4,10 +4,29 @@
 
 ### The dock
 
+- New: **YouTube by channel.** Type `@yourchannel` (or paste the channel link) once; the reader opens
+  `youtube.com/@name/live`, reads the live video's id and reads its chat, every time you go live. Not live: the
+  channel shows *offline* and is checked again every 2 minutes; after a stream ends the next one is found the same
+  way. A `UC...` channel id, a video link or a video id still work. A bare 11-letter name ("RoyalAscent") is a
+  channel, not a video id (ids have a digit, `-` or `_`). Verified on a real channel: reading in 2.5 s.
+- New: **Audio tab.** One row per destination with the OBS audio track it sends, live level meters for the six
+  tracks (only while the tab is visible), a "silent for 5 s" warning per destination and a button that opens
+  OBS's Advanced Audio Properties. The track column left the Streams table.
+- New: **a voice per platform** on the Voice tab (Twitch in one voice, YouTube in another, with a play button
+  per row), and every Voice-tab setting is remembered; before, each OBS start reset them.
+- Changed: the **chat overlay** shows a small platform logo (0.8 x the text) next to each name and nothing
+  else; the recommended Browser source is a normal 800 x 400 chat box. *Platform icons* is marked optional.
+- Changed: the **chat reader uses about a third of the memory**: one shared, logged-out browser context and
+  shared renderers instead of one per channel, background throttling off (no late lines). Five chats: 410 MB
+  instead of 1,243 MB, CPU 1 % instead of up to 3.9 % (docs/benchmarks.md; `OMSC_READER_LOWMEM=0` for the old way).
+- New: **Setup opens a Quick start guide with pictures** (`docs/quickstart.html`, also in the Start menu).
+- New: `scripts/bench-reader.js` (boot time, live detection, memory and CPU) and docs/benchmarks.md.
+- Fixed: "Add my channels from Streams" took the destination's *name* when it had no handle, and since the
+  dialog fills the name with the platform's label that would have added a channel called "twitch".
 - New: a **Get started** card at the top of the dock: 1. add where you stream, 2. add your chat, 3. put chat
   and icons on stream. Each step has the button that does it and ticks itself off; the card goes away when
   all three are done (or with *Hide*). Remembered in `ui-state.ini` next to `config.json`, not in the config.
-- Changed: **one row of tabs** instead of tabs inside tabs: Chat (merged chat), Streams, Chat sources,
+- Changed: **one row of tabs** instead of tabs inside tabs: Chat (merged chat), Streams, Channels,
   Overlays, Voice. Version and *Check for updates* moved to a line at the bottom.
 - New: **Overlays** tab with both Browser-source links (chat and platform icons), a look (dark, transparent,
   light), *Copy link* and the size to use.

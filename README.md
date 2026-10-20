@@ -54,10 +54,11 @@ powershell -ExecutionPolicy Bypass -File scripts\package.ps1
 ## Quick start (5 minutes)
 
 The pictures are the real dock (0.5.0) in a test copy of OBS 32.2.2, with sample channels and sample chat.
+The same steps, with the same pictures, open at the end of Setup (`docs/quickstart.html`, also in the Start menu).
 
 **1. Open the panel.** In OBS: **Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**). Drag it
-next to your other docks. Until you are set up it shows a **Get started** card with the three steps below;
-each has a button that takes you to the right place, and each ticks itself off when it is done.
+next to your other docks. Until you are set up it shows a **Get started** card with three steps; each has a
+button that takes you to the right place and ticks itself off when it is done.
 
 ![The panel docked on the right of OBS, with the Get started card](docs/images/00-obs-window.png)
 
@@ -71,42 +72,57 @@ each *extra* platform here.
 |---|---|
 | ![First run: Get started card, empty Streams tab](docs/images/01-first-run.png) | ![Add destination: platform, key, handle](docs/images/02-add-destination.png) |
 
-Need another canvas (vertical TikTok), another audio track, an own encoder, a delay or Aitum's settings?
-Open **Advanced options** in the same dialog ([details](#canvas-encoder-and-audio-track-per-destination-030)).
-It opens by itself when you edit a destination that already uses any of them.
+Need another canvas (vertical TikTok), an own encoder, a delay or Aitum's settings? Open **Advanced options**
+in the same dialog ([details](#canvas-encoder-and-audio-track-per-destination-030)). It opens by itself when
+you edit a destination that already uses any of them.
 
 ![The dialog with Advanced options open](docs/images/03-add-destination-advanced.png)
 
-**3. Add your chat.** Press **Add chat** (or open the **Chat sources** tab). Pick the platform, type the channel
-(or paste its link) and press **Add**; do the same for a collaborator's channel when you stream together.
-**Add my channels from Streams** adds a chat channel for every Twitch, Kick and TikTok destination that has a
-handle; it only adds what is missing and never changes a channel you added yourself. YouTube needs the id of
-each *live video*, so add that by hand. Under **Chat reader**, choose when it starts: only when you press
-Start, when OBS starts, or when you go live. Read [Merged chat](#merged-chat) once before you use it.
+**3. Give each platform its sound.** On the **Audio** tab, pick the OBS audio track each destination sends
+(for example: no music on YouTube). The meters show what is on each track right now, and a destination whose
+track has been silent for 5 seconds says so. Which sources go on which track is set in OBS's **Advanced Audio
+Properties** (the tab has a button that opens it); the [audio guide](#canvas-encoder-and-audio-track-per-destination-030)
+has the details.
 
-| Streams | Chat sources |
+| Streams | Audio |
 |---|---|
-| ![Streams tab with three destinations](docs/images/04-streams.png) | ![Chat sources tab: add a channel, the list, the reader](docs/images/05-chat-sources.png) |
+| ![Streams tab with three destinations](docs/images/04-streams.png) | ![Audio tab: one track per platform, live meters](docs/images/09-audio.png) |
 
-**4. Put it on stream.** Open the **Overlays** tab. There are two Browser sources: **Chat on stream** (all chats
-in one box) and **Platform icons** (an icon with your handle per platform, lit only while that destination
-is really sending). Pick a look, press **Copy link**, then in OBS **Sources > + > Browser**, paste it into *URL*
-and use the size shown under it.
+**4. Add your chat.** Press **Add chat** (or open the **Channels** tab). Pick the platform, type the channel
+(or paste its link) and press **Add**; do the same for a collaborator's channel when you stream together.
+**YouTube: type your channel as `@yourchannel`.** The reader finds the live stream on it by itself, every time
+you go live (a video link or id still works too). **Add my channels from Streams** adds your own Twitch, Kick,
+TikTok and YouTube channels from your destinations' handles; it only adds what is missing and never changes a
+channel you added yourself. Under **Chat reader**, choose when it starts: only when you press Start, when OBS
+starts, or when you go live. Read [Merged chat](#merged-chat) once before you use it.
 
-![Overlays tab: both links, look and size](docs/images/06-overlays.png)
+![Channels tab: add a channel, the list, the reader](docs/images/05-chat-sources.png)
 
-**5. Go live.** Start your normal OBS stream: destinations with *Start with the main stream* go live with it
+**5. Put the chat on stream.** Open the **Overlays** tab, press **Copy link** under *Chat on stream*, then in
+OBS **Sources > + > Browser**, paste it into *URL*, width **800**, height **400**. Each line shows a small logo
+of the platform next to the sender's name, nothing else. (*Platform icons*, a row of logos lit while each
+destination is sending, is optional.)
+
+| Overlays tab | What viewers see (on a dark scene) |
+|---|---|
+| ![Overlays tab: copy the chat link](docs/images/06-overlays.png) | ![The chat on stream: a small platform logo next to each name](docs/images/10-chat-overlay.png) |
+
+**6. Go live.** Start your normal OBS stream: destinations with *Start with the main stream* go live with it
 (or press the big **Start all destinations**). The line under the button says how many are live, the total
-bitrate and whether chat is being read. The **Chat** tab shows the merged chat for you, with the platform icon
-on each line; a number on the tab counts lines you have not seen yet.
+bitrate and whether chat is being read. The **Chat** tab shows the merged chat for you; a number on the tab
+counts lines you have not seen yet.
+
+**7. Optional: read chat aloud.** The **Voice** tab reads chat with voices that run on this PC, with **its own
+voice per platform** if you like (Twitch in one voice, YouTube in another; ▶ plays a sample). Your choices are
+remembered. See [Chat voices](#chat-voices-voice-reader). (The picture comes from a test copy without voice
+packs installed, hence "No voices installed".)
 
 | Chat | Voice |
 |---|---|
-| ![Chat tab with merged chat from Twitch and Kick](docs/images/07-chat.png) | ![Voice tab: read chat aloud, chime](docs/images/08-voice.png) |
+| ![Chat tab with merged chat from Twitch and Kick](docs/images/07-chat.png) | ![Voice tab: main voice, one voice per platform, chime](docs/images/08-voice.png) |
 
-**6. Optional: read chat aloud.** The **Voice** tab reads chat with voices that run on this PC; see
-[Chat voices](#chat-voices-voice-reader). (The picture comes from a test copy without voice packs installed,
-hence "No voices installed".)
+**Light hardware:** the hidden browser that reads chat runs in a low-memory mode: about 0.4 GB for five chats
+instead of 1.2 GB, under 1 % CPU on the test PC. Numbers and method: [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Finding the panel
 
@@ -118,7 +134,7 @@ hence "No voices installed".)
 - Layout (0.5.0): the big **Start/Stop all destinations** button and a line such as
   `2 of 3 live | 11800 kbps | chat: 3 of 3 sources reading` stay at the top; under them one row of tabs:
   **Chat** (the merged chat for you), **Streams** (destinations: status dot, handle, audio track, and while
-  anything is live bitrate, dropped %, uptime; Start/Stop per row), **Chat sources**, **Overlays**, **Voice**.
+  anything is live bitrate, dropped %, uptime; Start/Stop per row), **Audio**, **Channels**, **Overlays**, **Voice**.
   The version and *Check for updates* are in the line at the bottom.
 
 ## Setup
@@ -194,7 +210,7 @@ answering, the overlay dims everything instead of showing a stale "live".
 One chat for all your platforms, in one OBS browser source, with an icon per line for the platform it
 came from. Nothing is sent to any platform, you never log in, and no API, token or OAuth is involved.
 
-**How it works.** The **Chat reader** (Chat sources tab) starts `node reader\index.js` as a hidden child process. That
+**How it works.** The **Chat reader** (Channels tab) starts `node reader\index.js` as a hidden child process. That
 program opens each chat page you added in a *headless Chrome of its own* (a throw-away profile that is
 deleted when it exits, no extension, no cookies kept, no window), watches the page's chat list, and
 posts the lines it sees to this plugin over `127.0.0.1`. The plugin cleans them (plain text only),
@@ -220,19 +236,20 @@ Google Chrome or Chromium in its normal place (Microsoft Edge as a last resort; 
 
 ### Set it up
 
-1. **Chat sources > Add a chat channel**: pick the platform and enter the channel (Twitch, Kick), the
-   11-character video id or the link of the *live video* (YouTube), the `@username` (TikTok) or the
-   broadcast link `x.com/i/broadcasts/...` (X), then **Add**. Only the platform's own links are accepted;
-   the same channel is never added twice. **Add my channels from Streams** adds one per Twitch, Kick and
-   TikTok destination with a handle, add-only.
+1. **Channels > Add a chat channel**: pick the platform and enter the channel (Twitch, Kick), your channel as
+   `@name` (YouTube: the reader looks up the live stream on `youtube.com/@name/live` by itself, and again every
+   2 minutes while you are not live; a channel id `UC...`, a video link or an 11-character video id also work),
+   the `@username` (TikTok) or the broadcast link `x.com/i/broadcasts/...` (X), then **Add**. Only the
+   platform's own links are accepted; the same channel is never added twice. **Add my channels from Streams**
+   adds one per Twitch, Kick, TikTok and YouTube destination with a handle, add-only.
 2. **Chat reader > Start chat reader** (or **Start reader** on the Chat tab). Each source shows its status:
    *Starting*, *Reading*, *Quiet*, *Page layout changed or login needed*, *Needs login*, *Error*.
    **Start it:** *Only when I press Start*, *When OBS starts* or *When I go live*. Press the button again,
    or close OBS, to stop it; Chrome goes with it.
 3. **Overlays > Chat on stream > Copy link**, then in OBS add a **Browser** source with that URL (for
-   example 480 x 720). More options go in the URL: `?theme=dark|light|transparent&font=22&size=24&max=30&fade=0&colors=platform|hash|off&emotes=1&align=bottom&backlog=30`
-   (`size` = icon pixels, `fade` = seconds until a line disappears, 0 = stay).
-4. Optional: **Filters** (Chat sources tab) hide commands (`!word`), well-known bots, blocked words and
+   example 800 x 400). More options go in the URL: `?theme=dark|light|transparent&font=22&size=18&max=30&fade=0&colors=platform|hash|off&emotes=1&align=bottom&backlog=30`
+   (`size` = the platform logo next to each name, in pixels, default 0.8 x the font; `fade` = seconds until a line disappears, 0 = stay).
+4. Optional: **Filters** (Channels tab) hide commands (`!word`), well-known bots, blocked words and
    blocked users.
 
 ### Live checklist (to do once, by you)
@@ -242,7 +259,7 @@ Nothing here was run against a real platform. For each platform you use:
 | Platform | What to add | What you should see | If not |
 |---|---|---|---|
 | Twitch | your channel name, e.g. `shroud` | status *Reading* within ~30 s; new chat lines in the overlay with the purple icon | *Page layout changed*: open `https://www.twitch.tv/popout/<channel>/chat` in Chrome, compare with `reader\adapters\twitch.json`, fix the selectors |
-| YouTube | the 11-character id of a **live** stream (its chat must be open) | *Reading*, lines with the red icon | same, `youtube.json`; a stream with chat off or members-only shows nothing |
+| YouTube | your channel as `@name` (or the id of a **live** stream) | *Reading* once you are live (verified on a real channel: 2.5 s), *Channel offline* before | same, `youtube.json`; a stream with chat off or members-only shows nothing |
 | Kick | channel name | *Reading*, lines with the green icon | same, `kick.json` (Kick changes markup often) |
 | TikTok (experimental) | `@username` of someone who is **live now** | *Reading* with lines, or *Needs login* | expected sometimes; nothing to fix on your side |
 | X (experimental) | link of a running broadcast | *Needs login* is the likely answer | expected; there is no workaround here |
@@ -282,6 +299,10 @@ Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Port
 - **Needs Node.js 22+**, like the chat reader. The voices run in a helper of their own
   (`data\voice\index.js`), never inside OBS, so a voice problem cannot crash OBS. Its log is
   `voice-helper.log` next to the plugin's `config.json`.
+- **A voice per platform:** under *Voice per platform* pick a voice for Twitch, YouTube, Kick, TikTok and X
+  ("Same as the main voice" by default; the play button next to each plays a sample). A voice that is no longer
+  installed falls back to the main one. Everything on the Voice tab is remembered (`ui-state.ini` next to
+  `config.json`).
 - Links are read as "a link"; emoji, spam runs ("noooooo") and very long messages are trimmed. When chat
   is faster than the voice, the oldest waiting lines are skipped. **Preview** cuts off whatever is
   playing.

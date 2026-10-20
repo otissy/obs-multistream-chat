@@ -7,6 +7,11 @@ const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const { omscEngine } = require('./inject');
 const { pageUrl, allowedHosts } = require('./adapters');
+const { isChannelTarget } = require('./targets');
+
+// Run in the channel's /live page: the canonical link names the live video (watch?v=<id>) or the channel.
+const RESOLVE_LIVE_JS = "(() => { const c = document.querySelector('link[rel=\"canonical\"]'); const h = c ? String(c.href) : '';" +
+  " const m = /[?&]v=([A-Za-z0-9_-]{11})(?:&|$)/.exec(h); return { id: m ? m[1] : '', host: location.hostname }; })()";
 const { delayMs } = require('./backoff');
 
 const MAX_ATTEMPTS = 4;
@@ -56,6 +61,7 @@ class Source extends EventEmitter {
     this.src = opts.src;
     this.testOrigin = opts.testOrigin || '';
     this.quietMs = opts.quietMs || 5 * 60000;
+    this.sharedContext = !!opts.sharedContext;
     this.ua = opts.userAgent || null; // from useragent.computeUserAgent, or null = Chrome's own headless agent
     this.log = opts.log;
     this.binding = 'omsc_' + crypto.randomBytes(6).toString('hex');
@@ -75,6 +81,11 @@ class Source extends EventEmitter {
     this.forced = null;
     this.url = pageUrl(this.pack, this.src.target, this.testOrigin);
     this.hosts = allowedHosts(this.pack, this.testOrigin);
+    // a YouTube channel (@handle): this.url is its /live page until the live video is known
+    this.channel = isChannelTarget(this.src.platform, this.src.target);
+    this.channelUrl = this.channel ? this.url : '';
+    this.videoId = '';
+    this._waitingLive = false;
   }
 
   status() { return { id: this.src.id, platform: this.src.platform, state: this.state, detail: this.detail }; }
@@ -103,10 +114,15 @@ class Source extends EventEmitter {
     if (this.stopped) return;
     const cdp = this.cdp;
     try {
-      const ctx = await cdp.send('Target.createBrowserContext', {});
-      this.contextId = ctx.browserContextId;
-      try { await cdp.send('Browser.setDownloadBehavior', { behavior: 'deny', browserContextId: this.contextId }); } catch (e) { /* older Chrome */ }
-      const t = await cdp.send('Target.createTarget', { url: 'about:blank', browserContextId: this.contextId });
+      // own cookie-less context per source; in low-memory mode all sources share the browser's default
+      // (throw-away, logged-out) context so their pages can share renderer processes
+      if (!this.sharedContext) {
+        const ctx = await cdp.send('Target.createBrowserContext', {});
+        this.contextId = ctx.browserContextId;
+      }
+      const inCtx = this.contextId ? { browserContextId: this.contextId } : {};
+      try { await cdp.send('Browser.setDownloadBehavior', Object.assign({ behavior: 'deny' }, inCtx)); } catch (e) { /* older Chrome */ }
+      const t = await cdp.send('Target.createTarget', Object.assign({ url: 'about:blank' }, inCtx));
       this.targetId = t.targetId;
       const a = await cdp.send('Target.attachToTarget', { targetId: this.targetId, flatten: true });
       this.sessionId = a.sessionId;
@@ -134,6 +150,17 @@ class Source extends EventEmitter {
         if (!r.success) this.log.warn('source ' + this.src.id + ': cookie ' + c.name + ' was not accepted');
       }
       await s('Emulation.setDeviceMetricsOverride', { width: 900, height: 1000, deviceScaleFactor: 1, mobile: false });
+      if (this.channel) {
+        // which video is live on the channel right now? (before the engine is installed: it must not run here)
+        const r = await this._resolveLive(s);
+        if (this.stopped) return;
+        if (r.consent) { this.forced = { state: 'consent', detail: 'YouTube is showing its cookie-consent page instead of the channel; the reader never clicks, so nothing is read' }; this.loadedAt = Date.now(); this._evaluate(); return; }
+        if (r.error) { this._fail(r.error); return; }
+        if (!r.id) { this._offline(); return; }
+        if (r.id !== this.videoId) this.log.info('source ' + this.src.id + ' (youtube): ' + this.src.target + ' is live on video ' + r.id);
+        this.videoId = r.id;
+        this.url = pageUrl(this.pack, r.id, this.testOrigin);
+      }
       await s('Runtime.addBinding', { name: this.binding, executionContextName: 'omsc' });
       const engineCfg = Object.assign({}, this.pack.engine);
       const source = '(' + omscEngine.toString() + ')(' + JSON.stringify(engineCfg) + ',' + JSON.stringify(this.binding) + ');';
@@ -148,8 +175,56 @@ class Source extends EventEmitter {
     }
   }
 
-  _onLoad() {
+  // Loads the channel's /live page and reads the live video id from its canonical link (YouTube points
+  // /@name/live at the current or next live video, and at the channel itself when there is none).
+  // -> { id } | { id: '' } (not live) | { consent: true } | { error }
+  async _resolveLive(s) {
+    this._resolving = true;
+    try {
+      const loaded = new Promise(res => {
+        const off = this.cdp.on('Page.loadEventFired', () => { off(); res(true); }, this.sessionId);
+        this._timer(() => { off(); res(false); }, LOAD_TIMEOUT_MS);
+      });
+      const nav = await s('Page.navigate', { url: this.channelUrl });
+      if (nav.errorText) return { error: 'could not load the channel page (' + nav.errorText + ')' };
+      if (!(await loaded)) return { error: 'the channel page did not load in ' + LOAD_TIMEOUT_MS / 1000 + ' s' };
+      const ev = await s('Runtime.evaluate', { expression: RESOLVE_LIVE_JS, returnByValue: true });
+      const v = (ev && ev.result && ev.result.value) || {};
+      if ((this.pack.consentHosts || []).includes(String(v.host || ''))) return { consent: true };
+      return { id: /^[A-Za-z0-9_-]{11}$/.test(String(v.id || '')) ? v.id : '' };
+    } finally {
+      this._resolving = false;
+    }
+  }
+
+  // Channel not live: close the tab and look again after channelRecheckSec (not a failure).
+  _offline() {
+    this._closeTab();
+    this.loadedAt = 0;
+    this.tick = null;
+    this.videoId = '';
+    const sec = this.pack.channelRecheckSec || 120;
+    this._waitingLive = true;
+    this._set('offline', this.src.target + ' is not live right now; checking again every ' + sec + ' s');
+    this._timer(() => this._reopen('checking whether ' + this.src.target + ' is live'), sec * 1000);
+  }
+
+  async _reopen(why) {
     if (this.stopped) return;
+    this._closeTab();
+    this._waitingLive = false;
+    this._failed = false;
+    this._recheckArmed = false;
+    this.seenTotal = 0;
+    this.forced = null;
+    this._reopening = true;
+    this._set('starting', why);
+    await this._open();
+    this._reopening = false;
+  }
+
+  _onLoad() {
+    if (this.stopped || this._resolving) return;
     clearTimeout(this._loadTimer);
     this.loadedAt = Date.now();
     this.attempts = 0; // loaded fine: the failure counter starts over
@@ -158,7 +233,7 @@ class Source extends EventEmitter {
 
   _onNavigated(p) {
     const f = p.frame || {};
-    if (f.parentId || this.stopped) return; // only the main frame matters
+    if (f.parentId || this.stopped || this._resolving) return; // only the main frame of the chat page matters
     let u;
     try { u = new URL(f.url); } catch (e) { return; }
     if (u.protocol === 'about:' || u.protocol === 'chrome-error:') return;
@@ -222,7 +297,7 @@ class Source extends EventEmitter {
 
   _evaluate() {
     if (this.stopped && this.state === 'error') return;
-    if (this._failed) return;
+    if (this._failed || this._waitingLive || this._resolving) return;
     const r = evaluateHealth({
       now: Date.now(), loadedAt: this.loadedAt, tick: this.tick,
       containerTimeoutMs: (this.pack.containerTimeoutSec || 45) * 1000, quietMs: this.quietMs,
@@ -230,6 +305,11 @@ class Source extends EventEmitter {
       notes: this._notes(),
     });
     this._set(r.state, r.detail);
+    // a channel whose stream ended (chat off, replay, empty page): look for the next live video later
+    if (this.channel && ['disabled', 'replay', 'stub'].includes(r.state) && !this._recheckArmed) {
+      this._recheckArmed = true;
+      this._timer(() => this._reopen('looking for a new live stream on ' + this.src.target), (this.pack.channelRecheckSec || 120) * 1000);
+    }
   }
 
   _notes() {

@@ -31,6 +31,7 @@
 #include <QDialogButtonBox>
 #include <QDateTime>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -45,8 +46,10 @@
 #include <QPolygonF>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSlider>
 #include <QTableWidget>
+#include <QStyle>
 #include <QTabWidget>
 #include <QTextBrowser>
 #include <QTimer>
@@ -360,6 +363,24 @@ private:
 	QCheckBox *enabled_;
 };
 
+// "Twitch", "TikTok" (the dock label without "(experimental)")
+QString platform_name(const std::string &id)
+{
+	const ChatPlatform *p = find_chat_platform(id);
+	QString l = p ? qs(p->label) : qs(id);
+	int cut = l.indexOf(" (");
+	return cut > 0 ? l.left(cut) : l;
+}
+
+// The Voice tab is kept in ui-state.ini next to config.json (per user, not part of the config schema).
+QString voice_state_path()
+{
+	char *p = obs_module_config_path("ui-state.ini");
+	QString s = p ? QString::fromUtf8(p) : QString();
+	bfree(p);
+	return s;
+}
+
 std::vector<std::string> lines_of(const QString &text)
 {
 	std::vector<std::string> out;
@@ -494,8 +515,8 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	add_info_->hide();
 	agl->addWidget(add_info_);
 	from_dest_btn_ = new QPushButton("Add my channels from Streams");
-	from_dest_btn_->setToolTip("One chat channel per Twitch, Kick or TikTok destination, from its handle. Adds only what is missing; "
-				   "never changes a channel you added yourself. YouTube needs the id of each live video, so add that above.");
+	from_dest_btn_->setToolTip("One chat channel per Twitch, Kick, TikTok or YouTube destination, from its handle (YouTube: your "
+				   "@channel; the live stream is found by itself). Adds only what is missing; never changes a channel you added yourself.");
 	agl->addWidget(from_dest_btn_, 0, Qt::AlignLeft);
 	sl->addWidget(add_grp);
 
@@ -633,6 +654,45 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	tgl->addWidget(tts_include_platform_);
 	vl->addWidget(tts_grp);
 
+	// one voice per platform, so you hear where a line came from ("Same as the main voice" by default)
+	QGroupBox *pp_grp = new QGroupBox("Voice per platform");
+	QGridLayout *ppl = new QGridLayout(pp_grp);
+	ppl->setColumnStretch(1, 1);
+	const std::vector<ChatPlatform> &vpl = chat_platforms();
+	for (size_t i = 0; i < vpl.size(); ++i) {
+		const std::string pid = vpl[i].id;
+		QLabel *lbl = new QLabel(platform_name(pid));
+		lbl->setMinimumWidth(64);
+		QLabel *ico = new QLabel();
+		ico->setPixmap(QPixmap::fromImage(create_platform_icon(pid, 18)));
+		QComboBox *cb = new QComboBox();
+		cb->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+		cb->setMinimumContentsLength(10);
+		cb->addItem("Same as the main voice", QString());
+		for (const TtsVoice &v : installed_voices)
+			cb->addItem(qs(v.name), qs(v.id));
+		QPushButton *play = new QPushButton();
+		play->setIcon(play->style()->standardIcon(QStyle::SP_MediaPlay)); // the theme's font has no play-symbol glyph
+		play->setFixedWidth(30);
+		play->setToolTip("Hear this voice");
+		int prow = static_cast<int>(i);
+		QHBoxLayout *name = new QHBoxLayout();
+		name->setContentsMargins(0, 0, 0, 0);
+		name->addWidget(ico);
+		name->addWidget(lbl);
+		ppl->addLayout(name, prow, 0);
+		ppl->addWidget(cb, prow, 1);
+		ppl->addWidget(play, prow, 2);
+		platform_voice_.push_back(std::make_pair(pid, cb));
+		QObject::connect(cb, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
+		QObject::connect(play, &QPushButton::clicked, [this, pid]() {
+			if (speaker_)
+				speaker_->interrupt();
+			play_tts("Viewer", pid, "This is how chat from " + ss(platform_name(pid)) + " sounds.");
+		});
+	}
+	vl->addWidget(pp_grp);
+
 	QGroupBox *snd_grp = new QGroupBox("Chime");
 	QVBoxLayout *sgl = new QVBoxLayout(snd_grp);
 	sound_alert_enabled_ = new QCheckBox("Play a chime on each new chat line");
@@ -687,7 +747,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	QObject::connect(tts_test_btn_, &QPushButton::clicked, [this]() {
 		if (speaker_)
 			speaker_->interrupt();
-		play_tts("Viewer", "Twitch", "Welcome to the stream! The voice reader is ready.");
+		play_tts("Viewer", "", "Welcome to the stream! The voice reader is ready."); // "" = the main voice
 		if (speaker_ && !speaker_->problem().empty())
 			QMessageBox::warning(this, "OBS Multistream Chat", qs(speaker_->problem()));
 	});
@@ -695,6 +755,15 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		std::string st = sound_alert_type_ ? ss(sound_alert_type_->currentData().toString()) : "chime";
 		play_alert_sound(st);
 	});
+	load_voice_settings();
+	QObject::connect(tts_enabled_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(tts_voice_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
+	QObject::connect(tts_volume_, &QSlider::valueChanged, [this](int) { save_voice_settings(); });
+	QObject::connect(tts_speed_, &QSlider::valueChanged, [this](int) { save_voice_settings(); });
+	QObject::connect(tts_include_user_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(tts_include_platform_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(sound_alert_enabled_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(sound_alert_type_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
 	QObject::connect(check_updates_btn_, &QPushButton::clicked, [this]() { check_for_updates(); });
 	QObject::connect(download_update_btn_, &QPushButton::clicked, [this]() {
 		QDesktopServices::openUrl(QUrl("https://github.com/otissy/obs-multistream-chat/releases/latest"));
@@ -757,6 +826,54 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	refresh();
 }
 
+// Voice tab settings survive an OBS restart (before 0.5.0 every start was "voice reader off, first voice").
+void ChatPanel::load_voice_settings()
+{
+	QString path = voice_state_path();
+	if (path.isEmpty())
+		return;
+	loading_voice_ = true;
+	QSettings s(path, QSettings::IniFormat);
+	s.beginGroup("voice");
+	auto pick = [](QComboBox *cb, const QString &id) {
+		int i = cb->findData(id);
+		if (i >= 0)
+			cb->setCurrentIndex(i);
+	};
+	tts_enabled_->setChecked(s.value("enabled", false).toBool());
+	pick(tts_voice_, s.value("voice").toString());
+	tts_volume_->setValue(s.value("volume", 85).toInt());
+	tts_speed_->setValue(s.value("speed", 0).toInt());
+	tts_include_user_->setChecked(s.value("say_user", true).toBool());
+	tts_include_platform_->setChecked(s.value("say_platform", false).toBool());
+	sound_alert_enabled_->setChecked(s.value("chime", false).toBool());
+	pick(sound_alert_type_, s.value("chime_sound", "chime").toString());
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		pick(platform_voice_[i].second, s.value(QString::fromStdString("voice_" + platform_voice_[i].first)).toString());
+	s.endGroup();
+	loading_voice_ = false;
+}
+
+void ChatPanel::save_voice_settings()
+{
+	QString path = voice_state_path();
+	if (loading_voice_ || path.isEmpty() || !tts_voice_)
+		return;
+	QSettings s(path, QSettings::IniFormat);
+	s.beginGroup("voice");
+	s.setValue("enabled", tts_enabled_->isChecked());
+	s.setValue("voice", tts_voice_->currentData().toString());
+	s.setValue("volume", tts_volume_->value());
+	s.setValue("speed", tts_speed_->value());
+	s.setValue("say_user", tts_include_user_->isChecked());
+	s.setValue("say_platform", tts_include_platform_->isChecked());
+	s.setValue("chime", sound_alert_enabled_->isChecked());
+	s.setValue("chime_sound", sound_alert_type_->currentData().toString());
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		s.setValue(QString::fromStdString("voice_" + platform_voice_[i].first), platform_voice_[i].second->currentData().toString());
+	s.endGroup();
+}
+
 void ChatPanel::attach(QTabWidget *tabs, int live_index, std::function<void()> go_sources)
 {
 	host_tabs_ = tabs;
@@ -784,7 +901,7 @@ void ChatPanel::update_add_hint()
 	if (p && p->experimental)
 		t += " Experimental: this platform may need a login or block automated browsers; nothing is ever logged in.";
 	add_hint_->setText(t);
-	add_input_->setPlaceholderText(p && std::string(p->id) == "youtube" ? "video id or link of the live stream"
+	add_input_->setPlaceholderText(p && std::string(p->id) == "youtube" ? "@yourchannel"
 					: p && std::string(p->id) == "x"     ? "x.com/i/broadcasts/..."
 					: p && std::string(p->id) == "tiktok" ? "@username"
 									      : "channel name");
@@ -1261,8 +1378,8 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 	bool inc_user = tts_include_user_ ? tts_include_user_->isChecked() : true;
 	bool inc_plat = tts_include_platform_ ? tts_include_platform_->isChecked() : false;
 
-	if (inc_user && inc_plat)
-		text_to_say = author + " on " + platform + " says: " + message;
+	if (inc_user && inc_plat && !platform.empty())
+		text_to_say = author + " on " + ss(platform_name(platform)) + " says: " + message;
 	else if (inc_user)
 		text_to_say = author + " says: " + message;
 	else
@@ -1270,7 +1387,14 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 
 	int vol = tts_volume_ ? tts_volume_->value() : 85;
 	int rate = tts_speed_ ? tts_speed_->value() : 0;
-	std::string voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
+	std::string main_voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
+	std::vector<std::pair<std::string, std::string>> per;
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		per.push_back(std::make_pair(platform_voice_[i].first, ss(platform_voice_[i].second->currentData().toString())));
+	std::vector<std::string> installed;
+	for (int i = 0; tts_voice_ && i < tts_voice_->count(); ++i)
+		installed.push_back(ss(tts_voice_->itemData(i).toString()));
+	std::string voice = voice_for_platform(per, platform, main_voice, installed);
 
 	if (!speaker_) {
 		const PluginState &st = plugin();

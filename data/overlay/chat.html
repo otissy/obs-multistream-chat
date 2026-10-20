@@ -9,14 +9,14 @@
   with a small icon of the platform it came from. Reads only /chat/events (SSE) from the plugin's
   local server. Everything shown is set with textContent; there is no innerHTML anywhere.
   Query (all optional):
-    theme=dark|light|transparent   font=10..72 (px)   size=10..96 (icon px)   max=1..100 (lines kept)
+    theme=dark|light|transparent   font=10..72 (px)   size=8..96 (logo px, default 0.8 x font)   max=1..100 (lines kept)
     fade=0..600 (seconds until a line fades away, 0 = never)   colors=platform|hash|off
     emotes=1|0   align=bottom|top   backlog=0..200 (lines replayed when the page opens, default = max)
 -->
 <style>
   :root {
     --font: 20px;
-    --icon: 22px;
+    --icon: 16px;
     --fg: #f2f2f5;
     --dim: #a9a9b8;
     --card: rgba(18, 18, 24, 0.82);
@@ -31,7 +31,7 @@
   body[data-theme="dark"] #chat, body[data-theme="light"] #chat { background: var(--card); }
   .msg { display: block; padding: 2px 0; overflow-wrap: anywhere; word-break: break-word; max-height: 12em; overflow: hidden; animation: rise .22s ease-out; transition: opacity 1s ease; }
   .msg.fading { opacity: 0; }
-  .ico { display: inline-block; width: var(--icon); height: var(--icon); vertical-align: -0.28em; margin-right: .4em; background-color: var(--brand, var(--dim)); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
+  .ico { display: inline-block; width: var(--icon); height: var(--icon); vertical-align: -0.1em; margin-right: .3em; opacity: .9; background-color: var(--brand, var(--dim)); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
   .msg[data-platform="twitch"] { --brand: var(--twitch); }
   .msg[data-platform="youtube"] { --brand: var(--youtube); }
   .msg[data-platform="kick"] { --brand: var(--kick); }

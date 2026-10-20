@@ -1,6 +1,8 @@
 #include "setup_flow.hpp"
 
+#include "chat_hub.hpp"
 #include "chat_targets.hpp"
+#include "destination.hpp"
 
 namespace oms {
 
@@ -60,10 +62,18 @@ int add_sources_from_destinations(const std::vector<Destination> &dests, std::ve
 	int added = 0;
 	for (size_t i = 0; i < dests.size(); ++i) {
 		const Destination &d = dests[i];
-		// YouTube needs the id of each live video, X a broadcast link: neither follows from a stream key
-		if (d.platform != "twitch" && d.platform != "kick" && d.platform != "tiktok")
+		// X needs a broadcast link, which no destination has; YouTube goes by the channel (@handle) since 0.5.0
+		if (d.platform != "twitch" && d.platform != "kick" && d.platform != "tiktok" && d.platform != "youtube")
 			continue;
-		std::string raw = !d.handle.empty() ? d.handle : d.name;
+		std::string raw = d.handle;
+		if (raw.empty() && d.platform != "youtube") {
+			// the name only when it is not just the platform's label (the dialog fills that in by itself)
+			const PlatformPreset *p = find_preset(d.platform);
+			if (!(p && ascii_lower(d.name) == ascii_lower(p->label)))
+				raw = d.name;
+		}
+		if (d.platform == "youtube" && !raw.empty())
+			raw = (raw[0] == '@' ? "" : "@") + raw; // a handle, never read as a video id
 		std::string target, err;
 		bool exists = false;
 		if (raw.empty() || !normalize_chat_target(d.platform, raw, target, err))
@@ -76,6 +86,20 @@ int add_sources_from_destinations(const std::vector<Destination> &dests, std::ve
 			++added;
 	}
 	return added;
+}
+
+std::string voice_for_platform(const std::vector<std::pair<std::string, std::string>> &per_platform, const std::string &platform,
+			       const std::string &main_voice, const std::vector<std::string> &installed)
+{
+	for (size_t i = 0; i < per_platform.size(); ++i) {
+		if (per_platform[i].first != platform || per_platform[i].second.empty())
+			continue;
+		for (size_t k = 0; k < installed.size(); ++k)
+			if (installed[k] == per_platform[i].second)
+				return per_platform[i].second;
+		break; // set but no longer installed: the main voice speaks instead of silence
+	}
+	return main_voice;
 }
 
 int reader_start_mode(const ChatConfig &c)

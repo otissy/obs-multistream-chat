@@ -68,11 +68,20 @@ Please report problems privately to the repository owner (otissy) rather than in
 ## The chat reader (since 0.2.0)
 
 **What the reader can do.** It runs as your Windows user, as `node reader\index.js`, started only by
-you (the Start button, or the "Start it" choice on the Chat sources tab: when OBS starts, or when you go live). It starts a headless Chrome with a fresh
+you (the Start button, or the "Start it" choice on the Channels tab: when OBS starts, or when you go live). It starts a headless Chrome with a fresh
 throw-away profile, opens the chat page of each channel you added (the URL is built from a fixed
 template per platform; a link you type must be on that platform's own host, or it is refused), and
 reads the chat list with a script that cannot click, type, scroll, navigate or send anything (a test
 searches the script for every such API). It posts what it read to `127.0.0.1` only.
+
+**Low-memory mode (default since 0.5.0).** All chat pages share the browser's one throw-away context and
+its renderer processes, and Chrome's site isolation between them is off (`--disable-site-isolation-trials`,
+no `site-per-process`). That cuts the browser from about 1.2 GB to about 0.4 GB for five channels
+(docs/benchmarks.md). The tradeoff: a page could in theory read another chat page's memory through a
+side channel. Every page is a public chat page in a logged-out profile, so there is nothing private to
+read; set the environment variable `OMSC_READER_LOWMEM=0` before OBS starts for the old one context
+and renderer per channel. A YouTube channel (`@name`) is looked up on `youtube.com/@name/live`, the same
+host list as its chat page.
 
 **What it cannot do.** It has no login, cookie, platform token or API key, and the plugin never stores
 one. It cannot open a page outside the platform's host list: if a page redirects elsewhere, the tab is

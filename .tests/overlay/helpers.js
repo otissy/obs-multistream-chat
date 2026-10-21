@@ -9,7 +9,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const OVERLAY_DIR = path.join(ROOT, 'data', 'overlay');
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+// the same search as the chat reader: Chrome, then Chromium, then Edge (OMSC_CHROME overrides)
+const CHROME = require('../../reader/lib/chrome').findChrome() || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PROOF_DIR = process.env.OMS_PROOF_DIR || path.join(ROOT, '..', 'overlay-proof');
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };

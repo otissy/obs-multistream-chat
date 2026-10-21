@@ -11,7 +11,8 @@ function parseReaderConfig(text) {
   if (!Number.isInteger(c.port) || c.port < 1024 || c.port > 65535) throw new Error('reader config: "port" must be 1024-65535');
   const quiet = c.quiet_minutes === undefined ? 5 : c.quiet_minutes;
   if (!Number.isInteger(quiet) || quiet < 1 || quiet > 120) throw new Error('reader config: "quiet_minutes" must be 1-120');
-  if (!Array.isArray(c.sources) || c.sources.length > 10) throw new Error('reader config: "sources" must be a list of at most 10');
+  // 32 = the plugin's kMaxChatSources (it was 10 here, so 11+ enabled channels stopped the whole reader)
+  if (!Array.isArray(c.sources) || c.sources.length > 32) throw new Error('reader config: "sources" must be a list of at most 32');
   const ids = new Set();
   const sources = c.sources.map((s, i) => {
     if (!s || typeof s !== 'object') throw new Error('reader config: source #' + (i + 1) + ' is not an object');
@@ -24,7 +25,8 @@ function parseReaderConfig(text) {
   });
   const ua = c.user_agent === undefined ? 'chrome' : c.user_agent;
   if (ua !== 'chrome' && ua !== 'headless') throw new Error('reader config: "user_agent" must be "chrome" or "headless"');
-  return { port: c.port, quietMs: quiet * 60000, images: c.images === true, userAgent: ua, sources };
+  const lowMemory = c.low_memory === undefined ? undefined : c.low_memory === true;
+  return { port: c.port, quietMs: quiet * 60000, images: c.images === true, userAgent: ua, lowMemory, sources };
 }
 
 function loadReaderConfig(file) {

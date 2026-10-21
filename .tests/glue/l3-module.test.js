@@ -120,3 +120,54 @@ test('the dock shows a big start/stop, a summary line and the chat reader state'
   assert.match(dock, /plugin_reader_running\(\)/);
   for (const col of ['Col.Status', 'Col.Bitrate', 'Col.Dropped', 'Col.Uptime']) assert.ok(dock.includes(col), col);
 });
+
+// 0.5.0: one flat row of tabs, a "Get started" card, one way to add a chat channel (setup_flow.cpp)
+test('the dock has one row of tabs and the chat panel has none of its own', () => {
+  const dock = strip(read('src', 'obs', 'dock.cpp'));
+  const chat = strip(read('src', 'obs', 'chat_panel.cpp'));
+  assert.ok(!/new QTabWidget/.test(chat), 'chat_panel.cpp must not build its own tab bar');
+  for (const t of ['Tab.Chat', 'Tab.Streams', 'Tab.Audio', 'Tab.Sources', 'Tab.Overlays', 'Tab.Voice']) assert.ok(dock.includes('T("' + t + '")'), t);
+  assert.match(dock, /chat_panel_->attach\(tabs_, tab_chat_/);
+});
+
+test('the Get started card has three steps driven by setup_progress', () => {
+  const dock = strip(read('src', 'obs', 'dock.cpp'));
+  assert.match(dock, /setup_progress\(cfg, ui_flag\("overlay_copied"\)\)/);
+  for (const k of ['Setup.Step1', 'Setup.Step2', 'Setup.Step3', 'Setup.Btn1', 'Setup.Btn2', 'Setup.Btn3']) assert.ok(dock.includes(k), k);
+  assert.match(dock, /obs_module_config_path\("ui-state\.ini"\)/); // not in config.json
+});
+
+test('chat channels are added only through setup_flow (no guessing, no overwriting)', () => {
+  const chat = strip(read('src', 'obs', 'chat_panel.cpp'));
+  assert.match(chat, /add_chat_source\(st\.cfg\.chat\.sources/);
+  assert.match(chat, /add_sources_from_destinations\(st\.cfg\.destinations, st\.cfg\.chat\.sources\)/);
+  assert.match(chat, /set_reader_start_mode\(/);
+  assert.ok(!/auto_connect_channel|sync_from_destinations|add_collaborator_dialog/.test(chat));
+  assert.ok(!/"c" \+ std::to_string\(st\.cfg\.chat\.sources\.size\(\)/.test(chat), 'ids come from next_chat_source_id');
+});
+
+test('screenshots run only when OMSC_SHOTS is set', () => {
+  const main = strip(read('src', 'obs', 'plugin-main.cpp'));
+  assert.match(main, /getenv\("OMSC_SHOTS"\)/);
+  assert.match(main, /if \(!dir \|\| !\*dir\)\s*return;/);
+});
+
+test('every README picture exists and every picture is used', () => {
+  const readme = read('README.md');
+  const used = [...readme.matchAll(/\]\((docs\/images\/[^)]+\.png)\)/g)].map(m => m[1]);
+  assert.ok(used.length >= 9, 'README shows the step pictures');
+  for (const u of used) assert.ok(fs.existsSync(path.join(ROOT, u)), u);
+  const files = fs.readdirSync(path.join(ROOT, 'docs', 'images')).map(f => 'docs/images/' + f);
+  assert.deepStrictEqual(files.filter(f => !used.includes(f)), []);
+});
+
+test('the Setup quick start page shows existing pictures, offline, and Setup offers to open it', () => {
+  const page = read('docs', 'quickstart.html');
+  const pics = [...page.matchAll(/<img src="(images\/[^"]+\.png)"/g)].map(m => m[1]);
+  assert.ok(pics.length >= 8, 'the page shows the step pictures');
+  for (const u of pics) assert.ok(fs.existsSync(path.join(ROOT, 'docs', u)), u);
+  assert.ok(!/<script|https?:\/\/(?!github)/i.test(page.replace(/github\.com\/otissy[^\s<]*/g, '')), 'no scripts, no web resources');
+  const iss = read('packaging', 'installer.iss');
+  assert.ok(iss.includes('Filename: "{app}\\docs\\quickstart.html"; Description: "Open the Quick start guide (with pictures)"; Flags: postinstall shellexec skipifsilent nowait runasoriginaluser'));
+  assert.ok(iss.includes('Source: "{#SourceTree}\\docs\\*"; DestDir: "{app}\\docs"'), 'docs (with the pictures) are installed');
+});

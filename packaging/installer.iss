@@ -3,7 +3,7 @@
   #define MyAppName "OBS Multistream Chat"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion "0.4.1"
+  #define MyAppVersion "0.5.1"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "otissy"
@@ -58,6 +58,13 @@ Source: "{#SourceTree}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceTree}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceTree}\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceTree}\CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
+
+; The Quick start guide with pictures (docs\quickstart.html, offline): a Start-menu entry, and offered at the end
+[Icons]
+Name: "{autoprograms}\OBS Multistream Chat Quick start"; Filename: "{app}\docs\quickstart.html"
+
+[Run]
+Filename: "{app}\docs\quickstart.html"; Description: "Open the Quick start guide (with pictures)"; Flags: postinstall shellexec skipifsilent nowait runasoriginaluser
 
 [InstallDelete]
 ; Clean up previous nested bug if present

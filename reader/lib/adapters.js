@@ -4,7 +4,7 @@
 // invalid pack disables only its own platform, with a message that names the problem.
 const fs = require('fs');
 const path = require('path');
-const { PLATFORMS, normalizeTarget } = require('./targets');
+const { PLATFORMS, normalizeTarget, isChannelTarget } = require('./targets');
 
 const MAX_PACK_BYTES = 64 * 1024;
 
@@ -26,6 +26,16 @@ function validatePack(pack, expectedPlatform) {
   }
   const host = new URL(pack.url.replace('{target}', 'x')).hostname;
   if (!pack.hosts.includes(host)) bad('the host of "url" (' + host + ') is not in "hosts"');
+  if (pack.channelUrl !== undefined) {
+    if (typeof pack.channelUrl !== 'string' || !pack.channelUrl.startsWith('https://') || pack.channelUrl.split('{handle}').length !== 2) {
+      bad('"channelUrl" must be an https:// template containing {handle} once');
+    }
+    const ch = new URL(pack.channelUrl.replace('{handle}', 'x')).hostname;
+    if (!pack.hosts.includes(ch)) bad('the host of "channelUrl" (' + ch + ') is not in "hosts"');
+    if (!(Number.isInteger(pack.channelRecheckSec) && pack.channelRecheckSec >= 30 && pack.channelRecheckSec <= 3600)) {
+      bad('"channelRecheckSec" must be a whole number from 30 to 3600');
+    }
+  }
   if (pack.loginPaths !== undefined && !isStrList(pack.loginPaths, 10)) bad('"loginPaths" must be a list of strings');
   if (pack.containerTimeoutSec !== undefined && !(Number.isInteger(pack.containerTimeoutSec) && pack.containerTimeoutSec >= 10 && pack.containerTimeoutSec <= 300)) {
     bad('"containerTimeoutSec" must be a whole number from 10 to 300');
@@ -111,7 +121,12 @@ function loadAdapters(dir) {
 function pageUrl(pack, target, testOrigin) {
   const n = normalizeTarget(pack.platform, target);
   if (!n.ok || n.target !== target) throw new Error('target is not valid for ' + pack.platform);
-  const real = pack.url.replace('{target}', encodeURIComponent(target));
+  // a channel (@handle): the page that shows its current live video; the chat page follows from that
+  if (isChannelTarget(pack.platform, target) && !pack.channelUrl) throw new Error(pack.platform + ' adapter has no "channelUrl"');
+  let real;
+  if (!isChannelTarget(pack.platform, target)) real = pack.url.replace('{target}', encodeURIComponent(target));
+  else if (target.startsWith('@')) real = pack.channelUrl.replace('{handle}', encodeURIComponent(target.slice(1)));
+  else real = new URL(pack.channelUrl).origin + '/channel/' + encodeURIComponent(target) + '/live'; // UC... channel id
   if (!testOrigin) return real;
   if (!/^http:\/\/127\.0\.0\.1:\d{2,5}$/.test(testOrigin)) throw new Error('test origin must be http://127.0.0.1:<port>');
   const u = new URL(real);

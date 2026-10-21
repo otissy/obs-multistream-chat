@@ -12,9 +12,12 @@
 #include <obs-module.h>
 #include <util/base.h>
 
+#include <cstdlib>
+
 #include <QAction>
 #include <QApplication>
 #include <QDockWidget>
+#include <QMainWindow>
 #include <QTimer>
 #include <QWidget>
 
@@ -148,6 +151,8 @@ void publish_state()
 // obs-module.h) and log "dock registered" after the module list; 0.1.0 to 0.3.0 registered from
 // obs_module_load and the return value was ignored, so a refusal was silent and no dock appeared.
 // Every outcome is logged now, and a failure is retried once on FINISHED_LOADING.
+void show_panel();
+
 QWidget *main_window()
 {
 	return static_cast<QWidget *>(obs_frontend_get_main_window());
@@ -173,6 +178,40 @@ void create_dock(const char *when)
 					      (g_dock_retry_allowed ? "will retry once when OBS finishes loading; " : "") +
 					      "Tools > OBS Multistream Chat still opens the panel");
 	}
+}
+
+// README step pictures, for a throw-away portable OBS only: OMSC_SHOTS=<dir> renders the dock's pages and
+// dialogs to PNGs (MultistreamDock::capture_screens), then the whole OBS window with the dock shown;
+// OMSC_SHOTS_DEMO=1 fills sample destinations / channels / chat in memory; OMSC_SHOTS_QUIT=1 closes OBS after.
+// Unset (every normal start) this does nothing.
+void schedule_shots()
+{
+	const char *dir = getenv("OMSC_SHOTS");
+	if (!dir || !*dir)
+		return;
+	QString out = QString::fromUtf8(dir);
+	QTimer::singleShot(4000, qApp, [out]() {
+		const char *demo = getenv("OMSC_SHOTS_DEMO");
+		MultistreamDock::capture_screens(out, demo && *demo == '1');
+		show_panel();
+		// the window shot shows the dock docked on the right, the way it is normally used
+		if (QDockWidget *host = g_dock ? qobject_cast<QDockWidget *>(g_dock->parentWidget()) : nullptr) {
+			if (QMainWindow *mw = qobject_cast<QMainWindow *>(main_window())) {
+				host->setFloating(false);
+				mw->addDockWidget(Qt::RightDockWidgetArea, host);
+				host->show();
+				mw->resizeDocks({host}, {460}, Qt::Horizontal);
+				mw->resize(1600, 900);
+			}
+		}
+		QTimer::singleShot(1500, qApp, [out]() {
+			if (QWidget *mw = main_window())
+				mw->grab().save(out + "/00-obs-window.png");
+			const char *quit = getenv("OMSC_SHOTS_QUIT");
+			if (quit && *quit == '1' && main_window())
+				QTimer::singleShot(500, qApp, []() { main_window()->close(); });
+		});
+	});
 }
 
 // Tools > OBS Multistream Chat: always works, even when OBS refused the dock.
@@ -270,6 +309,7 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 			g_dock_retry_allowed = false;
 			create_dock("finished loading");
 		}
+		schedule_shots();
 		break;
 	case OBS_FRONTEND_EVENT_PROFILE_CHANGED:
 		if (g_state && g_state->mgr) {

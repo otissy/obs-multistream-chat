@@ -1,4 +1,5 @@
 #include "chat_panel.hpp"
+#include "setup_flow.hpp"
 #include "chat_targets.hpp"
 #include "plugin.hpp"
 
@@ -30,6 +31,7 @@
 #include <QDialogButtonBox>
 #include <QDateTime>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -44,8 +46,10 @@
 #include <QPolygonF>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSlider>
 #include <QTableWidget>
+#include <QStyle>
 #include <QTabWidget>
 #include <QTextBrowser>
 #include <QTimer>
@@ -359,6 +363,24 @@ private:
 	QCheckBox *enabled_;
 };
 
+// "Twitch", "TikTok" (the dock label without "(experimental)")
+QString platform_name(const std::string &id)
+{
+	const ChatPlatform *p = find_chat_platform(id);
+	QString l = p ? qs(p->label) : qs(id);
+	int cut = l.indexOf(" (");
+	return cut > 0 ? l.left(cut) : l;
+}
+
+// The Voice tab is kept in ui-state.ini next to config.json (per user, not part of the config schema).
+QString voice_state_path()
+{
+	char *p = obs_module_config_path("ui-state.ini");
+	QString s = p ? QString::fromUtf8(p) : QString();
+	bfree(p);
+	return s;
+}
+
 std::vector<std::string> lines_of(const QString &text)
 {
 	std::vector<std::string> out;
@@ -383,15 +405,13 @@ QString join_lines(const std::vector<std::string> &v)
 
 ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 {
-	QVBoxLayout *main_layout = new QVBoxLayout(this);
-	main_layout->setContentsMargins(0, 0, 0, 0);
+	// Since 0.5.0 this widget only owns the pages and timers: the dock puts the pages in its own tab bar
+	// (Chat, Chat sources, Voice) and the version / update line in its footer.
+	hide();
 
-	tabs_ = new QTabWidget(this);
-	main_layout->addWidget(tabs_);
-
-	// --- 1. Live Chat Page ---
-	QWidget *live_page = new QWidget();
-	QVBoxLayout *ll = new QVBoxLayout(live_page);
+	// --- Chat: the live merged feed ---------------------------------------------------------------
+	live_page_ = new QWidget();
+	QVBoxLayout *ll = new QVBoxLayout(live_page_);
 	ll->setContentsMargins(6, 6, 6, 6);
 
 	QHBoxLayout *top_live = new QHBoxLayout();
@@ -401,14 +421,16 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	live_reader_btn_->setMinimumHeight(26);
 
 	font_smaller_btn_ = new QPushButton("A-");
-	font_smaller_btn_->setMaximumWidth(32);
+	font_smaller_btn_->setFixedWidth(38);
+	font_smaller_btn_->setStyleSheet("padding:2px 0;");
+	font_smaller_btn_->setToolTip("Smaller text");
 	font_size_label_ = new QLabel("14px");
 	font_size_label_->setStyleSheet("color:#8a8a96; min-width:32px; text-align:center;");
 	font_bigger_btn_ = new QPushButton("A+");
-	font_bigger_btn_->setMaximumWidth(32);
-
+	font_bigger_btn_->setFixedWidth(38);
+	font_bigger_btn_->setStyleSheet("padding:2px 0;");
+	font_bigger_btn_->setToolTip("Bigger text");
 	clear_btn_ = new QPushButton("Clear");
-	clear_btn_->setMaximumWidth(60);
 
 	top_live->addWidget(live_reader_status_);
 	top_live->addWidget(live_reader_btn_);
@@ -419,30 +441,21 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	top_live->addWidget(clear_btn_);
 	ll->addLayout(top_live);
 
-	// Channel Auto-Connect Quick Bar
-	QHBoxLayout *chan_box = new QHBoxLayout();
-	QLabel *chan_lbl = new QLabel("My Channel:");
-	chan_lbl->setStyleSheet("font-weight:bold; color:#8a8a96; font-size:12px;");
-	channel_input_ = new QLineEdit();
-	channel_input_->setPlaceholderText("Enter channel name (e.g. RoyalAscent) to auto-connect chat");
-	channel_input_->setMinimumHeight(26);
-	auto_connect_btn_ = new QPushButton("Auto-Connect");
-	auto_connect_btn_->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
-	auto_connect_btn_->setMinimumHeight(26);
-
-	chan_box->addWidget(chan_lbl);
-	chan_box->addWidget(channel_input_, 1);
-	chan_box->addWidget(auto_connect_btn_);
-	add_collab_btn_ = new QPushButton("+ Add Collaborator");
-	add_collab_btn_->setStyleSheet("background-color:#9146ff; color:#ffffff; font-weight:bold; padding:4px 10px; border-radius:3px;");
-	add_collab_btn_->setMinimumHeight(26);
-	chan_box->addWidget(add_collab_btn_);
-	ll->addLayout(chan_box);
-
-	auto_connect_info_ = new QLabel();
-	auto_connect_info_->setStyleSheet("color:#3ddc84; font-size:12px; padding:2px;");
-	auto_connect_info_->hide();
-	ll->addWidget(auto_connect_info_);
+	// nothing to read yet: say what to do instead of an empty black box
+	empty_chat_ = new QWidget();
+	QVBoxLayout *el = new QVBoxLayout(empty_chat_);
+	el->setContentsMargins(12, 24, 12, 24);
+	QLabel *empty_lbl = new QLabel("<b>No chat channels yet.</b><br>Add the channels whose chat you want to see here: "
+				       "your own, and a collaborator's if you stream together.");
+	empty_lbl->setWordWrap(true);
+	empty_lbl->setAlignment(Qt::AlignCenter);
+	empty_lbl->setStyleSheet("color:#c8c8d0; font-size:13px;");
+	QPushButton *empty_btn = new QPushButton("Add chat channels");
+	empty_btn->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:6px 16px; border-radius:3px;");
+	el->addWidget(empty_lbl);
+	el->addWidget(empty_btn, 0, Qt::AlignHCenter);
+	el->addStretch(1);
+	ll->addWidget(empty_chat_);
 
 	chat_browser_ = new QTextBrowser();
 	chat_browser_->setOpenExternalLinks(false);
@@ -463,17 +476,10 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	pause_scroll_btn_->hide();
 	ll->addWidget(pause_scroll_btn_);
 
-	// --- 2. Sources & Settings Page ---
-	QWidget *settings_page = new QWidget();
-	QVBoxLayout *sl = new QVBoxLayout(settings_page);
+	// --- Chat sources: which channels, the reader, filters ----------------------------------------
+	sources_page_ = new QWidget();
+	QVBoxLayout *sl = new QVBoxLayout(sources_page_);
 	sl->setContentsMargins(6, 6, 6, 6);
-
-	QLabel *about = new QLabel("Reads the public chat page of each channel below in a hidden Chrome of its own, "
-				   "without any platform API, token or login. Automated reading may be against a platform's terms: "
-				   "you decide. See docs/limits.md.");
-	about->setWordWrap(true);
-	about->setStyleSheet("color:#8a8a96;");
-	sl->addWidget(about);
 
 	notice_ = new QLabel();
 	notice_->setWordWrap(true);
@@ -481,17 +487,40 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	notice_->hide();
 	sl->addWidget(notice_);
 
-	QHBoxLayout *top = new QHBoxLayout();
-	reader_btn_ = new QPushButton("Start chat reader");
-	reader_state_ = new QLabel();
-	start_with_obs_ = new QCheckBox("Start with OBS");
-	auto_start_stream_ = new QCheckBox("Auto-start with stream");
-	top->addWidget(reader_btn_);
-	top->addWidget(reader_state_, 1);
-	top->addWidget(start_with_obs_);
-	top->addWidget(auto_start_stream_);
-	sl->addLayout(top);
+	// 1. add a channel: one way, the same for every platform
+	QGroupBox *add_grp = new QGroupBox("Add a chat channel");
+	QVBoxLayout *agl = new QVBoxLayout(add_grp);
+	QHBoxLayout *arow = new QHBoxLayout();
+	add_platform_ = new QComboBox();
+	add_platform_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+	const std::vector<ChatPlatform> &cpl = chat_platforms();
+	for (size_t i = 0; i < cpl.size(); ++i)
+		add_platform_->addItem(QIcon(QPixmap::fromImage(create_platform_icon(cpl[i].id, 20))), qs(cpl[i].label), qs(cpl[i].id));
+	add_input_ = new QLineEdit();
+	add_input_->setMaxLength(300);
+	add_input_->setMinimumHeight(26);
+	QPushButton *add_btn = new QPushButton("Add");
+	add_btn->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 14px; border-radius:3px;");
+	add_btn->setMinimumHeight(26);
+	arow->addWidget(add_platform_);
+	arow->addWidget(add_input_, 1);
+	arow->addWidget(add_btn);
+	agl->addLayout(arow);
+	add_hint_ = new QLabel();
+	add_hint_->setWordWrap(true);
+	add_hint_->setStyleSheet("color:#8a8a96; font-size:11px;");
+	agl->addWidget(add_hint_);
+	add_info_ = new QLabel();
+	add_info_->setWordWrap(true);
+	add_info_->hide();
+	agl->addWidget(add_info_);
+	from_dest_btn_ = new QPushButton("Add my channels from Streams");
+	from_dest_btn_->setToolTip("One chat channel per Twitch, Kick, TikTok or YouTube destination, from its handle (YouTube: your "
+				   "@channel; the live stream is found by itself). Adds only what is missing; never changes a channel you added yourself.");
+	agl->addWidget(from_dest_btn_, 0, Qt::AlignLeft);
+	sl->addWidget(add_grp);
 
+	// 2. the channels
 	table_ = new QTableWidget(0, 4);
 	QStringList heads;
 	heads << "On" << "Status" << "Platform" << "Channel / video";
@@ -500,25 +529,52 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	table_->setSelectionBehavior(QAbstractItemView::SelectRows);
 	table_->setSelectionMode(QAbstractItemView::SingleSelection);
 	table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 	table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+	table_->setMinimumHeight(130);
 	sl->addWidget(table_, 1);
 
 	QHBoxLayout *row = new QHBoxLayout();
-	QPushButton *add = new QPushButton("Add...");
 	edit_btn_ = new QPushButton("Edit...");
 	remove_btn_ = new QPushButton("Remove");
-	sync_dest_btn_ = new QPushButton("Auto-sync from Destinations");
-	row->addWidget(add);
 	row->addWidget(edit_btn_);
 	row->addWidget(remove_btn_);
-	row->addWidget(sync_dest_btn_);
 	row->addStretch(1);
 	sl->addLayout(row);
 
+	// 3. the reader: one start/stop, one "when" choice
+	QGroupBox *rd_grp = new QGroupBox("Chat reader");
+	QVBoxLayout *rgl = new QVBoxLayout(rd_grp);
+	QHBoxLayout *top = new QHBoxLayout();
+	reader_btn_ = new QPushButton("Start chat reader");
+	reader_btn_->setMinimumHeight(26);
+	reader_state_ = new QLabel();
+	top->addWidget(reader_btn_);
+	top->addWidget(reader_state_, 1);
+	rgl->addLayout(top);
+	QHBoxLayout *mrow = new QHBoxLayout();
+	mrow->addWidget(new QLabel("Start it:"));
+	start_mode_ = new QComboBox();
+	start_mode_->addItem("Only when I press Start", 0);
+	start_mode_->addItem("When OBS starts", 1);
+	start_mode_->addItem("When I go live", 2);
+	mrow->addWidget(start_mode_, 1);
+	rgl->addLayout(mrow);
+	QLabel *about = new QLabel("The reader opens each channel's public chat page in a hidden browser of its own: no account, "
+				   "no login, no platform API. Automated reading may be against a platform's terms; you decide.");
+	about->setWordWrap(true);
+	about->setStyleSheet("color:#8a8a96; font-size:11px;");
+	rgl->addWidget(about);
+	sl->addWidget(rd_grp);
+
+	// 4. filters
+	QGroupBox *flt_grp = new QGroupBox("Filters");
+	QVBoxLayout *fgl = new QVBoxLayout(flt_grp);
 	hide_commands_ = new QCheckBox("Hide commands (!word, /word)");
 	hide_bots_ = new QCheckBox("Hide well-known bots");
-	sl->addWidget(hide_commands_);
-	sl->addWidget(hide_bots_);
+	fgl->addWidget(hide_commands_);
+	fgl->addWidget(hide_bots_);
 	QHBoxLayout *lists = new QHBoxLayout();
 	QVBoxLayout *wl = new QVBoxLayout();
 	wl->addWidget(new QLabel("Blocked words (one per line)"));
@@ -532,44 +588,34 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	ul->addWidget(users_);
 	lists->addLayout(wl);
 	lists->addLayout(ul);
-	sl->addLayout(lists);
-	QPushButton *apply = new QPushButton("Apply filters");
-	sl->addWidget(apply);
+	fgl->addLayout(lists);
+	QPushButton *apply = new QPushButton("Save word and user lists");
+	fgl->addWidget(apply, 0, Qt::AlignLeft);
+	sl->addWidget(flt_grp);
 
-	QHBoxLayout *urlrow = new QHBoxLayout();
-	url_label_ = new QLabel();
-	url_label_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-	url_label_->setStyleSheet("color:#8a8a96;");
-	QPushButton *copy = new QPushButton("Copy chat URL");
-	urlrow->addWidget(url_label_, 1);
-	urlrow->addWidget(copy);
-	sl->addLayout(urlrow);
-
-	// --- 3. Voice & Alerts (TTS) Page ---
-	QWidget *voice_page = new QWidget();
-	QVBoxLayout *vl = new QVBoxLayout(voice_page);
+	// --- Voice: read chat aloud, chimes -----------------------------------------------------------
+	voice_page_ = new QWidget();
+	QVBoxLayout *vl = new QVBoxLayout(voice_page_);
 	vl->setContentsMargins(10, 10, 10, 10);
 	vl->setSpacing(8);
 
-	QLabel *voice_title = new QLabel("Voice Reader (TTS), Chat Alerts & Updates");
-	voice_title->setStyleSheet("font-size:14px; font-weight:bold; color:#f2f2f5;");
-	vl->addWidget(voice_title);
-
-	QLabel *voice_desc = new QLabel("Read incoming chat aloud with neural voices that run on this PC (no internet, no account), play chime alerts, and check for new releases.");
+	QLabel *voice_desc = new QLabel("Read incoming chat aloud with neural voices that run on this PC (no internet, no account), "
+					"or play a short chime on each new line.");
 	voice_desc->setWordWrap(true);
 	voice_desc->setStyleSheet("color:#8a8a96; font-size:12px; margin-bottom:4px;");
 	vl->addWidget(voice_desc);
 
-	// TTS Box
-	QGroupBox *tts_grp = new QGroupBox("Text-to-Speech (TTS) Voice Reader");
+	QGroupBox *tts_grp = new QGroupBox("Voice reader");
 	QVBoxLayout *tgl = new QVBoxLayout(tts_grp);
-	tts_enabled_ = new QCheckBox("Enable Voice Reader (reads incoming chat aloud)");
+	tts_enabled_ = new QCheckBox("Read chat aloud");
 	tts_enabled_->setStyleSheet("font-weight:bold; color:#3ddc84;");
 	tgl->addWidget(tts_enabled_);
 
 	QHBoxLayout *vrow1 = new QHBoxLayout();
 	vrow1->addWidget(new QLabel("Voice:"));
 	tts_voice_ = new QComboBox();
+	tts_voice_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+	tts_voice_->setMinimumContentsLength(12);
 	std::vector<TtsVoice> installed_voices = ChatSpeaker::voices();
 	for (const TtsVoice &v : installed_voices)
 		tts_voice_->addItem(qs(v.name), qs(v.id));
@@ -577,7 +623,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		tts_voice_->addItem("No voices installed: run the installer again and tick a language", QString());
 	vrow1->addWidget(tts_voice_, 1);
 
-	tts_test_btn_ = new QPushButton("Preview Voice");
+	tts_test_btn_ = new QPushButton("Preview");
 	tts_test_btn_->setStyleSheet("background-color:#5865F2; color:#ffffff; font-weight:bold; padding:4px 12px; border-radius:3px;");
 	vrow1->addWidget(tts_test_btn_);
 	tgl->addLayout(vrow1);
@@ -600,79 +646,108 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	vrow2->addWidget(tts_speed_, 1);
 	tgl->addLayout(vrow2);
 
-	QHBoxLayout *vrow3 = new QHBoxLayout();
-	tts_include_user_ = new QCheckBox("Include username (e.g. 'User says:')");
+	tts_include_user_ = new QCheckBox("Say who wrote it (\"Viewer says\")");
 	tts_include_user_->setChecked(true);
-	tts_include_platform_ = new QCheckBox("Include platform ('on Twitch', 'on Kick')");
+	tts_include_platform_ = new QCheckBox("Say where (\"on Twitch\")");
 	tts_include_platform_->setChecked(false);
-	vrow3->addWidget(tts_include_user_);
-	vrow3->addWidget(tts_include_platform_);
-	vrow3->addStretch(1);
-	tgl->addLayout(vrow3);
+	tgl->addWidget(tts_include_user_);
+	tgl->addWidget(tts_include_platform_);
 	vl->addWidget(tts_grp);
 
-	// Alert Chimes Box
-	QGroupBox *snd_grp = new QGroupBox("Chat Sound Alerts");
+	// one voice per platform, so you hear where a line came from ("Same as the main voice" by default)
+	QGroupBox *pp_grp = new QGroupBox("Voice per platform");
+	QGridLayout *ppl = new QGridLayout(pp_grp);
+	ppl->setColumnStretch(1, 1);
+	const std::vector<ChatPlatform> &vpl = chat_platforms();
+	for (size_t i = 0; i < vpl.size(); ++i) {
+		const std::string pid = vpl[i].id;
+		QLabel *lbl = new QLabel(platform_name(pid));
+		lbl->setMinimumWidth(64);
+		QLabel *ico = new QLabel();
+		ico->setPixmap(QPixmap::fromImage(create_platform_icon(pid, 18)));
+		QComboBox *cb = new QComboBox();
+		cb->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+		cb->setMinimumContentsLength(10);
+		cb->addItem("Same as the main voice", QString());
+		for (const TtsVoice &v : installed_voices)
+			cb->addItem(qs(v.name), qs(v.id));
+		QPushButton *play = new QPushButton();
+		play->setIcon(play->style()->standardIcon(QStyle::SP_MediaPlay)); // the theme's font has no play-symbol glyph
+		play->setFixedWidth(30);
+		play->setToolTip("Hear this voice");
+		int prow = static_cast<int>(i);
+		QHBoxLayout *name = new QHBoxLayout();
+		name->setContentsMargins(0, 0, 0, 0);
+		name->addWidget(ico);
+		name->addWidget(lbl);
+		ppl->addLayout(name, prow, 0);
+		ppl->addWidget(cb, prow, 1);
+		ppl->addWidget(play, prow, 2);
+		platform_voice_.push_back(std::make_pair(pid, cb));
+		QObject::connect(cb, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
+		QObject::connect(play, &QPushButton::clicked, [this, pid]() {
+			if (speaker_)
+				speaker_->interrupt();
+			play_tts("Viewer", pid, "This is how chat from " + ss(platform_name(pid)) + " sounds.");
+		});
+	}
+	vl->addWidget(pp_grp);
+
+	QGroupBox *snd_grp = new QGroupBox("Chime");
 	QVBoxLayout *sgl = new QVBoxLayout(snd_grp);
-	sound_alert_enabled_ = new QCheckBox("Play sound chime on new message");
+	sound_alert_enabled_ = new QCheckBox("Play a chime on each new chat line");
 	sound_alert_enabled_->setStyleSheet("font-weight:bold; color:#38bdf8;");
 	sgl->addWidget(sound_alert_enabled_);
-
 	QHBoxLayout *srow = new QHBoxLayout();
-	srow->addWidget(new QLabel("Alert Chime:"));
+	srow->addWidget(new QLabel("Sound:"));
 	sound_alert_type_ = new QComboBox();
+	sound_alert_type_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+	sound_alert_type_->setMinimumContentsLength(12);
 	sound_alert_type_->addItem("Gentle Chime (Dual Note)", "chime");
 	sound_alert_type_->addItem("Modern Ding (Crystal Bell)", "ding");
 	sound_alert_type_->addItem("Soft Pop (Bubble)", "pop");
 	sound_alert_type_->addItem("Subtle Click (Minimal)", "subtle");
 	srow->addWidget(sound_alert_type_, 1);
-
-	sound_test_btn_ = new QPushButton("Test Chime");
+	sound_test_btn_ = new QPushButton("Test");
 	srow->addWidget(sound_test_btn_);
 	sgl->addLayout(srow);
 	vl->addWidget(snd_grp);
-
-	// Updates Box
-	QGroupBox *upd_grp = new QGroupBox("Plugin Updates");
-	QVBoxLayout *ugl = new QVBoxLayout(upd_grp);
-	QHBoxLayout *urow = new QHBoxLayout();
-	QLabel *ver_lbl = new QLabel("Current version: <b>v0.4.0</b>");
-	urow->addWidget(ver_lbl);
-	check_updates_btn_ = new QPushButton("Check for Updates");
-	urow->addWidget(check_updates_btn_);
-	download_update_btn_ = new QPushButton("Download Update (.exe)");
-	download_update_btn_->setStyleSheet("background-color:#3ddc84; color:#121217; font-weight:bold; padding:4px 10px; border-radius:3px;");
-	download_update_btn_->hide();
-	urow->addWidget(download_update_btn_);
-	urow->addStretch(1);
-	ugl->addLayout(urow);
-
-	update_status_lbl_ = new QLabel();
-	update_status_lbl_->setStyleSheet("color:#8a8a96; font-size:12px;");
-	ugl->addWidget(update_status_lbl_);
-	vl->addWidget(upd_grp);
-
 	vl->addStretch(1);
 
-	tabs_->addTab(live_page, "Live Chat");
-	tabs_->addTab(settings_page, "Sources & Settings");
-	tabs_->addTab(voice_page, "Voice & Alerts (TTS)");
+	// --- footer: version and updates (the dock shows it under the tabs) ---------------------------
+	footer_ = new QWidget();
+	QHBoxLayout *urow = new QHBoxLayout(footer_);
+	urow->setContentsMargins(6, 0, 6, 2);
+	QLabel *ver_lbl = new QLabel("OBS Multistream Chat " "v" PLUGIN_VERSION);
+	ver_lbl->setStyleSheet("color:#8a8a96; font-size:11px;");
+	urow->addWidget(ver_lbl);
+	check_updates_btn_ = new QPushButton("Check for updates");
+	check_updates_btn_->setFlat(true);
+	check_updates_btn_->setStyleSheet("color:#58a6ff; font-size:11px; padding:0 4px;");
+	urow->addWidget(check_updates_btn_);
+	update_status_lbl_ = new QLabel();
+	update_status_lbl_->setStyleSheet("color:#8a8a96; font-size:11px;");
+	update_status_lbl_->setWordWrap(true);
+	urow->addWidget(update_status_lbl_, 1);
+	download_update_btn_ = new QPushButton("Download update");
+	download_update_btn_->setStyleSheet("background-color:#3ddc84; color:#121217; font-weight:bold; padding:2px 8px; border-radius:3px; font-size:11px;");
+	download_update_btn_->hide();
+	urow->addWidget(download_update_btn_);
 
 	// Connect signals
-	QObject::connect(tabs_, &QTabWidget::currentChanged, [this](int idx) {
-		if (idx == 0) {
-			unread_count_ = 0;
-			tabs_->setTabText(0, "Live Chat");
-		}
+	QObject::connect(empty_btn, &QPushButton::clicked, [this]() {
+		if (go_sources_)
+			go_sources_();
+		add_input_->setFocus();
 	});
-
-	QObject::connect(channel_input_, &QLineEdit::returnPressed, [this]() { auto_connect_channel(); });
-	QObject::connect(auto_connect_btn_, &QPushButton::clicked, [this]() { auto_connect_channel(); });
-	QObject::connect(add_collab_btn_, &QPushButton::clicked, [this]() { add_collaborator_dialog(); });
+	QObject::connect(add_platform_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { update_add_hint(); });
+	QObject::connect(add_input_, &QLineEdit::returnPressed, [this]() { add_quick(); });
+	QObject::connect(add_btn, &QPushButton::clicked, [this]() { add_quick(); });
+	QObject::connect(from_dest_btn_, &QPushButton::clicked, [this]() { add_from_destinations(); });
 	QObject::connect(tts_test_btn_, &QPushButton::clicked, [this]() {
 		if (speaker_)
 			speaker_->interrupt();
-		play_tts("Viewer", "Twitch", "Welcome to the stream! The voice reader is ready.");
+		play_tts("Viewer", "", "Welcome to the stream! The voice reader is ready."); // "" = the main voice
 		if (speaker_ && !speaker_->problem().empty())
 			QMessageBox::warning(this, "OBS Multistream Chat", qs(speaker_->problem()));
 	});
@@ -680,6 +755,15 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		std::string st = sound_alert_type_ ? ss(sound_alert_type_->currentData().toString()) : "chime";
 		play_alert_sound(st);
 	});
+	load_voice_settings();
+	QObject::connect(tts_enabled_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(tts_voice_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
+	QObject::connect(tts_volume_, &QSlider::valueChanged, [this](int) { save_voice_settings(); });
+	QObject::connect(tts_speed_, &QSlider::valueChanged, [this](int) { save_voice_settings(); });
+	QObject::connect(tts_include_user_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(tts_include_platform_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(sound_alert_enabled_, &QCheckBox::toggled, [this](bool) { save_voice_settings(); });
+	QObject::connect(sound_alert_type_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int) { save_voice_settings(); });
 	QObject::connect(check_updates_btn_, &QPushButton::clicked, [this]() { check_for_updates(); });
 	QObject::connect(download_update_btn_, &QPushButton::clicked, [this]() {
 		QDesktopServices::openUrl(QUrl("https://github.com/otissy/obs-multistream-chat/releases/latest"));
@@ -705,19 +789,12 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		pause_scroll_btn_->hide();
 	});
 
-	QObject::connect(add, &QPushButton::clicked, [this]() { add_source(); });
 	QObject::connect(edit_btn_, &QPushButton::clicked, [this]() { edit_selected(); });
 	QObject::connect(remove_btn_, &QPushButton::clicked, [this]() { remove_selected(); });
-	QObject::connect(sync_dest_btn_, &QPushButton::clicked, [this]() { sync_from_destinations(); });
 	QObject::connect(reader_btn_, &QPushButton::clicked, [this]() { toggle_reader(); });
 	QObject::connect(apply, &QPushButton::clicked, [this]() { apply_filters(); });
-	QObject::connect(copy, &QPushButton::clicked, [this]() { copy_chat_url(); });
-	QObject::connect(start_with_obs_, &QCheckBox::clicked, [this](bool on) {
-		plugin().cfg.chat.start_with_obs = on;
-		save();
-	});
-	QObject::connect(auto_start_stream_, &QCheckBox::clicked, [this](bool on) {
-		plugin().cfg.chat.auto_start_with_stream = on;
+	QObject::connect(start_mode_, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		set_reader_start_mode(plugin().cfg.chat, start_mode_->currentData().toInt());
 		save();
 	});
 	QObject::connect(hide_commands_, &QCheckBox::clicked, [this](bool) { apply_filters(); });
@@ -729,6 +806,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	});
 	edit_btn_->setEnabled(false);
 	remove_btn_->setEnabled(false);
+	update_add_hint();
 
 	// Pre-load backlog messages
 	PluginState &st = plugin();
@@ -748,6 +826,104 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	refresh();
 }
 
+// Voice tab settings survive an OBS restart (before 0.5.0 every start was "voice reader off, first voice").
+void ChatPanel::load_voice_settings()
+{
+	QString path = voice_state_path();
+	if (path.isEmpty())
+		return;
+	loading_voice_ = true;
+	QSettings s(path, QSettings::IniFormat);
+	s.beginGroup("voice");
+	auto pick = [](QComboBox *cb, const QString &id) {
+		int i = cb->findData(id);
+		if (i >= 0)
+			cb->setCurrentIndex(i);
+	};
+	tts_enabled_->setChecked(s.value("enabled", false).toBool());
+	pick(tts_voice_, s.value("voice").toString());
+	tts_volume_->setValue(s.value("volume", 85).toInt());
+	tts_speed_->setValue(s.value("speed", 0).toInt());
+	tts_include_user_->setChecked(s.value("say_user", true).toBool());
+	tts_include_platform_->setChecked(s.value("say_platform", false).toBool());
+	sound_alert_enabled_->setChecked(s.value("chime", false).toBool());
+	pick(sound_alert_type_, s.value("chime_sound", "chime").toString());
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		pick(platform_voice_[i].second, s.value(QString::fromStdString("voice_" + platform_voice_[i].first)).toString());
+	s.endGroup();
+	loading_voice_ = false;
+}
+
+void ChatPanel::save_voice_settings()
+{
+	QString path = voice_state_path();
+	if (loading_voice_ || path.isEmpty() || !tts_voice_)
+		return;
+	QSettings s(path, QSettings::IniFormat);
+	s.beginGroup("voice");
+	s.setValue("enabled", tts_enabled_->isChecked());
+	s.setValue("voice", tts_voice_->currentData().toString());
+	s.setValue("volume", tts_volume_->value());
+	s.setValue("speed", tts_speed_->value());
+	s.setValue("say_user", tts_include_user_->isChecked());
+	s.setValue("say_platform", tts_include_platform_->isChecked());
+	s.setValue("chime", sound_alert_enabled_->isChecked());
+	s.setValue("chime_sound", sound_alert_type_->currentData().toString());
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		s.setValue(QString::fromStdString("voice_" + platform_voice_[i].first), platform_voice_[i].second->currentData().toString());
+	s.endGroup();
+}
+
+void ChatPanel::attach(QTabWidget *tabs, int live_index, std::function<void()> go_sources)
+{
+	host_tabs_ = tabs;
+	live_index_ = live_index;
+	live_label_ = tabs ? tabs->tabText(live_index) : QString();
+	go_sources_ = std::move(go_sources);
+	if (tabs)
+		QObject::connect(tabs, &QTabWidget::currentChanged, [this](int idx) {
+			if (idx == live_index_)
+				reset_unread();
+		});
+}
+
+void ChatPanel::reset_unread()
+{
+	unread_count_ = 0;
+	if (host_tabs_)
+		host_tabs_->setTabText(live_index_, live_label_);
+}
+
+void ChatPanel::update_add_hint()
+{
+	const ChatPlatform *p = find_chat_platform(ss(add_platform_->currentData().toString()));
+	QString t = p ? "Enter the " + qs(p->hint) + "." : QString();
+	if (p && p->experimental)
+		t += " Experimental: this platform may need a login or block automated browsers; nothing is ever logged in.";
+	add_hint_->setText(t);
+	add_input_->setPlaceholderText(p && std::string(p->id) == "youtube" ? "@yourchannel"
+					: p && std::string(p->id) == "x"     ? "x.com/i/broadcasts/..."
+					: p && std::string(p->id) == "tiktok" ? "@username"
+									      : "channel name");
+}
+
+void ChatPanel::show_add_info(const QString &text, bool good)
+{
+	add_info_->setText(text);
+	add_info_->setStyleSheet(good ? "color:#3ddc84; font-size:12px;" : "color:#ff4d4f; font-size:12px;");
+	add_info_->show();
+}
+
+void ChatPanel::start_reader_if_wanted()
+{
+	PluginState &st = plugin();
+	if (!st.reader_active) {
+		std::string cerr;
+		if (!plugin_start_reader(cerr))
+			notice_->setText(qs(cerr));
+	}
+}
+
 std::string ChatPanel::selected_id() const
 {
 	QList<QTableWidgetSelectionRange> r = table_->selectedRanges();
@@ -757,162 +933,56 @@ std::string ChatPanel::selected_id() const
 	return (row >= 0 && row < static_cast<int>(row_ids_.size())) ? row_ids_[static_cast<size_t>(row)] : std::string();
 }
 
-void ChatPanel::auto_connect_channel()
+// One way to add a channel, the same for every platform (replaces "Auto-Connect", which added the typed
+// name on Twitch, Kick, TikTok and X at once, and "+ Add Collaborator", which was Twitch only).
+void ChatPanel::add_quick()
 {
-	if (!channel_input_)
-		return;
-	QString raw = channel_input_->text().trimmed();
-	if (raw.isEmpty())
-		return;
-
-	// Support multiple comma or space separated channels (e.g. "mychan, collab1, collab2")
-	QStringList items = raw.split(QRegularExpression("[,;\\s]+"), Qt::SkipEmptyParts);
-	if (items.isEmpty())
-		return;
-
 	PluginState &st = plugin();
-	const char *plats[] = {"twitch", "kick", "tiktok", "x"};
-	bool changed = false;
-
-	for (const QString &item : items) {
-		std::string base = ss(item);
-		if (!base.empty() && base.front() == '@')
-			base = base.substr(1);
-
-		for (const char *plat : plats) {
-			std::string norm, err;
-			if (!normalize_chat_target(plat, base, norm, err))
-				continue;
-			bool found = false;
-			for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i) {
-				if (st.cfg.chat.sources[i].platform == plat && st.cfg.chat.sources[i].target == norm) {
-					st.cfg.chat.sources[i].enabled = true;
-					found = true;
-					changed = true;
-					break;
-				}
-			}
-			if (!found && st.cfg.chat.sources.size() < static_cast<size_t>(kMaxChatSources)) {
-				ChatSource s;
-				s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
-				s.platform = plat;
-				s.target = norm;
-				s.enabled = true;
-				st.cfg.chat.sources.push_back(s);
-				changed = true;
-			}
-		}
-	}
-
-	if (changed) {
-		save();
-	}
-
-	if (!st.reader_active) {
-		std::string cerr;
-		plugin_start_reader(cerr);
-	}
-
-	if (auto_connect_info_) {
-		auto_connect_info_->setText(QString("Connected %1 channel(s) across Twitch, Kick, TikTok & X!").arg(items.size()));
-		auto_connect_info_->show();
-	}
-	refresh();
-}
-
-void ChatPanel::add_collaborator_dialog()
-{
-	bool ok = false;
-	QString input = QInputDialog::getText(
-		this,
-		"Add Twitch / Platform Collaborator",
-		"Enter collaborator's channel name or link (e.g. shroud or https://twitch.tv/shroud):",
-		QLineEdit::Normal,
-		QString(),
-		&ok
-	);
-	if (!ok || input.trimmed().isEmpty())
+	std::string platform = ss(add_platform_->currentData().toString());
+	std::string target, err;
+	AddResult r = add_chat_source(st.cfg.chat.sources, platform, ss(add_input_->text()), target, err);
+	const ChatPlatform *p = find_chat_platform(platform);
+	QString where = p ? qs(p->label) : qs(platform);
+	switch (r) {
+	case AddResult::Invalid:
+		show_add_info(add_input_->text().trimmed().isEmpty() ? "Type a channel first." : qs(err), false);
 		return;
-
-	QString raw = input.trimmed();
-	std::string base = ss(raw);
-	if (!base.empty() && base.front() == '@')
-		base = base.substr(1);
-
-	PluginState &st = plugin();
-	if (st.cfg.chat.sources.size() >= static_cast<size_t>(kMaxChatSources)) {
-		QMessageBox::information(this, "OBS Multistream Chat", "At most 32 chat sources allowed.");
+	case AddResult::Full:
+		show_add_info("At most 32 chat channels.", false);
 		return;
-	}
-
-	std::string norm, err;
-	if (!normalize_chat_target("twitch", base, norm, err)) {
-		QMessageBox::warning(this, "OBS Multistream Chat", "Invalid channel name: " + qs(err));
+	case AddResult::Duplicate:
+		show_add_info(QString("%1 on %2 is already in the list.").arg(qs(target), where), false);
 		return;
+	case AddResult::Enabled:
+		show_add_info(QString("%1 on %2 was in the list but off; it is on again.").arg(qs(target), where), true);
+		break;
+	case AddResult::Added:
+		show_add_info(QString("Added %1 on %2.").arg(qs(target), where), true);
+		break;
 	}
-
-	ChatSource s;
-	s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
-	s.platform = "twitch";
-	s.target = norm;
-	s.enabled = true;
-	st.cfg.chat.sources.push_back(s);
+	add_input_->clear();
 	save();
-
-	if (!st.reader_active) {
-		std::string cerr;
-		plugin_start_reader(cerr);
-	}
-	if (auto_connect_info_) {
-		auto_connect_info_->setText(QString("Added collaborator \"%1\" (Twitch)!").arg(qs(norm)));
-		auto_connect_info_->show();
-	}
+	start_reader_if_wanted();
 	refresh();
 }
 
-void ChatPanel::sync_from_destinations()
+// "Add my channels from Streams": add-only (the old "Auto-sync" replaced the first source of the same
+// platform, so a collaborator's channel was overwritten by your own).
+void ChatPanel::add_from_destinations()
 {
 	PluginState &st = plugin();
-	bool changed = false;
-	for (size_t i = 0; i < st.cfg.destinations.size(); ++i) {
-		const Destination &d = st.cfg.destinations[i];
-		std::string plat = d.platform;
-		if (plat != "twitch" && plat != "kick" && plat != "tiktok" && plat != "x")
-			continue;
-		std::string raw = !d.handle.empty() ? d.handle : d.name;
-		if (raw.empty())
-			continue;
-		std::string norm, err;
-		if (!normalize_chat_target(plat, raw, norm, err))
-			continue;
-		bool found = false;
-		for (size_t j = 0; j < st.cfg.chat.sources.size(); ++j) {
-			if (st.cfg.chat.sources[j].platform == plat) {
-				st.cfg.chat.sources[j].target = norm;
-				st.cfg.chat.sources[j].enabled = true;
-				found = true;
-				changed = true;
-				break;
-			}
-		}
-		if (!found && st.cfg.chat.sources.size() < static_cast<size_t>(kMaxChatSources)) {
-			ChatSource s;
-			s.id = "c" + std::to_string(st.cfg.chat.sources.size() + 1);
-			s.platform = plat;
-			s.target = norm;
-			s.enabled = true;
-			st.cfg.chat.sources.push_back(s);
-			changed = true;
-		}
+	int n = add_sources_from_destinations(st.cfg.destinations, st.cfg.chat.sources);
+	if (n == 0) {
+		show_add_info(st.cfg.destinations.empty()
+				      ? "No stream destinations yet: add them on the Streams tab first."
+				      : "Nothing to add: every Twitch, Kick and TikTok destination with a handle is already here.",
+			      false);
+		return;
 	}
-	if (changed) {
-		save();
-		if (!st.reader_active) {
-			std::string cerr;
-			plugin_start_reader(cerr);
-		}
-		refresh();
-	}
+	show_add_info(QString("Added %1 channel(s) from your stream destinations.").arg(n), true);
+	save();
+	start_reader_if_wanted();
+	refresh();
 }
 
 void ChatPanel::save()
@@ -1003,16 +1073,6 @@ void ChatPanel::apply_filters()
 	save();
 }
 
-void ChatPanel::copy_chat_url()
-{
-	std::string url = plugin_chat_url();
-	if (url.empty()) {
-		QMessageBox::warning(this, "OBS Multistream Chat", "The local server is not running.");
-		return;
-	}
-	QApplication::clipboard()->setText(qs(url + "?theme=dark&font=22&max=30"));
-}
-
 void ChatPanel::rebuild_rows(const std::vector<std::string> &ids)
 {
 	row_ids_ = ids;
@@ -1043,41 +1103,22 @@ void ChatPanel::refresh()
 	PluginState &st = plugin();
 	if (!filters_loaded_) {
 		filters_loaded_ = true;
-		start_with_obs_->setChecked(st.cfg.chat.start_with_obs);
-		auto_start_stream_->setChecked(st.cfg.chat.auto_start_with_stream);
 		hide_commands_->setChecked(st.cfg.chat.hide_commands);
 		hide_bots_->setChecked(st.cfg.chat.hide_bots);
 		words_->setPlainText(join_lines(st.cfg.chat.blocked_words));
 		users_->setPlainText(join_lines(st.cfg.chat.blocked_users));
-		if (channel_input_ && channel_input_->text().isEmpty()) {
-			std::string detected_handle;
-			for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i) {
-				if (!st.cfg.chat.sources[i].target.empty()) {
-					detected_handle = st.cfg.chat.sources[i].target;
-					break;
-				}
-			}
-			if (detected_handle.empty()) {
-				for (size_t i = 0; i < st.cfg.destinations.size(); ++i) {
-					if (!st.cfg.destinations[i].handle.empty()) {
-						detected_handle = st.cfg.destinations[i].handle;
-						break;
-					} else if (!st.cfg.destinations[i].name.empty()) {
-						detected_handle = st.cfg.destinations[i].name;
-						break;
-					}
-				}
-			}
-			if (!detected_handle.empty()) {
-				channel_input_->setText(qs(detected_handle));
-			}
-		}
 	}
-	start_with_obs_->setChecked(st.cfg.chat.start_with_obs);
-	auto_start_stream_->setChecked(st.cfg.chat.auto_start_with_stream);
+	int mode_idx = start_mode_->findData(reader_start_mode(st.cfg.chat));
+	if (mode_idx >= 0 && start_mode_->currentIndex() != mode_idx)
+		start_mode_->setCurrentIndex(mode_idx);
+	bool no_sources = st.cfg.chat.sources.empty();
+	empty_chat_->setVisible(no_sources && chat_browser_->document()->isEmpty());
+	chat_browser_->setVisible(!empty_chat_->isVisible());
 	bool running = plugin_reader_running();
 	reader_btn_->setText(running ? "Stop chat reader" : "Start chat reader");
-	reader_state_->setText(running ? "Reader running" : "Reader stopped");
+	reader_btn_->setEnabled(running || !no_sources);
+	live_reader_btn_->setEnabled(running || !no_sources);
+	reader_state_->setText(running ? "Running" : no_sources ? "Add a channel first" : "Stopped");
 	reader_state_->setStyleSheet(running ? "color:#3ddc84;" : "color:#8a8a96;");
 	live_reader_btn_->setText(running ? "Stop reader" : "Start reader");
 
@@ -1091,7 +1132,10 @@ void ChatPanel::refresh()
 			any_waiting = true;
 	}
 
-	if (any_reading) {
+	if (!running) {
+		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Reader stopped"));
+		live_reader_status_->setStyleSheet("color:#8a8a96; font-weight:bold;");
+	} else if (any_reading) {
 		live_reader_status_->setText(QString::fromUtf8("\xE2\x97\x8F Chat Live"));
 		live_reader_status_->setStyleSheet("color:#3ddc84; font-weight:bold;");
 	} else if (any_waiting) {
@@ -1106,16 +1150,13 @@ void ChatPanel::refresh()
 	}
 
 	if (st.cfg.chat.sources.empty()) {
-		notice_->setText("No chat sources configured. Enter your channel name above or click 'Auto-sync from Destinations'.");
-		notice_->show();
+		notice_->hide();
 	} else if (!st.chat_notice.empty()) {
 		notice_->setText(qs(st.chat_notice));
 		notice_->show();
 	} else {
 		notice_->hide();
 	}
-	std::string url = plugin_chat_url();
-	url_label_->setText(url.empty() ? "The local server is not running." : qs(url));
 
 	std::vector<std::string> ids;
 	for (size_t i = 0; i < st.cfg.chat.sources.size(); ++i)
@@ -1203,14 +1244,14 @@ void ChatPanel::append_message(const ChatMessage &m)
 	}
 
 	int ico_size = std::max(14, static_cast<int>(font_size_ * 1.15));
-	QString ico_html = QString("<img src=\"platform://%1\" width=\"%2\" height=\"%2\" style=\"vertical-align:middle; margin-right:5px;\" alt=\"%3\" title=\"%3\">")
+	QString ico_html = QString("<img src=\"platform://%1\" width=\"%2\" height=\"%2\" style=\"vertical-align:middle;\" alt=\"%3\" title=\"%3\">&nbsp;")
 				   .arg(qs(m.platform), QString::number(ico_size), qs(b.label));
 
 	QString html = QString(
 		"<div style=\"margin-bottom:4px; line-height:1.35; font-size:%1px;\">"
 		"%2"
-		"<span style=\"color:#8a8a96; font-size:80%; margin-right:5px;\">%3</span>"
-		"<span style=\"color:%4; font-weight:bold; margin-right:3px;\">%5:</span>"
+		"<span style=\"color:#8a8a96; font-size:80%;\">%3</span>&nbsp;&nbsp;"
+		"<span style=\"color:%4; font-weight:bold;\">%5:</span>&nbsp;"
 		"<span style=\"color:#f2f2f5;\">%6</span>"
 		"</div>")
 		.arg(QString::number(font_size_), ico_html, time_str, c, author, content);
@@ -1227,9 +1268,9 @@ void ChatPanel::append_message(const ChatMessage &m)
 		pause_scroll_btn_->show();
 	}
 
-	if (tabs_->currentIndex() != 0) {
+	if (host_tabs_ && host_tabs_->currentIndex() != live_index_) {
 		unread_count_++;
-		tabs_->setTabText(0, QString("Live Chat (%1)").arg(unread_count_));
+		host_tabs_->setTabText(live_index_, QString("%1 (%2)").arg(live_label_).arg(unread_count_));
 	}
 
 	if (sound_alert_enabled_ && sound_alert_enabled_->isChecked()) {
@@ -1250,8 +1291,7 @@ void ChatPanel::append_message(const ChatMessage &m)
 void ChatPanel::clear_chat()
 {
 	chat_browser_->clear();
-	unread_count_ = 0;
-	tabs_->setTabText(0, "Live Chat");
+	reset_unread();
 }
 
 void ChatPanel::set_font_scale(int delta)
@@ -1338,8 +1378,8 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 	bool inc_user = tts_include_user_ ? tts_include_user_->isChecked() : true;
 	bool inc_plat = tts_include_platform_ ? tts_include_platform_->isChecked() : false;
 
-	if (inc_user && inc_plat)
-		text_to_say = author + " on " + platform + " says: " + message;
+	if (inc_user && inc_plat && !platform.empty())
+		text_to_say = author + " on " + ss(platform_name(platform)) + " says: " + message;
 	else if (inc_user)
 		text_to_say = author + " says: " + message;
 	else
@@ -1347,7 +1387,14 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 
 	int vol = tts_volume_ ? tts_volume_->value() : 85;
 	int rate = tts_speed_ ? tts_speed_->value() : 0;
-	std::string voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
+	std::string main_voice = tts_voice_ ? ss(tts_voice_->currentData().toString()) : std::string();
+	std::vector<std::pair<std::string, std::string>> per;
+	for (size_t i = 0; i < platform_voice_.size(); ++i)
+		per.push_back(std::make_pair(platform_voice_[i].first, ss(platform_voice_[i].second->currentData().toString())));
+	std::vector<std::string> installed;
+	for (int i = 0; tts_voice_ && i < tts_voice_->count(); ++i)
+		installed.push_back(ss(tts_voice_->itemData(i).toString()));
+	std::string voice = voice_for_platform(per, platform, main_voice, installed);
 
 	if (!speaker_) {
 		const PluginState &st = plugin();

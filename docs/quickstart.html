@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OBS Multistream Chat: Quick start</title>
+<!-- Installed with the plugin (docs\quickstart.html) and opened at the end of Setup. Offline: no scripts,
+     no web fonts, pictures from docs\images next to it. Same steps as the README's Quick start. -->
+<style>
+  :root { --bg: #15161b; --card: #1d1f27; --fg: #ecedf2; --dim: #a3a6b4; --accent: #6b7cff; --line: #2b2e3a; }
+  @media (prefers-color-scheme: light) { :root { --bg: #f6f6f9; --card: #ffffff; --fg: #17181d; --dim: #5d606d; --accent: #4250d6; --line: #e3e4ea; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  .lede { color: var(--dim); margin: 0 0 28px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 0 0 18px; }
+  .step h2 { font-size: 19px; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
+  .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 15px;
+         display: inline-flex; align-items: center; justify-content: center; transform: translateY(-2px); }
+  .step p { margin: 6px 0; }
+  .pics { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+  .pics figure { margin: 0; flex: 1 1 260px; }
+  .pics img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); display: block; }
+  .pics.wide figure { flex-basis: 100%; }
+  figcaption { color: var(--dim); font-size: 13px; margin-top: 6px; }
+  code { background: rgba(127,127,127,.16); padding: 1px 6px; border-radius: 5px; font-size: 14px; }
+  .note { color: var(--dim); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Quick start</h1>
+  <p class="lede">From install to live in a few minutes. The pictures are the real panel in OBS, with sample channels and sample chat.</p>
+
+  <section class="step">
+    <h2><span class="num">1</span>Open the panel</h2>
+    <p>Start OBS, then <b>Docks &gt; OBS Multistream Chat</b> (or <b>Tools &gt; OBS Multistream Chat</b>) and drag it next to your other docks.
+       Until you are set up it shows a <b>Get started</b> card: each step has a button that takes you to the right place and ticks itself off when done.</p>
+    <div class="pics wide"><figure><img src="images/00-obs-window.png" alt="The panel docked on the right of OBS"><figcaption>The panel on the right of OBS, with the Get started card.</figcaption></figure></div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">2</span>Add where you stream</h2>
+    <p>Press <b>Add destination</b>. Pick the platform, paste its stream key (from the platform's dashboard) and type the handle you want shown.
+       The server address is filled in for you. Your normal OBS stream keeps going to <i>Settings &gt; Stream</i>; add each <i>extra</i> platform here.</p>
+    <p class="note">Another canvas (vertical TikTok), an own encoder, a delay or Aitum's settings are under <b>Advanced options</b> in the same window.</p>
+    <div class="pics">
+      <figure><img src="images/01-first-run.png" alt="First run"><figcaption>First run.</figcaption></figure>
+      <figure><img src="images/02-add-destination.png" alt="Add destination"><figcaption>Platform, key, handle: that is all.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">3</span>Give each platform its sound</h2>
+    <p>On the <b>Audio</b> tab, pick the OBS audio track each destination sends (for example: no music on YouTube). The meters show what is on each track,
+       and a destination whose track has been silent for 5 seconds says so. Which sources go on which track is set in OBS's <b>Advanced Audio Properties</b>
+       (the panel has a button for it).</p>
+    <div class="pics"><figure><img src="images/09-audio.png" alt="Audio tab"><figcaption>One track per platform, with live meters.</figcaption></figure></div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">4</span>Add your chat</h2>
+    <p>Press <b>Add chat</b> (or open <b>Channels</b>). Pick the platform, type the channel and press <b>Add</b>. For YouTube type your channel as
+       <code>@yourchannel</code>: the live stream is found by itself, every time you go live. <b>Add my channels from Streams</b> adds your own channels in one go
+       and never changes one you added yourself.</p>
+    <div class="pics"><figure><img src="images/05-chat-sources.png" alt="Channels"><figcaption>Add a channel; choose when the chat reader starts.</figcaption></figure></div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">5</span>Put the chat on stream</h2>
+    <p>On <b>Overlays</b>, press <b>Copy link</b> under <i>Chat on stream</i>. In OBS: <b>Sources &gt; + &gt; Browser</b>, paste the link into <i>URL</i>,
+       width <b>800</b>, height <b>400</b>. Every line has a small logo of the platform next to the name.</p>
+    <div class="pics"><figure><img src="images/06-overlays.png" alt="Overlays tab"><figcaption>Copy the link, add a Browser source.</figcaption></figure><figure><img src="images/10-chat-overlay.png" alt="The chat on stream"><figcaption>What viewers see: a small platform logo next to each name.</figcaption></figure></div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">6</span>Go live</h2>
+    <p>Start your normal OBS stream: destinations with <i>Start with the main stream</i> go live with it (or press <b>Start all destinations</b>).
+       The <b>Chat</b> tab shows all chats together for you.</p>
+    <div class="pics">
+      <figure><img src="images/04-streams.png" alt="Streams tab"><figcaption>Your destinations.</figcaption></figure>
+      <figure><img src="images/07-chat.png" alt="Chat tab"><figcaption>All chats in one list.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2><span class="num">7</span>Optional: read chat aloud</h2>
+    <p>The <b>Voice</b> tab reads chat with voices that run on this PC, with its own voice per platform if you like. Your choices are remembered.</p>
+    <div class="pics"><figure><img src="images/08-voice.png" alt="Voice tab"><figcaption>One voice for everything, or one per platform.</figcaption></figure></div>
+  </section>
+
+  <p class="note">More detail (every option, troubleshooting, antivirus notes) is in <code>README.md</code> in this folder's parent and on
+     github.com/otissy/obs-multistream-chat.</p>
+</main>
+</body>
+</html>

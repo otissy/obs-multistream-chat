@@ -18,7 +18,8 @@
 
   var theme = pick(params.get('theme'), ['dark', 'light', 'transparent'], 'dark');
   var font = num(params.get('font'), 10, 72, 20);
-  var iconPx = num(params.get('size'), 10, 96, Math.round(font * 1.1));
+  // a small logo next to the name, not a badge: about the height of a lower-case letter's body
+  var iconPx = num(params.get('size'), 8, 96, Math.max(10, Math.round(font * 0.8)));
   var maxLines = num(params.get('max'), 1, 100, 30);
   var fadeSec = num(params.get('fade'), 0, 600, 0);
   var colorMode = pick(params.get('colors'), ['platform', 'hash', 'off'], 'platform');

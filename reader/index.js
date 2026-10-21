@@ -46,6 +46,9 @@ async function start(opts, env, hooks = {}) {
   if (token.length < 16) throw Object.assign(new Error('OMSC_CHAT_TOKEN is missing or too short'), { exitCode: 2 });
   log.addSecret(token);
   const cfg = loadReaderConfig(opts.config);
+  // low memory (default since 0.5.0): one shared browser context and shared renderers, ~400 MB for 5 chats instead
+  // of ~1.2 GB. Off with low_memory:false in the reader config or OMSC_READER_LOWMEM=0.
+  const lowMemory = cfg.lowMemory !== undefined ? cfg.lowMemory : env.OMSC_READER_LOWMEM !== '0';
   const adaptersDir = opts.adapters || path.join(__dirname, 'adapters');
   const { packs, errors } = loadAdapters(adaptersDir);
   if (opts.testOrigin && !/^http:\/\/127\.0\.0\.1:\d{2,5}$/.test(opts.testOrigin)) throw Object.assign(new Error('--test-origin must be http://127.0.0.1:<port>'), { exitCode: 2 });
@@ -84,7 +87,7 @@ async function start(opts, env, hooks = {}) {
 
   async function openBrowser() {
     cleanStaleProfiles();
-    const b = await launch({ chrome: opts.chrome, images: cfg.images, env: browserEnv });
+    const b = await launch({ chrome: opts.chrome, images: cfg.images, env: browserEnv, lowMemory });
     try { uaInfo = computeUserAgent(await b.cdp.send('Browser.getVersion'), cfg.userAgent); } catch (e) { uaInfo = null; }
     log.info('user agent mode: ' + cfg.userAgent + (uaInfo ? ' (Chrome ' + uaInfo.version + ', "Headless" removed)' : ' (Chrome default)'));
     if (shuttingDown) { await b.close(); return false; } // asked to stop while Chrome was starting
@@ -108,7 +111,7 @@ async function start(opts, env, hooks = {}) {
   async function startSources() {
     for (const s of wanted) {
       if (shuttingDown) return;
-      const src = new Source({ cdp: browser.cdp, pack: packs[s.platform], src: s, testOrigin: opts.testOrigin, quietMs: cfg.quietMs, log, userAgent: uaInfo });
+      const src = new Source({ cdp: browser.cdp, pack: packs[s.platform], src: s, testOrigin: opts.testOrigin, quietMs: cfg.quietMs, log, userAgent: uaInfo, sharedContext: lowMemory });
       src.on('status', st => poster.setStatus(st));
       src.on('messages', msgs => poster.enqueue(msgs));
       sources.push(src);

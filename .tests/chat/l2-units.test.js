@@ -272,7 +272,15 @@ test('reader config: validation of ports, ids, platforms and targets', () => {
   bad(c => { c.port = 'x'; }, /port/);
   bad(c => { c.quiet_minutes = 0; }, /quiet/);
   bad(c => { c.sources = {}; }, /sources/);
-  bad(c => { c.sources = Array.from({ length: 11 }, (_, i) => ({ id: 'c' + i, platform: 'twitch', target: 'shroud' })); }, /at most 10/);
+  // the plugin allows 32 chat channels; 11 used to stop the whole reader
+  bad(c => { c.sources = Array.from({ length: 33 }, (_, i) => ({ id: 'c' + i, platform: 'twitch', target: 'shroud' })); }, /at most 32/);
+  const many = clone(ok);
+  many.sources = Array.from({ length: 32 }, (_, i) => ({ id: 'c' + i, platform: 'twitch', target: 'chan' + (100 + i) }));
+  assert.strictEqual(parseReaderConfig(JSON.stringify(many)).sources.length, 32);
+  // YouTube channel targets pass the reader's own check (the plugin writes them as "@name")
+  const yt = clone(ok);
+  yt.sources = [{ id: 'c1', platform: 'youtube', target: '@royalascent' }, { id: 'c2', platform: 'youtube', target: 'UCabcdefghijklmnopqrstuv' }];
+  assert.strictEqual(parseReaderConfig(JSON.stringify(yt)).sources.length, 2);
   bad(c => { c.sources[0].id = 'bad id'; }, /id/);
   bad(c => { c.sources.push({ id: 'c1', platform: 'kick', target: 'xqc' }); }, /repeated/);
   bad(c => { c.sources[0].platform = 'myspace'; }, /platform/);
@@ -712,3 +720,16 @@ if (!cpp.cases) {
   test('C++ chat L2: enough cases ran', () => assert.ok(cpp.cases.length >= 28, `only ${cpp.cases.length}\n${cpp.out}`));
   for (const c of cpp.cases) test('C++ ' + c.name, () => assert.ok(c.ok, c.detail));
 }
+
+test('browser search: Chrome first, then Chromium (per user, then system), Edge last; OMSC_CHROME wins', () => {
+  const { candidates } = require('../../reader/lib/chrome');
+  const local = String.raw`C:\Users\u\AppData\Local`, own = String.raw`D:\x\chrome.exe`;
+  const list = candidates({ LOCALAPPDATA: local, OMSC_CHROME: own });
+  assert.strictEqual(list[0], own);
+  const idx = s => list.findIndex(p => p.includes(s));
+  assert.ok(idx('Google') > 0 && idx('Google') < idx('Chromium'), list.join('\n'));
+  assert.ok(list[idx('Chromium')].startsWith(local), 'per-user Chromium before the system one');
+  assert.ok(list.includes(String.raw`C:\Program Files\Chromium\Application\chrome.exe`));
+  assert.ok(list[list.length - 1].endsWith('msedge.exe'));
+  assert.ok(!candidates({}).some(p => p.includes('undefined')), 'no LOCALAPPDATA: no broken entries');
+});

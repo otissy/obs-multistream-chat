@@ -63,6 +63,10 @@ function queryParam(q, key) {
   }
   return '';
 }
+// YouTube channel handle (without the @): 3-30 of a-z 0-9 _ - . , not starting or ending with a dot
+function handleOk(h) { return classOk(h, '_-.', 3, 30) && !h.startsWith('.') && !h.endsWith('.'); }
+// YouTube channel id: UC + 22 of A-Z a-z 0-9 _ -
+function channelIdOk(s) { return s.length === 24 && s.startsWith('UC') && classOk(s, '_-', 24, 24); }
 function looksLikeUrl(platform, s) {
   return s.includes('/') || (platform !== 'tiktok' && s.includes('.')) || s.includes(':') || s.includes('?');
 }
@@ -77,9 +81,18 @@ function normalizeTarget(platform, inputRaw) {
     if (c < 0x20 || c === 0x7f) return { ok: false, error: 'control characters are not allowed' };
   }
   let cand = '';
+  // YouTube: a channel (@handle, stored as "@handle") is found live by the reader; an 11-character id is one video
+  const ytChannel = h => (handleOk(h) ? { ok: true, target: '@' + h.toLowerCase() } : { ok: false, error: 'that is not a valid YouTube channel handle (@name)' });
+  if (platform === 'youtube' && input.startsWith('@') && !input.includes('/')) return ytChannel(input.slice(1));
   if (!looksLikeUrl(platform, input)) {
     cand = input;
     if (platform === 'tiktok' && cand.startsWith('@')) cand = cand.slice(1);
+    if (platform === 'youtube') {
+      if (channelIdOk(cand)) return { ok: true, target: cand };
+      // bare 11 characters with a digit, - or _ is a video id; anything else typed bare is a channel name
+      // ("RoyalAscent" is 11 letters: a channel, not a video)
+      if (!(NAME_OK.youtube(cand) && /[0-9_-]/.test(cand))) return ytChannel(cand);
+    }
   } else {
     const u = parseUrl(input);
     if (!u) return { ok: false, error: 'that link is not acceptable (https links to the platform only)' };
@@ -91,6 +104,11 @@ function normalizeTarget(platform, inputRaw) {
       if (u.host === 'youtu.be') {
         if (!u.segs.length) return { ok: false, error: 'no video id in that link' };
         cand = u.segs[0];
+      } else if (hostOk && u.segs.length && u.segs[0].startsWith('@')) {
+        return ytChannel(u.segs[0].slice(1)); // youtube.com/@name, /@name/live, /@name/streams ...
+      } else if (hostOk && u.segs.length >= 2 && u.segs[0] === 'channel') {
+        if (!channelIdOk(u.segs[1])) return { ok: false, error: 'that YouTube channel link has no valid channel id (UC...)' };
+        return { ok: true, target: u.segs[1] }; // youtube.com/channel/UC...
       } else if (hostOk) {
         if (u.segs.length && (u.segs[0] === 'watch' || u.segs[0] === 'live_chat')) cand = queryParam(u.query, 'v');
         else if (u.segs.length >= 2 && (u.segs[0] === 'live' || u.segs[0] === 'embed')) cand = u.segs[1];
@@ -109,4 +127,9 @@ function normalizeTarget(platform, inputRaw) {
   return { ok: true, target: lower ? cand.toLowerCase() : cand };
 }
 
-module.exports = { PLATFORMS, normalizeTarget };
+// A YouTube target that names a channel (the live video is looked up), not one video.
+function isChannelTarget(platform, target) {
+  return platform === 'youtube' && typeof target === 'string' && (target.startsWith('@') || channelIdOk(target));
+}
+
+module.exports = { PLATFORMS, normalizeTarget, isChannelTarget };

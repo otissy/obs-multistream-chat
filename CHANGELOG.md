@@ -1,6 +1,55 @@
-﻿# Changelog
+# Changelog
 
-## 0.4.2 (unreleased): neural chat voices, offline, in 43 languages
+## 0.5.1 (2026-10-21): a dock you can follow from install to live, and neural chat voices
+
+Released as 0.5.1; 0.5.0 and 0.4.2 were never published on their own, everything below ships in this release.
+
+### The dock
+
+- New: **YouTube by channel.** Type `@yourchannel` (or paste the channel link) once; the reader opens
+  `youtube.com/@name/live`, reads the live video's id and reads its chat, every time you go live. Not live: the
+  channel shows *offline* and is checked again every 2 minutes; after a stream ends the next one is found the same
+  way. A `UC...` channel id, a video link or a video id still work. A bare 11-letter name ("RoyalAscent") is a
+  channel, not a video id (ids have a digit, `-` or `_`). Verified on a real channel: reading in 2.5 s.
+- New: **Audio tab.** One row per destination with the OBS audio track it sends, live level meters for the six
+  tracks (only while the tab is visible), a "silent for 5 s" warning per destination and a button that opens
+  OBS's Advanced Audio Properties. The track column left the Streams table.
+- New: **a voice per platform** on the Voice tab (Twitch in one voice, YouTube in another, with a play button
+  per row), and every Voice-tab setting is remembered; before, each OBS start reset them.
+- Changed: the **chat overlay** shows a small platform logo (0.8 x the text) next to each name and nothing
+  else; the recommended Browser source is a normal 800 x 400 chat box. *Platform icons* is marked optional.
+- Changed: the **chat reader uses about a third of the memory**: one shared, logged-out browser context and
+  shared renderers instead of one per channel, background throttling off (no late lines). Five chats: 410 MB
+  instead of 1,243 MB, CPU 1 % instead of up to 3.9 % (docs/benchmarks.md; `OMSC_READER_LOWMEM=0` for the old way).
+- New: **Setup opens a Quick start guide with pictures** (`docs/quickstart.html`, also in the Start menu).
+- New: `scripts/bench-reader.js` (boot time, live detection, memory and CPU) and docs/benchmarks.md.
+- Fixed: "Add my channels from Streams" took the destination's *name* when it had no handle, and since the
+  dialog fills the name with the platform's label that would have added a channel called "twitch".
+- New: a **Get started** card at the top of the dock: 1. add where you stream, 2. add your chat, 3. put chat
+  and icons on stream. Each step has the button that does it and ticks itself off; the card goes away when
+  all three are done (or with *Hide*). Remembered in `ui-state.ini` next to `config.json`, not in the config.
+- Changed: **one row of tabs** instead of tabs inside tabs: Chat (merged chat), Streams, Channels,
+  Overlays, Voice. Version and *Check for updates* moved to a line at the bottom.
+- New: **Overlays** tab with both Browser-source links (chat and platform icons), a look (dark, transparent,
+  light), *Copy link* and the size to use.
+- Changed: **Add destination** asks only for platform, stream key, handle and name; the server URL shows only
+  for platforms without one fixed ingest. Canvas, encoder, audio track, delay and Aitum are under
+  **Advanced options**, which opens by itself for a destination that uses any of them.
+- Changed: **one way to add a chat channel** (platform + channel + Add) and **Add my channels from Streams**;
+  one *Start it* choice (when I press Start / when OBS starts / when I go live) instead of two checkboxes.
+- Fixed: *Auto-Connect* added the typed name on Twitch, Kick, TikTok and X at once (three of them usually
+  wrong). Removed.
+- Fixed: *Auto-sync from Destinations* replaced the first chat source of the same platform, so your own handle
+  overwrote a collaborator's channel. The new merge only adds.
+- Fixed: chat sources added by *Auto-Connect*, *+ Add Collaborator* and *Auto-sync* got the id `c<count+1>`,
+  which repeats after a removal; Edit and Remove could then act on the wrong row. Ids are now always free.
+- Fixed: the Chat tab said "Chat Live" while the reader was stopped; time, name and text ran together; the
+  A-/A+ buttons were blank under the dark theme. The audio guide listed Instagram and X presets that do not
+  exist.
+- README: a Quick start with pictures of the real dock (`docs/images/`).
+
+### Neural chat voices, offline, in 43 languages (planned as 0.4.2, never released on its own)
+
 
 - New: the voice reader speaks with **neural voices that run on this PC** (sherpa-onnx with Kokoro v1.0 and
   Piper voices) instead of Windows voices. The catalogue (`voice/catalogue.json`) holds 185 voices in 43

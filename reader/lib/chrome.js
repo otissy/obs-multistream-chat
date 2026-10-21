@@ -17,6 +17,9 @@ function candidates(env = process.env) {
   list.push('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
   list.push('C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe');
   if (env.LOCALAPPDATA) list.push(path.join(env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+  // Chromium (some PCs have no Google Chrome): per-user install in LOCALAPPDATA, system-wide in Program Files
+  if (env.LOCALAPPDATA) list.push(path.join(env.LOCALAPPDATA, 'Chromium', 'Application', 'chrome.exe'));
+  list.push('C:\\Program Files\\Chromium\\Application\\chrome.exe');
   list.push('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'); // same engine, last resort
   return list;
 }
@@ -45,15 +48,22 @@ function cleanStaleProfiles(tmp = os.tmpdir(), maxAgeMs = 6 * 3600 * 1000) {
 }
 
 function chromeArgs(dir, opts) {
+  // low memory: the chat pages share renderer processes instead of one (or more) per site, and there is no
+  // separate software-GPU process. Every page is a public chat page in a throw-away, logged-out profile.
+  const low = opts.lowMemory !== undefined ? !!opts.lowMemory : process.env.OMSC_READER_LOWMEM !== '0';
+  const off = ['Translate', 'MediaRouter'].concat(low ? ['site-per-process', 'IsolateOrigins', 'SpareRendererForSitePerProcess'] : []);
   const a = [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--mute-audio',
     '--remote-debugging-port=0', '--remote-allow-origins=http://127.0.0.1',
     '--user-data-dir=' + dir,
     '--disable-extensions', '--disable-sync', '--disable-background-networking', '--disable-component-update',
-    '--disable-default-apps', '--disable-breakpad', '--no-service-autorun', '--disable-features=Translate,MediaRouter',
+    '--disable-default-apps', '--disable-breakpad', '--no-service-autorun', '--disable-features=' + off.join(','),
     '--deny-permission-prompts', '--autoplay-policy=user-gesture-required', '--password-store=basic',
     '--hide-scrollbars',
   ];
+  // shared renderers make all but one chat page "background": no timer throttling or backgrounding, or lines arrive late
+  if (low) a.push('--disable-site-isolation-trials', '--renderer-process-limit=2', '--disable-software-rasterizer',
+    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows');
   if (!opts.images) a.push('--blink-settings=imagesEnabled=false');
   a.push('about:blank');
   return a;
@@ -116,4 +126,4 @@ async function launch(opts = {}) {
   return { cdp, proc, dir, close, hasExited: () => exited };
 }
 
-module.exports = { findChrome, launch, cleanStaleProfiles, PREFIX, MARKER };
+module.exports = { candidates, findChrome, launch, cleanStaleProfiles, PREFIX, MARKER };

@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.5.0 (unreleased): a dock you can follow from install to live, and neural chat voices
+## 0.5.1 (2026-10-21): a dock you can follow from install to live, and neural chat voices
+
+Released as 0.5.1; 0.5.0 and 0.4.2 were never published on their own, everything below ships in this release.
 
 ### The dock
 

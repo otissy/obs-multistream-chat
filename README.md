@@ -53,7 +53,7 @@ powershell -ExecutionPolicy Bypass -File scripts\package.ps1
 
 ## Quick start (5 minutes)
 
-The pictures are the real dock (0.5.0) in a test copy of OBS 32.2.2, with sample channels and sample chat.
+The pictures are the real dock (taken from the 0.5.0 test build, the same dock as 0.5.1) in a test copy of OBS 32.2.2, with sample channels and sample chat.
 The same steps, with the same pictures, open at the end of Setup (`docs/quickstart.html`, also in the Start menu).
 
 **1. Open the panel.** In OBS: **Docks > OBS Multistream Chat** (or **Tools > OBS Multistream Chat**). Drag it
@@ -131,7 +131,7 @@ instead of 1.2 GB, under 1 % CPU on the test PC. Numbers and method: [docs/bench
   its own floating window, which you can leave floating or drag into a dock area.
 - The OBS log (Help > Log Files > View Current Log) says which happened: `dock registered`,
   `dock registration returned false`, or `frontend main window not ready`, plus `Tools > OBS Multistream Chat added`.
-- Layout (0.5.0): the big **Start/Stop all destinations** button and a line such as
+- Layout (since 0.5.1): the big **Start/Stop all destinations** button and a line such as
   `2 of 3 live | 11800 kbps | chat: 3 of 3 sources reading` stay at the top; under them one row of tabs:
   **Chat** (the merged chat for you), **Streams** (destinations: status dot, handle, audio track, and while
   anything is live bitrate, dropped %, uptime; Start/Stop per row), **Audio**, **Channels**, **Overlays**, **Voice**.

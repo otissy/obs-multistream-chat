@@ -29,7 +29,9 @@
   #chat { position: fixed; inset: 0; box-sizing: border-box; padding: 8px 12px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
   body[data-align="top"] #chat { justify-content: flex-start; }
   body[data-theme="dark"] #chat, body[data-theme="light"] #chat { background: var(--card); }
-  .msg { display: block; padding: 2px 0; overflow-wrap: anywhere; word-break: break-word; max-height: 12em; overflow: hidden; animation: rise .22s ease-out; transition: opacity 1s ease; }
+  /* flex: none: a line keeps its own height. With the default flex-shrink: 1 (and overflow: hidden,
+     which drops the automatic minimum height) a full chat squeezed every line instead of scrolling. */
+  .msg { display: block; flex: none; padding: 2px 0; overflow-wrap: anywhere; word-break: break-word; max-height: 12em; overflow: hidden; animation: rise .22s ease-out; transition: opacity 1s ease; }
   .msg.fading { opacity: 0; }
   .ico { display: inline-block; width: var(--icon); height: var(--icon); vertical-align: -0.1em; margin-right: .3em; opacity: .9; background-color: var(--brand, var(--dim)); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
   .msg[data-platform="twitch"] { --brand: var(--twitch); }

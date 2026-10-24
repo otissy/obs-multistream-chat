@@ -199,6 +199,40 @@ if (!chromeAvailable() || !findFixtureExe()) {
     } finally { await srv.stop(); }
   });
 
+  // 2026-10-24 regression: with more lines than fit, every line was squeezed (flex-shrink on an
+  // overflow:hidden flex item) instead of the chat ticking upward. README size: 800 x 400.
+  test('a full chat ticks: lines keep their height, the oldest drop out, the newest is fully visible', async () => {
+    const srv = await startCppChat();
+    try {
+      for (const align of ['bottom', 'top']) {
+        const page = await overlayPage(srv.url(`/chat.html?static=1&align=${align}`), 800, 400);
+        const said = ['gg', 'a much longer message that has to wrap onto a second line in an 800 pixel wide browser source, so it is taller than the rest', 'lol', 'nice'];
+        for (let i = 1; i <= 26; i++) await page.eval(`window.__omsc.add(${JSON.stringify({ platform: 'twitch', author: 'v' + i, parts: [{ t: 'text', v: '#' + i + ' ' + said[i % 4] }] })}); true`);
+        await sleep(400); // the rise animation
+        const m = await page.eval(`(() => { const box = document.getElementById('chat').getBoundingClientRect(); const ms = [...document.querySelectorAll('#chat .msg')];
+          return { n: ms.length, boxTop: box.top, boxBottom: box.bottom,
+            rows: ms.map(e => { const r = e.getBoundingClientRect(); return { h: r.height, nat: e.scrollHeight, top: r.top, bottom: r.bottom, t: e.querySelector('.text').textContent }; }) }; })()`);
+        for (const r of m.rows) assert.ok(r.h >= r.nat - 1, `${align}: line "${r.t}" squeezed to ${r.h}px (needs ${r.nat}px)`);
+        const minH = Math.min(...m.rows.map(r => r.h));
+        const wrapped = m.rows.filter(r => / much longer /.test(r.t));
+        assert.ok(wrapped.length >= 1 && wrapped.every(r => r.h >= minH * 1.6), `${align}: a wrapped line keeps both of its lines`);
+        const last = m.rows[m.rows.length - 1];
+        assert.match(last.t, /^#26 /, `${align}: newest line is last`);
+        assert.ok(last.bottom <= m.boxBottom + 0.5, `${align}: newest line fully inside the source (${last.bottom} > ${m.boxBottom})`);
+        assert.ok(m.rows[0].top >= m.boxTop - 0.5, `${align}: no line cut off at the top`);
+        assert.ok(m.n < 26 && m.n >= 8, `${align}: oldest lines dropped, the rest kept (${m.n} lines)`);
+        assert.deepStrictEqual(m.rows.map(r => +r.t.match(/^#(\d+)/)[1]), Array.from({ length: m.n }, (_, i) => 27 - m.n + i), `${align}: consecutive, newest last`);
+        await page.shot(path.join(PROOF_DIR, `chat-full-${align}-800x400.png`));
+        await page.close();
+      }
+      // one line taller than the whole source is kept (clipped by its 12em cap), never removed
+      const page = await overlayPage(srv.url('/chat.html?static=1&font=40'), 300, 120);
+      await page.eval(`window.__omsc.add({ platform: 'kick', author: 'k', parts: [{ t: 'text', v: 'word '.repeat(80) }] }); true`);
+      assert.strictEqual(await page.eval('document.querySelectorAll("#chat .msg").length'), 1);
+      await page.close();
+    } finally { await srv.stop(); }
+  });
+
   test('overlay options: max lines and fade work from the URL', async () => {
     const srv = await startCppChat();
     try {

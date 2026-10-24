@@ -3,6 +3,9 @@
 //   - GET/HEAD only, fixed allowlist: the asset map, /state.json, /events (SSE), "/" -> overlay.html
 //   - Host header must be 127.0.0.1:<port> or localhost:<port> (DNS-rebinding defence)
 //   - a present Origin must be the same origin; no Access-Control-Allow-* header is ever sent
+//   - with an access key set (the plugin always sets one), every GET/HEAD must name it as the first
+//     path segment, /k/<key>/..., compared in constant time; anything else gets 401 and no data.
+//     The pages use relative URLs, so their scripts, icons and event streams carry the key too.
 // The request handling (parse_request, handle_request, host_allowed...) is pure and unit tested
 // without sockets; HttpServer is the thin socket layer around it.
 #pragma once
@@ -70,6 +73,13 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 // With chat != nullptr the server also answers GET /chat/events, GET /chat/status.json and
 // POST /chat/ingest (bearer token, JSON body, loopback only).
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat);
+// access_key non-empty: GET/HEAD paths must start with /k/<access_key>/ (see split_access_key).
+// POST /chat/ingest is unchanged: it has its own bearer token.
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
+			    const std::string &access_key);
+// "/k/<key>/rest" with <key> == access_key -> true, rest = "/rest" ("/k/<key>/" -> "/").
+// Anything else (no prefix, wrong key, no slash after the key) -> false. Constant time in the key.
+bool split_access_key(const std::string &path, const std::string &access_key, std::string &rest);
 // Header-only checks for POST /chat/ingest, run BEFORE the body is read so an unauthenticated
 // client costs nothing. true: the body may be read (req.body must then hold exactly
 // Content-Length bytes). false: `early` is the final response.
@@ -82,6 +92,7 @@ struct ServerOptions {
 	int max_sse = 8;
 	int read_timeout_ms = 5000;
 	int heartbeat_ms = 15000;
+	std::string access_key;       // "" = no key (tests of the plain routes); the plugin always sets one
 };
 
 class HttpServer {

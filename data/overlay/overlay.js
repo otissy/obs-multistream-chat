@@ -37,7 +37,7 @@
     icon.className = 'icon';
     var glyph = document.createElement('div');
     glyph.className = 'glyph';
-    glyph.style.setProperty('--mask', 'url("/icons/' + platform + '.svg")');
+    glyph.style.setProperty('--mask', 'url("icons/' + platform + '.svg")');
     var dot = document.createElement('div');
     dot.className = 'dot';
     icon.appendChild(glyph);
@@ -79,7 +79,7 @@
   }
 
   function poll() {
-    fetch('/state.json', { cache: 'no-store' })
+    fetch('state.json', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(render)
       .catch(function () { /* stale timer handles it */ });
@@ -87,7 +87,7 @@
 
   function connect() {
     if (typeof EventSource === 'undefined') return;
-    var es = new EventSource('/events');
+    var es = new EventSource('events');
     es.onmessage = function (ev) { try { render(JSON.parse(ev.data)); } catch (e) { /* ignore a bad frame */ } };
     es.onerror = function () { /* EventSource reconnects by itself (retry: 2000) */ };
   }

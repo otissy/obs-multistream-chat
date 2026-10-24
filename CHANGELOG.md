@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: the **chat overlay** squeezed every line once more lines arrived than fit the browser source; it now
+  ticks upward: lines keep their height and the oldest whole lines drop out (align bottom and top).
+- Changed: the local overlay server answers only URLs that carry this install's **access key**
+  (`/k/<key>/chat.html`, `/k/<key>/overlay.html`). **After updating, copy the URLs again from the dock** into
+  your browser sources; the old keyless URLs get `401`. This is an access key on loopback, not encryption
+  (docs/security.md).
+
 ## 0.5.1 (2026-10-21): a dock you can follow from install to live, and neural chat voices
 
 Released as 0.5.1; 0.5.0 and 0.4.2 were never published on their own, everything below ships in this release.

@@ -97,7 +97,7 @@ if (!chromeAvailable() || !findFixtureExe()) {
       assert.strictEqual(lines.length, 9, JSON.stringify(lines.map(l => l.p + ':' + l.t)));
       assert.deepStrictEqual(lines.map(l => l.p), ['twitch', 'kick', 'youtube', 'tiktok', 'x', 'twitch', 'kick', 'twitch', 'tiktok'], 'platform order = order the messages were sent');
       assert.deepStrictEqual(lines.map(l => l.a), ['TwitchAnna', 'KickKai', 'YtYuki', 'tiktoker1', 'XavierX', 'Mallory', 'KickKai', 'RtlTroll', 'tiktoker1']);
-      for (const l of lines) assert.strictEqual(l.mask, `url("/icons/${l.p}.svg")`, 'icon matches platform: ' + l.p);
+      for (const l of lines) assert.strictEqual(l.mask, `url("icons/${l.p}.svg")`, 'icon matches platform: ' + l.p);
       assert.strictEqual(lines[0].t.trim(), 'hello from twitch', 'the emote image is an <img>, its name is not text');
       assert.strictEqual(lines[0].imgs, 1);
       assert.strictEqual(lines[1].imgs, 1);
@@ -230,6 +230,48 @@ if (!chromeAvailable() || !findFixtureExe()) {
       await page.eval(`window.__omsc.add({ platform: 'kick', author: 'k', parts: [{ t: 'text', v: 'word '.repeat(80) }] }); true`);
       assert.strictEqual(await page.eval('document.querySelectorAll("#chat .msg").length'), 1);
       await page.close();
+    } finally { await srv.stop(); }
+  });
+
+  // 2026-10-24: the local server needs the per-install access key on every page and stream.
+  test('access key: without it nothing is served; with it the real pages load their script, icons and live chat', async () => {
+    const KEY = require('crypto').randomBytes(32).toString('hex');
+    const srv = await startCppChat(TOKEN, KEY);
+    const http = require('http');
+    const raw = (method, p, body, headers = {}) => new Promise((res, rej) => {
+      const r = http.request({ host: '127.0.0.1', port: srv.port, path: p, method, headers: Object.assign({ Host: '127.0.0.1:' + srv.port }, headers) }, x => {
+        let b = ''; x.on('data', d => { b += d; if (b.length > 4096) x.destroy(); }); x.on('end', () => res({ status: x.statusCode, body: b })); x.on('close', () => res({ status: x.statusCode, body: b }));
+      });
+      r.on('error', rej); if (body) r.write(body); r.end();
+    });
+    try {
+      // one message into the hub, through the reader's own route (bearer token, no access key)
+      const body = JSON.stringify({ v: 1, sent: Date.now(), sources: [], messages: [{ platform: 'twitch', source: 'c1', id: 'k1', author: 'KeyedViewer', color: '', parts: [{ t: 'text', v: 'through the key' }], badges: [], t: Date.now() }] });
+      const ing = await raw('POST', '/chat/ingest', body, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), Authorization: 'Bearer ' + TOKEN });
+      assert.strictEqual(ing.status, 200, ing.body);
+      await sleep(600); // the hub's reorder window
+      const wrong = KEY.slice(0, 63) + (KEY[63] === '0' ? '1' : '0');
+      for (const p of ['/', '/chat.html', '/chat.js', '/chat/events', '/chat/status.json', '/overlay.html', '/overlay.js', '/state.json', '/events', '/icons/twitch.svg',
+        `/k/${wrong}/chat.html`, `/k/${wrong}/chat/events`, `/k/${KEY.slice(0, 32)}/chat.html`, `/k/${KEY}`, `/k/${KEY.toUpperCase()}/chat.html`]) {
+        const r = await raw('GET', p);
+        assert.strictEqual(r.status, 401, `${p} without the right key: ${r.status}`);
+        assert.ok(!/KeyedViewer|<script|<svg|data:/.test(r.body), `${p} leaked: ${r.body.slice(0, 80)}`);
+      }
+      assert.strictEqual((await raw('GET', `/k/${KEY}/chat.js`)).status, 200);
+      const page = await overlayPage(srv.url(`/k/${KEY}/chat.html?backlog=10`), 460, 300);
+      await waitFor(async () => (await page.eval(LINES)).length >= 1, 8000);
+      const lines = await page.eval(LINES);
+      assert.deepStrictEqual(lines.map(l => [l.p, l.a, l.t]), [['twitch', 'KeyedViewer', 'through the key']]);
+      const icon = await page.eval(`(async () => { const i = document.querySelector('#chat .ico'); const cs = getComputedStyle(i); const r = await fetch('icons/twitch.svg'); return { mask: cs.webkitMaskImage || cs.maskImage, status: r.status, type: r.headers.get('content-type') }; })()`);
+      assert.ok(icon.mask.includes(`/k/${KEY}/icons/twitch.svg`), 'the icon URL carries the key: ' + icon.mask);
+      assert.strictEqual(icon.status, 200);
+      assert.match(icon.type, /image\/svg\+xml/);
+      assert.deepStrictEqual(page.consoleErrors, []);
+      await page.shot(path.join(PROOF_DIR, 'chat-with-access-key-460x300.png'));
+      await page.close();
+      const ov = await overlayPage(srv.url(`/k/${KEY}/overlay.html`), 460, 120);
+      assert.strictEqual(await ov.eval(`fetch('state.json').then(r => r.status)`), 200, 'the status overlay reaches its feed through the key');
+      await ov.close();
     } finally { await srv.stop(); }
   });
 

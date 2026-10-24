@@ -7,6 +7,7 @@
 | Destinations, handles, URLs, settings | `%APPDATA%\obs-studio\plugin_config\obs-multistream-chat\config.json` | plain JSON, no secrets in it |
 | Stream keys | the same file, field `key_enc` | Windows DPAPI (`CryptProtectData`), current-user scope, app-specific entropy, token `dpapi:v1:<base64>` |
 | Overlay port | `config.json` (`server.port`, `server.last_port`) | none needed |
+| Overlay access key | `config.json` (`server.access_key`, 64 hex = 32 random bytes) and every browser source URL | plain text, like the URL in OBS's own scene file; readable by programs running as your Windows user |
 | Nothing else | no registry keys, no startup entries, no scheduled tasks, no cloud | n/a |
 
 The plugin makes no outbound connections of its own. Network traffic is the RTMP(S) connections OBS's
@@ -35,6 +36,18 @@ Serves the overlay to the OBS browser source.
 
 - Binds `127.0.0.1` only, never `0.0.0.0` or `::`; the bound address is read back from the OS in
   tests, and every accepted peer address is checked again.
+- **Access key (unreleased, after 0.5.1).** Every page and stream is served only under `/k/<key>/` (for example
+  `http://127.0.0.1:<port>/k/<key>/chat.html`). The key is 32 bytes from the Windows CSPRNG
+  (`BCryptGenRandom`), made on first start and kept in `config.json`; the dock's *Copy URL* buttons include
+  it. The key is compared in constant time. A request without it, with a wrong one, or with a prefix of it
+  gets `401` and no data, before any route runs. The pages use relative URLs, so their script, icons and
+  event stream carry the key too. `POST /chat/ingest` keeps its own per-run bearer token.
+- What the key is and is not: it is an **access key, not encryption.** Traffic stays plain HTTP over the
+  loopback interface; there is no TLS. Loopback traffic never leaves the PC, so nobody on the network can
+  read it, and nobody on the network can connect at all (127.0.0.1 bind). The key stops other local
+  programs and web pages that do not know it from reading the chat, the overlay state and the reader status.
+  It does **not** stop a program running as your Windows user: it can read `config.json`, OBS's scene file or
+  the process memory and so learn the key.
 - Read-only: `GET` and `HEAD` only; a fixed allowlist of paths (`/`, `/overlay.html`, `/overlay.js`,
   `/icons/*.svg` for known icons, `/state.json`, `/events`). Nothing is read from disk by request path,
   so there is no traversal surface.
@@ -46,8 +59,10 @@ Serves the overlay to the OBS browser source.
 - Content: platform id, handle and a state word per enabled destination. No URLs, keys, names,
   counters or IP addresses.
 - The handle is user text; the page shows it with `textContent`, never as HTML.
-- Another program on the same PC running as you can still read that feed (and could read your config
-  file). The feed was chosen to hold nothing sensitive for that reason.
+- Another program on the same PC running as you can still read that feed if it reads the key from your
+  config file first. The feed was chosen to hold nothing sensitive for that reason.
+- Not covered by the key: the chat reader's headless Chrome listens on a random loopback DevTools port while
+  it runs (see below); any local program can find and drive that throw-away browser.
 
 ## Aitum Stream Suite import (since 0.3.0)
 

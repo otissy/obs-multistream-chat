@@ -585,3 +585,109 @@ TEST(L3, sse_client_cap_returns_503)
 	srv.stop();
 	tclose(a);
 }
+
+// ---- access key (2026-10-24): every page and stream needs /k/<key>/ -------------------------
+
+static const std::string kKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+TEST(L2, access_key_prefix_is_split_only_for_the_exact_key)
+{
+	std::string rest;
+	CHECK(split_access_key("/k/" + kKey + "/chat.html", kKey, rest));
+	CHECK_EQ(rest, std::string("/chat.html"));
+	CHECK(split_access_key("/k/" + kKey + "/", kKey, rest));
+	CHECK_EQ(rest, std::string("/"));
+	CHECK(split_access_key("/k/" + kKey + "/icons/x.svg", kKey, rest));
+	CHECK_EQ(rest, std::string("/icons/x.svg"));
+	std::string wrong = kKey;
+	wrong[63] = '0';
+	const std::string bad[] = {"/chat.html", "/k/" + kKey, "/k/" + wrong + "/chat.html", "/k/" + kKey.substr(0, 63) + "/chat.html",
+				   "/k/" + kKey + "0/chat.html", "/k//chat.html", "/k/", "/K/" + kKey + "/chat.html",
+				   "/k/0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF/chat.html", "/x/k/" + kKey + "/chat.html"};
+	for (const std::string &p : bad)
+		CHECK_FALSE(split_access_key(p, kKey, rest));
+	CHECK_FALSE(split_access_key("/k//chat.html", "", rest)); // no key configured: nothing ever matches
+}
+
+TEST(L2, access_key_required_on_every_get_route)
+{
+	StateHub hub;
+	hub.publish(one_entry(State::Live), true);
+	AssetMap a = test_assets();
+	SystemClock clock;
+	ChatHub chat(clock);
+	const char *paths[] = {"/", "/overlay.html", "/overlay.js", "/state.json", "/events", "/chat/events", "/chat/status.json", "/missing"};
+	for (const char *p : paths) {
+		HttpResponse r = handle_request(req("GET", p, "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+		CHECK_EQ(r.status, 401);
+		CHECK_FALSE(r.sse);
+		CHECK(r.body.find("otiyyy") == std::string::npos);
+		CHECK(r.body.find("overlay") == std::string::npos);
+		r = handle_request(req("HEAD", p, "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+		CHECK_EQ(r.status, 401);
+		std::string wrong = kKey;
+		wrong[0] = 'f';
+		r = handle_request(req("GET", "/k/" + wrong + p, "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+		CHECK_EQ(r.status, 401);
+	}
+	const std::string k = "/k/" + kKey;
+	HttpResponse r = handle_request(req("GET", k + "/state.json", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 200);
+	CHECK(r.body.find("otiyyy") != std::string::npos);
+	r = handle_request(req("GET", k + "/", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 200);
+	CHECK_EQ(r.body, a["/overlay.html"].body);
+	r = handle_request(req("GET", k + "/overlay.js", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 200);
+	r = handle_request(req("GET", k + "/events", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK(r.sse);
+	r = handle_request(req("GET", k + "/chat/events?backlog=3", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK(r.sse);
+	CHECK_EQ(r.sse_kind, 1);
+	r = handle_request(req("GET", k + "/missing", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 404);
+	r = handle_request(req("GET", k + "/../state.json", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 404);
+	// the key does not override the other defences
+	r = handle_request(req("GET", k + "/state.json", "attacker.example:5000"), 5000, a, hub, &chat, kKey);
+	CHECK_EQ(r.status, 403);
+	HttpRequest x = req("GET", k + "/state.json", "127.0.0.1:5000");
+	x.headers["sec-fetch-site"] = "cross-site";
+	CHECK_EQ(handle_request(x, 5000, a, hub, &chat, kKey).status, 403);
+	CHECK_EQ(handle_request(req("POST", k + "/state.json", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey).status, 405);
+}
+
+TEST(L3, server_with_access_key_refuses_requests_without_it_over_the_wire)
+{
+	StateHub hub;
+	hub.publish(one_entry(State::Live), true);
+	ServerOptions o;
+	o.access_key = kKey;
+	o.heartbeat_ms = 500;
+	HttpServer srv(hub, test_assets(), o);
+	std::string err;
+	CHECK(srv.start(err));
+	std::string r = get(srv.port(), "/state.json");
+	CHECK(r.find("HTTP/1.1 401") == 0);
+	CHECK(r.find("otiyyy") == std::string::npos);
+	r = get(srv.port(), "/overlay.html");
+	CHECK(r.find("HTTP/1.1 401") == 0);
+	CHECK(r.find("<title>overlay</title>") == std::string::npos);
+	r = get(srv.port(), "/k/" + std::string(64, 'a') + "/state.json");
+	CHECK(r.find("HTTP/1.1 401") == 0);
+	r = get(srv.port(), "/events");
+	CHECK(r.find("HTTP/1.1 401") == 0);
+	CHECK(r.find("text/event-stream") == std::string::npos);
+	CHECK(r.find("\r\n\r\n") != std::string::npos && r.substr(r.find("\r\n\r\n")).find("data: {") == std::string::npos); // body only: the CSP header itself says "data:"
+	r = get(srv.port(), "/k/" + kKey + "/state.json");
+	CHECK(r.find("HTTP/1.1 200 OK") == 0);
+	CHECK(r.find("\"handle\":\"otiyyy\"") != std::string::npos);
+	r = get(srv.port(), "/k/" + kKey + "/overlay.html");
+	CHECK(r.find("<title>overlay</title>") != std::string::npos);
+	tsock s = tconnect(srv.port());
+	CHECK(s != kBadSock);
+	tsend(s, "GET /k/" + kKey + "/events HTTP/1.1\r\nHost: 127.0.0.1:" + std::to_string(srv.port()) + "\r\n\r\n");
+	CHECK(trecv(s, "\"state\":\"live\"").find("\"state\":\"live\"") != std::string::npos);
+	tclose(s);
+	srv.stop();
+}

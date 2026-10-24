@@ -11,6 +11,24 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## Unreleased (2026-10-24): chat overlay ticks, overlay access key
+
+- **Chat overlay squish fixed.** Cause (measured, 800x400, 26 lines): `#chat` is a flex column with
+  `overflow: hidden`, and each `.msg` had the default `flex-shrink: 1` plus `overflow: hidden`, which drops a flex
+  item's automatic minimum height; so instead of overflowing, all lines shrank (31 px -> 15 px). Fix: `.msg { flex:
+  none }` and `trimToFit()` in chat.js drops the oldest whole lines that no longer fit (align bottom and top; re-run
+  on emote load and resize; the newest line always stays). Test: chat L4 "a full chat ticks".
+- **Overlay access key.** Audit before the change: one HTTP server, bound to 127.0.0.1 only (peer re-checked),
+  Host/Origin/Sec-Fetch-Site checks, `POST /chat/ingest` behind a per-run bearer token, but every GET (`/`,
+  overlay.html/js, chat.html/js, icons, `/state.json`, `/events`, `/chat/events`, `/chat/status.json`) open to any
+  local process. No WebSocket on this server (the reader's headless Chrome has its own loopback DevTools port).
+  Now: per-install key `server.access_key` (32 bytes, `random_token_hex`, kept in config.json), every GET/HEAD must
+  be under `/k/<key>/` (`split_access_key`, `secret_equal` constant-time), else 401 before routing. Pages use
+  relative URLs so subresources keep the prefix. The plugin refuses to start the server without a key. Not TLS.
+  Existing browser sources must re-copy the URL after updating.
+- Lesson (2026-10-24): `D:` was full (0 bytes free, not caused by this work); a sandbox write failed with "No space
+  left on device". The work moved to a C: copy. Check free space before building under `D:\builds`.
+
 ## 0.5.0 (2026-10-20): dock overhaul, first load in a real OBS
 
 - **First time the plugin ran inside OBS**: a throw-away portable OBS 32.2.2 (`D:\builds\obs-portable`, zip sha-256 as
@@ -301,7 +319,9 @@ per-destination fields; `encoder` is `shared|own`). The example below shows the 
   user can; DPAPI does not defend against that, and the doc says so.
 - Keys never in: logs (all log lines go through `redact`), the overlay page, `/state.json`, SSE,
   error strings, the dock table (masked, reveal button only in the edit dialog, blank-to-keep).
-- HTTP server: binds `127.0.0.1` only (never `0.0.0.0`/`::`), peer address re-checked on accept,
+- HTTP server: every GET/HEAD needs the per-install access key as `/k/<key>/` (since 2026-10-24, constant-time
+  compare, 401 otherwise; an access key, not encryption: plain HTTP on loopback);
+  binds `127.0.0.1` only (never `0.0.0.0`/`::`), peer address re-checked on accept,
   `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defence), a present
   `Origin` must match, GET/HEAD only, fixed allowlist of paths (no file paths from the request, no
   directory traversal surface), no `Access-Control-Allow-Origin`, CSP + nosniff + no-store, header
@@ -515,6 +535,19 @@ eader). Chat/overlay ladders were not re-run (untouched; they start headless Chr
   after a real install into ProgramData (it compares the folder's mtime with now). Expected after an install, not a regression.
 - **2026-10-20** - unverified: the Audio tab's meters with real audio (the portable OBS had no sources routed), and
   `peak_to_db` / `db_to_bar` have no unit test (they live in the OBS glue).
+
+- **2026-10-24** - known (pre-existing, not fixed): Chrome-based ladders are flaky on this PC under load. Seen on
+  unchanged code: `reader/lib/chrome.js` `launch()` reads `DevToolsActivePort` while Chrome still holds it open
+  (`EBUSY`), failing the chat L2 `before` hook and so every L2 case; the overlay helper's `Browser.close()` kills
+  only the launcher process, so headless Chromium processes outlive the test and the node test process can hang
+  idle. Workaround used: run layer files with `node --test --test-timeout`, TEMP pointed at a private folder, then
+  stop only the Chromes whose profile lives there.
+- **2026-10-24** - known: in read-only mode (config.json from a newer build) a missing access key cannot be saved,
+  so a new one is made on every OBS start and the browser source URLs change each time.
+- **2026-10-24** - known: the access key is visible in the dock's overlay URL fields and in OMSC_SHOTS pictures of
+  a real install; anyone who sees the dock (for example a screen share) learns it.
+- **2026-10-24** - known: an invalid `server.access_key` warning goes through the generic "destination(s) were
+  skipped" notice path in plugin-main (pre-existing wording for all load warnings).
 
 ## Dropped approaches
 

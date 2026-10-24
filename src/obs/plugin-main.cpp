@@ -334,7 +334,7 @@ std::string plugin_chat_url()
 {
 	if (!g_state || !g_state->server || !g_state->server->running())
 		return std::string();
-	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/chat.html";
+	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/k/" + g_state->cfg.server.access_key + "/chat.html";
 }
 
 void plugin_apply_chat_filter()
@@ -460,7 +460,7 @@ std::string plugin_overlay_url()
 {
 	if (!g_state || !g_state->server || !g_state->server->running())
 		return std::string();
-	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/overlay.html";
+	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/k/" + g_state->cfg.server.access_key + "/overlay.html";
 }
 
 } // namespace oms
@@ -496,10 +496,20 @@ bool obs_module_load(void)
 
 	ServerOptions so;
 	so.preferred_port = st.cfg.server.port ? st.cfg.server.port : st.cfg.server.last_port;
+	// Every page and stream of the local server needs this per-install key in its URL (/k/<key>/...).
+	// Made once, kept in config.json, so browser source URLs survive restarts. No key, no server.
+	if (!access_key_valid(st.cfg.server.access_key)) {
+		st.cfg.server.access_key = random_token_hex(32);
+		lr.needs_save = true;
+	}
+	so.access_key = st.cfg.server.access_key;
 	plugin_apply_chat_filter();
 	st.server.reset(new HttpServer(st.hub, load_assets(), so, &st.chat_hub));
 	std::string err;
-	if (!st.server->start(err)) {
+	if (so.access_key.empty()) {
+		st.notice = "Overlay server not started: no secure random numbers for its access key.";
+		log_safe(LOG_ERROR, st.notice);
+	} else if (!st.server->start(err)) {
 		st.notice = "Overlay server could not start: " + err;
 		log_safe(LOG_ERROR, st.notice);
 	} else {

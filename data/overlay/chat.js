@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  // Merged chat overlay. Only talks to this page's own origin (/chat/events). Every string that
+  // Merged chat overlay. Only talks to this page's own origin (chat/events, relative: the URL carries the access key). Every string that
   // came from a web page is untrusted: it only ever goes through textContent / createTextNode,
   // never innerHTML. The platform id is matched against a fixed list before it is used in a URL,
   // the name colour must be #rrggbb, and an emote image must be https (the server has already
@@ -100,7 +100,7 @@
     el.setAttribute('data-platform', platform);
     var ico = document.createElement('span');
     ico.className = 'ico';
-    ico.style.setProperty('--mask', 'url("/icons/' + platform + '.svg")');
+    ico.style.setProperty('--mask', 'url("icons/' + platform + '.svg")');
     var name = document.createElement('span');
     name.className = 'name';
     name.textContent = String(m.author || '');
@@ -140,7 +140,7 @@
 
   function connect() {
     if (typeof EventSource === 'undefined') return;
-    var es = new EventSource('/chat/events?backlog=' + backlog);
+    var es = new EventSource('chat/events?backlog=' + backlog);
     es.onmessage = function (ev) {
       var m;
       try { m = JSON.parse(ev.data); } catch (e) { return; }

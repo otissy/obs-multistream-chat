@@ -366,3 +366,34 @@ TEST(L2, config_dpapi_end_to_end_file)
 	CHECK_EQ(plain, kFakeKey);
 }
 #endif
+
+TEST(L2, config_keeps_a_valid_overlay_access_key_and_drops_a_bad_one)
+{
+	InsecureTestProtector p;
+	const std::string key = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+	CHECK(access_key_valid(key));
+	CHECK_FALSE(access_key_valid(""));
+	CHECK_FALSE(access_key_valid(key.substr(1)));
+	CHECK_FALSE(access_key_valid(key + "0"));
+	CHECK_FALSE(access_key_valid("00112233445566778899AABBCCDDEEFF00112233445566778899aabbccddeeff"));
+	CHECK_FALSE(access_key_valid("00112233445566778899aabbccddeeff00112233445566778899aabbccddee/g"));
+	Config c;
+	c.server.access_key = key;
+	std::string text, err;
+	CHECK(serialize_config(c, text, err));
+	LoadResult r = parse_config(text, p);
+	CHECK(r.status == LoadStatus::Ok);
+	CHECK_EQ(r.config.server.access_key, key);
+	CHECK(r.warnings.empty());
+	// a hand-edited or truncated key is not used (the plugin then makes a new one) and is reported
+	r = parse_config("{\"schema\":4,\"server\":{\"access_key\":\"short\"}}", p);
+	CHECK(r.config.server.access_key.empty());
+	CHECK_EQ(r.warnings.size(), size_t(1));
+	CHECK(r.warnings[0].find("short") == std::string::npos); // the bad value itself is never echoed
+	// no key: nothing written, nothing read
+	Config none;
+	CHECK(serialize_config(none, text, err));
+	CHECK(text.find("access_key") == std::string::npos);
+	r = parse_config(text, p);
+	CHECK(r.config.server.access_key.empty());
+}

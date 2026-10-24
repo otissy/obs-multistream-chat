@@ -6,8 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
   OBS Browser Source page: one merged chat from Twitch, YouTube, Kick, TikTok and X, each line
-  with a small icon of the platform it came from. Reads only /chat/events (SSE) from the plugin's
-  local server. Everything shown is set with textContent; there is no innerHTML anywhere.
+  with a small icon of the platform it came from. Reads only chat/events (SSE) from the plugin's
+  local server. Every URL is relative: the page is served under /k/<access key>/, so its script,
+  icons and event stream carry the key too. Everything shown is set with textContent; there is no innerHTML anywhere.
   Query (all optional):
     theme=dark|light|transparent   font=10..72 (px)   size=8..96 (logo px, default 0.8 x font)   max=1..100 (lines kept)
     fade=0..600 (seconds until a line fades away, 0 = never)   colors=platform|hash|off
@@ -48,6 +49,6 @@
 </head>
 <body data-theme="dark" data-align="bottom">
 <div id="chat" aria-live="polite"></div>
-<script src="/chat.js"></script>
+<script src="chat.js"></script>
 </body>
 </html>

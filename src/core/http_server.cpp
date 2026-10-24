@@ -1,6 +1,7 @@
 #include "http_server.hpp"
 
 #include "chat_targets.hpp"
+#include "random.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -323,7 +324,26 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 	return handle_request(req, port, assets, hub, nullptr);
 }
 
+bool split_access_key(const std::string &path, const std::string &access_key, std::string &rest)
+{
+	if (access_key.empty() || path.compare(0, 3, "/k/") != 0)
+		return false;
+	size_t slash = path.find('/', 3);
+	if (slash == std::string::npos)
+		return false;
+	if (!secret_equal(access_key, path.substr(3, slash - 3)))
+		return false;
+	rest = path.substr(slash);
+	return true;
+}
+
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat)
+{
+	return handle_request(req, port, assets, hub, chat, std::string());
+}
+
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
+			    const std::string &access_key)
 {
 	if (chat && req.path == "/chat/ingest") {
 		HttpResponse early;
@@ -358,6 +378,12 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 		return make_error(403, "forbidden origin");
 
 	std::string path = req.path;
+	if (!access_key.empty()) {
+		std::string rest;
+		if (!split_access_key(path, access_key, rest))
+			return make_error(401, "access key required");
+		path = rest;
+	}
 	if (path == "/")
 		path = "/overlay.html";
 
@@ -770,7 +796,7 @@ void HttpServer::serve_connection(int64_t sock)
 			}
 		}
 		if (!have_response)
-			r = handle_request(req, port_, assets_, hub_, chat_);
+			r = handle_request(req, port_, assets_, hub_, chat_, opts_.access_key);
 		if (r.sse) {
 			if (sse_clients_.load() >= opts_.max_sse) {
 				HttpResponse busy = make_error(503, "too many event streams");

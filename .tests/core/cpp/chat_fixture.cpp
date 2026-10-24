@@ -1,6 +1,7 @@
 // Test fixture: the REAL HttpServer + ChatHub serving the REAL data/overlay chat assets, so node
 // and headless Chrome can drive the reader and the overlay end to end.
-//   usage: oms_chat_fixture <overlay-dir>      (token from env OMSC_CHAT_TOKEN, like the plugin)
+//   usage: oms_chat_fixture <overlay-dir>      (token from env OMSC_CHAT_TOKEN, like the plugin;
+//          overlay access key from env OMSC_ACCESS_KEY, none when unset)
 // prints "PORT <n>", then reads stdin lines:
 //   filter words=a,b users=x,y commands=0|1 bots=0|1
 //   status          -> prints the /chat/status.json body
@@ -55,7 +56,9 @@ int main(int argc, char **argv)
 		     {"/icons/kick.svg", "icons/kick.svg", "image/svg+xml"},
 		     {"/icons/tiktok.svg", "icons/tiktok.svg", "image/svg+xml"},
 		     {"/icons/x.svg", "icons/x.svg", "image/svg+xml"},
-		     {"/icons/generic.svg", "icons/generic.svg", "image/svg+xml"}};
+		     {"/icons/generic.svg", "icons/generic.svg", "image/svg+xml"},
+		     {"/overlay.html", "overlay.html", "text/html; charset=utf-8"},
+		     {"/overlay.js", "overlay.js", "text/javascript; charset=utf-8"}};
 	for (const F &f : files) {
 		Asset a;
 		a.content_type = f.type;
@@ -70,7 +73,10 @@ int main(int argc, char **argv)
 	ChatHub hub(clock);
 	hub.set_token(tok ? tok : "");
 	StateHub state;
-	HttpServer srv(state, assets, ServerOptions(), &hub);
+	ServerOptions so;
+	const char *key = std::getenv("OMSC_ACCESS_KEY");
+	so.access_key = key ? key : "";
+	HttpServer srv(state, assets, so, &hub);
 	std::string err;
 	if (!srv.start(err)) {
 		std::cerr << err << "\n";

@@ -201,7 +201,8 @@ not be re-checked offline: **confirm them on your dashboard.** Platforms change 
 | `names` | `1` show handles, `0` icons only | 1 |
 | `hide_idle` | `1` hide anything not connected | 0 |
 
-Example: `http://127.0.0.1:51734/overlay.html?theme=transparent&layout=v&size=64`. The port is chosen
+Example: `http://127.0.0.1:51734/k/<access key>/overlay.html?theme=transparent&layout=v&size=64`. Copy it with the
+dock's button: the access key is part of the URL and the page answers nothing without it (docs/security.md). The port is chosen
 once and remembered; if it is taken later a new one is used and the dock says so. If the plugin stops
 answering, the overlay dims everything instead of showing a stale "live".
 

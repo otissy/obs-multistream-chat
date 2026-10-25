@@ -29,6 +29,14 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 - Lesson (2026-10-24): `D:` was full (0 bytes free, not caused by this work); a sandbox write failed with "No space
   left on device". The work moved to a C: copy. Check free space before building under `D:\builds`.
 
+- **2026-10-25 audit (owner question).** Badges (mod/sub/VIP/...) are read by the reader as names and kept by the hub,
+  but NO page draws them: not the overlay in any version (git history of chat.js), not the dock. Emote images come
+  straight from the platforms' CDNs (absolute https URLs, page CSP `img-src 'self' data:` + `chat_img_src_csp()`
+  hosts), so the access key does not touch them; platform logos are plugin files under `/k/<key>/icons/` (relative
+  URLs, verified loading). The reader's own Chrome runs without images; it only copies the image URLs. The second
+  page, overlay.html (*Platform icons*), shows the live destinations as logos; it is now also available inside the
+  chat overlay (`platforms=top|bottom`), the old URL unchanged.
+
 ## 0.5.0 (2026-10-20): dock overhaul, first load in a real OBS
 
 - **First time the plugin ran inside OBS**: a throw-away portable OBS 32.2.2 (`D:\builds\obs-portable`, zip sha-256 as
@@ -208,6 +216,11 @@ long runs (see Limits), so the C++ suite was verified in pieces, not as one gree
 ## How to run and test
 
 - JS tests (overlay, packaging): `node ~/.claude/skills/plan/ladder.js .tests/<feature>`
+- Playwright (web pages: chat tick, access key, images, input; 2026-10-25): `node .tests/playwright/run.js [spec]`.
+  Needs Playwright 1.64.x (`PLAYWRIGHT_DIR`, else found in the npx cache) with its own Chromium, and
+  `oms_chat_fixture` from the core ladder (`OMSC_BUILD_ROOT`). Headless, one worker. Broken-build proofs use
+  `OMS_OVERLAY_DIR`, `OMS_FIXTURE_EXE`, `OMS_BROKEN_NO_KEY=1` (see harness.js). On this PC the repo's own
+  Chrome-launching node tests fail with "Chrome did not start" (also on 906cde2); the Playwright suite does not.
 - C++ tests (core, no OBS needed): `powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -Test`
   (needs MSVC; the ladder files under `.tests/core` call the same build and mark the layer
   SKIPPED, not passed, when no compiler is found)

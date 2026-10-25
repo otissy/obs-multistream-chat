@@ -40,7 +40,8 @@ Serves the overlay to the OBS browser source.
   `http://127.0.0.1:<port>/k/<key>/chat.html`). The key is 32 bytes from the Windows CSPRNG
   (`BCryptGenRandom`), made on first start and kept in `config.json`; the dock's *Copy URL* buttons include
   it. The key is compared in constant time. A request without it, with a wrong one, or with a prefix of it
-  gets `401` and no data, before any route runs. The pages use relative URLs, so their script, icons and
+  gets `401` and no data, before any route runs (a page URL gets a small red notice with no script and no data, so an
+  old browser source is visibly broken rather than blank). The pages use relative URLs, so their script, icons and
   event stream carry the key too. `POST /chat/ingest` keeps its own per-run bearer token.
 - What the key is and is not: it is an **access key, not encryption.** Traffic stays plain HTTP over the
   loopback interface; there is no TLS. Loopback traffic never leaves the PC, so nobody on the network can

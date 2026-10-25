@@ -67,7 +67,7 @@
     img.draggable = false;
     img.referrerPolicy = 'no-referrer';
     img.addEventListener('load', function () { trimToFit(); }); // an emote can make its line taller
-    img.addEventListener('error', function () { if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(name), img); });
+    img.addEventListener('error', function () { if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(name), img); trimToFit(); });
     img.src = url;
     return img;
   }
@@ -75,20 +75,21 @@
   var lastSeq = 0;
   var lines = [];
 
-  // Drops the oldest lines until the rest fit the browser source, so the chat ticks: new lines
+  // Hides the oldest lines until the rest fit the browser source, so the chat ticks: new lines
   // push old ones out, whole lines only, with align=bottom and align=top alike. The newest line
-  // always stays, even when it alone is taller than the source. Offsets ignore the rise animation's
-  // transform, so a line still sliding in is measured where it will end up.
+  // always stays, even when it alone is taller than the source. Lines are hidden, not removed
+  // (only `max` removes), so when a line gets shorter later (an emote image that failed and became
+  // its name, a wider source) older lines come back instead of leaving a gap. Offsets ignore the
+  // rise animation's transform, so a line still sliding in is measured where it will end up.
   function trimToFit() {
+    for (var i = 0; i < lines.length; i++) if (lines[i].hidden) lines[i].hidden = false;
     if (lines.length < 2) return;
     var cs = getComputedStyle(chat);
     var room = chat.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
     if (!(room > 0)) return;
     var last = lines[lines.length - 1];
-    while (lines.length > 1 && last.offsetTop + last.offsetHeight - lines[0].offsetTop > room + 0.5) {
-      var old = lines.shift();
-      if (old.parentNode) old.parentNode.removeChild(old);
-    }
+    for (var k = 0; k < lines.length - 1 && last.offsetTop + last.offsetHeight - lines[k].offsetTop > room + 0.5; k++)
+      lines[k].hidden = true;
   }
 
   function add(m) {
@@ -154,5 +155,6 @@
 
   window.addEventListener('resize', trimToFit);
   window.__omsc = { add: add };   // test hook: renders a message object, nothing more than the feed already allows
-  if (params.get('static') !== '1') connect();
+  if (params.get('chat') === '0') body.setAttribute('data-chat', '0');      // the platform bar alone (overlay.js)
+  else if (params.get('static') !== '1') connect();
 })();

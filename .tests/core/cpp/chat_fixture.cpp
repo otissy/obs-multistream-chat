@@ -5,6 +5,8 @@
 // prints "PORT <n>", then reads stdin lines:
 //   filter words=a,b users=x,y commands=0|1 bots=0|1
 //   status          -> prints the /chat/status.json body
+//   dest <platform> <handle> <state>   adds a destination to the overlay state (prints OK)
+//   dests-clear     empties the overlay state (prints OK)
 //   quit
 #include "../../../src/core/chat_hub.hpp"
 #include "../../../src/core/http_server.hpp"
@@ -84,9 +86,31 @@ int main(int argc, char **argv)
 	}
 	std::cout << "PORT " << srv.port() << std::endl;
 	std::string line;
+	std::vector<OverlayEntry> dests;
 	while (std::getline(std::cin, line)) {
 		if (line == "quit")
 			break;
+		if (line.compare(0, 5, "dest ") == 0) {
+			std::stringstream ss(line.substr(5));
+			OverlayEntry e;
+			std::string st;
+			ss >> e.platform >> e.handle >> st;
+			e.id = "d" + std::to_string(dests.size() + 1);
+			const State all[] = {State::Idle, State::Connecting, State::Live, State::Degraded, State::Reconnecting, State::Failed};
+			for (State s : all)
+				if (st == state_name(s))
+					e.state = s;
+			dests.push_back(e);
+			state.publish(dests, true);
+			std::cout << "OK" << std::endl;
+			continue;
+		}
+		if (line == "dests-clear") {
+			dests.clear();
+			state.publish(dests, false);
+			std::cout << "OK" << std::endl;
+			continue;
+		}
 		if (line == "status") {
 			std::cout << hub.status_json() << std::endl;
 			continue;

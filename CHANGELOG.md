@@ -8,6 +8,13 @@
   (`/k/<key>/chat.html`, `/k/<key>/overlay.html`). **After updating, copy the URLs again from the dock** into
   your browser sources; the old keyless URLs get `401`. This is an access key on loopback, not encryption
   (docs/security.md).
+- New: an old or wrong overlay URL shows a red notice in the source ("this link has no valid access key (401). Copy
+  the browser source URL again from the dock") instead of a blank page.
+- New: **one overlay**: `platforms=top` (or `bottom`) on the chat URL shows the live platform bar of the *Platform
+  icons* page above (below) the chat in the same browser source (`bar_size`, `bar_layout`, `names`, `hide_idle`,
+  `accent`); `chat=0` shows the bar alone. The old Platform icons URL keeps working unchanged.
+- Fixed: lines that no longer fit are hidden, not deleted, so a line that gets shorter later (a broken emote image
+  replaced by its name) lets the older line come back instead of leaving a gap; a long name stays next to its logo.
 
 ## 0.5.1 (2026-10-21): a dock you can follow from install to live, and neural chat voices
 

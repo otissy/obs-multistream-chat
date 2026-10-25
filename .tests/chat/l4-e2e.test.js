@@ -209,7 +209,7 @@ if (!chromeAvailable() || !findFixtureExe()) {
         const said = ['gg', 'a much longer message that has to wrap onto a second line in an 800 pixel wide browser source, so it is taller than the rest', 'lol', 'nice'];
         for (let i = 1; i <= 26; i++) await page.eval(`window.__omsc.add(${JSON.stringify({ platform: 'twitch', author: 'v' + i, parts: [{ t: 'text', v: '#' + i + ' ' + said[i % 4] }] })}); true`);
         await sleep(400); // the rise animation
-        const m = await page.eval(`(() => { const box = document.getElementById('chat').getBoundingClientRect(); const ms = [...document.querySelectorAll('#chat .msg')];
+        const m = await page.eval(`(() => { const box = document.getElementById('chat').getBoundingClientRect(); const ms = [...document.querySelectorAll('#chat .msg')].filter(e => !e.hidden);
           return { n: ms.length, boxTop: box.top, boxBottom: box.bottom,
             rows: ms.map(e => { const r = e.getBoundingClientRect(); return { h: r.height, nat: e.scrollHeight, top: r.top, bottom: r.bottom, t: e.querySelector('.text').textContent }; }) }; })()`);
         for (const r of m.rows) assert.ok(r.h >= r.nat - 1, `${align}: line "${r.t}" squeezed to ${r.h}px (needs ${r.nat}px)`);

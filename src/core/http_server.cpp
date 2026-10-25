@@ -259,6 +259,29 @@ bool parse_length(const std::string &v, size_t &out)
 	return true;
 }
 
+// A browser source opened with an old (keyless) or mistyped URL must not go blank: a page
+// request gets a small, high-contrast notice instead of plain text. No script, no data.
+bool looks_like_page(const std::string &path)
+{
+	if (path.empty() || path == "/" || path[path.size() - 1] == '/')
+		return true;
+	return path.size() >= 5 && path.compare(path.size() - 5, 5, ".html") == 0;
+}
+
+HttpResponse access_key_notice()
+{
+	HttpResponse r = make_error(401, "access key required");
+	for (size_t i = 0; i < r.headers.size(); ++i)
+		if (r.headers[i].first == "Content-Type")
+			r.headers[i].second = "text/html; charset=utf-8";
+	r.body = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Access key required</title></head>"
+		 "<body style=\"margin:0;background:transparent\"><p id=\"omsc-key-notice\" role=\"alert\" style=\"box-sizing:border-box;"
+		 "margin:12px;padding:14px 18px;max-width:calc(100% - 24px);background:#b00020;color:#ffffff;border-radius:8px;"
+		 "font:600 22px/1.35 'Segoe UI',system-ui,sans-serif;overflow-wrap:anywhere\">OBS Multistream Chat: this link has no "
+		 "valid access key (401). Copy the browser source URL again from the dock.</p></body></html>\n";
+	return r;
+}
+
 HttpResponse json_response(int status, const std::string &body)
 {
 	HttpResponse r;
@@ -381,7 +404,7 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 	if (!access_key.empty()) {
 		std::string rest;
 		if (!split_access_key(path, access_key, rest))
-			return make_error(401, "access key required");
+			return looks_like_page(path) ? access_key_notice() : make_error(401, "access key required");
 		path = rest;
 	}
 	if (path == "/")

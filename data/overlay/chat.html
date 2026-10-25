@@ -13,6 +13,9 @@
     theme=dark|light|transparent   font=10..72 (px)   size=8..96 (logo px, default 0.8 x font)   max=1..100 (lines kept)
     fade=0..600 (seconds until a line fades away, 0 = never)   colors=platform|hash|off
     emotes=1|0   align=bottom|top   backlog=0..200 (lines replayed when the page opens, default = max)
+    platforms=top|bottom (the live platform bar of overlay.html in this same source; off by default)
+      with bar_size=16..256  bar_layout=h|v  names=1|0  hide_idle=1  accent=RRGGBB
+    chat=0 (the bar alone, no chat lines)
 -->
 <style>
   :root {
@@ -33,6 +36,7 @@
   /* flex: none: a line keeps its own height. With the default flex-shrink: 1 (and overflow: hidden,
      which drops the automatic minimum height) a full chat squeezed every line instead of scrolling. */
   .msg { display: block; flex: none; padding: 2px 0; overflow-wrap: anywhere; word-break: break-word; max-height: 12em; overflow: hidden; animation: rise .22s ease-out; transition: opacity 1s ease; }
+  .msg[hidden] { display: none; } /* a line that no longer fits (chat.js trimToFit) */
   .msg.fading { opacity: 0; }
   .ico { display: inline-block; width: var(--icon); height: var(--icon); vertical-align: -0.1em; margin-right: .3em; opacity: .9; background-color: var(--brand, var(--dim)); -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
   .msg[data-platform="twitch"] { --brand: var(--twitch); }
@@ -40,15 +44,41 @@
   .msg[data-platform="kick"] { --brand: var(--kick); }
   .msg[data-platform="tiktok"] { --brand: var(--tiktok); }
   .msg[data-platform="x"] { --brand: var(--x); }
-  .name { font-weight: 700; }
+  .name { font-weight: 700; word-break: break-all; } /* a long name continues next to its logo instead of dropping to the next line */
   .sep { color: var(--dim); margin-right: .3em; }
   .emote { height: 1.5em; width: auto; vertical-align: middle; margin: 0 1px; }
+  /* the live platform bar (overlay.js), only with platforms=top|bottom */
+  #bar { display: none; }
+  body[data-platforms] #bar { display: inline-flex; position: fixed; left: 0; z-index: 1; gap: 14px; padding: calc(var(--size, 48px) * .22); align-items: center; box-sizing: border-box; max-width: 100%; flex-wrap: wrap; }
+  body[data-platforms="top"] #bar { top: 0; }
+  body[data-platforms="bottom"] #bar { bottom: 0; }
+  body[data-platforms="top"] #chat { top: var(--bar-h, 0px); }
+  body[data-platforms="bottom"] #chat { bottom: var(--bar-h, 0px); }
+  body[data-chat="0"] #chat { display: none; }
+  body[data-platforms][data-layout="v"] #bar { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; }
+  body[data-theme="dark"] #bar, body[data-theme="light"] #bar { background: var(--card); border-radius: calc(var(--size, 48px) * .4); }
+  #bar .dest { display: flex; align-items: center; gap: calc(var(--size, 48px) * .2); transition: opacity .3s, filter .3s; }
+  #bar .icon { position: relative; width: var(--size, 48px); height: var(--size, 48px); flex: none; }
+  #bar .glyph { position: absolute; inset: 12%; background-color: #6b6b78; -webkit-mask: var(--mask) center / contain no-repeat; mask: var(--mask) center / contain no-repeat; }
+  #bar .dot { position: absolute; right: -2px; bottom: -2px; width: calc(var(--size, 48px) * .26); height: calc(var(--size, 48px) * .26); border-radius: 50%; background: #6b6b78; border: 2px solid rgba(18, 18, 24, 0.82); box-sizing: border-box; display: none; }
+  #bar .name { font-size: calc(var(--size, 48px) * .42); font-weight: 600; white-space: nowrap; max-width: calc(var(--size, 48px) * 7); overflow: hidden; text-overflow: ellipsis; }
+  body[data-names="0"] #bar .name { display: none; }
+  #bar .dest[data-state="idle"] .glyph, #bar .dest[data-state="idle"] .name, #bar .dest[data-state="failed"] .glyph, #bar .dest[data-state="failed"] .name, #bar .dest[data-state="connecting"] .glyph, #bar .dest[data-state="connecting"] .name { opacity: .42; filter: grayscale(1); }
+  #bar .dest[data-state="failed"] .dot { display: block; background: #ff4d4f; }
+  #bar .dest[data-state="live"] .glyph, #bar .dest[data-state="degraded"] .glyph { background-color: var(--brand, var(--accent, #7c5cff)); }
+  #bar .dest[data-state="live"] .dot { display: block; background: #3ddc84; }
+  #bar .dest[data-state="degraded"] .dot, #bar .dest[data-state="reconnecting"] .dot { display: block; background: #ffb020; }
+  #bar .dest[data-state="reconnecting"] .glyph { background-color: #ffb020; }
+  body[data-stale="1"] #bar .dest .glyph, body[data-stale="1"] #bar .dest .name { opacity: .3; filter: grayscale(1); }
+  body[data-hide-idle="1"] #bar .dest[data-state="idle"], body[data-hide-idle="1"] #bar .dest[data-state="failed"], body[data-hide-idle="1"] #bar .dest[data-state="connecting"] { display: none; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .msg { animation: none; transition: none; } }
 </style>
 </head>
 <body data-theme="dark" data-align="bottom">
+<div id="bar" aria-live="polite"></div>
 <div id="chat" aria-live="polite"></div>
 <script src="chat.js"></script>
+<script src="overlay.js"></script>
 </body>
 </html>

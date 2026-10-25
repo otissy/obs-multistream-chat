@@ -657,6 +657,32 @@ TEST(L2, access_key_required_on_every_get_route)
 	CHECK_EQ(handle_request(req("POST", k + "/state.json", "127.0.0.1:5000"), 5000, a, hub, &chat, kKey).status, 405);
 }
 
+TEST(L2, access_key_refusal_of_a_page_is_a_visible_notice_and_of_data_is_plain_text)
+{
+	StateHub hub;
+	hub.publish(one_entry(State::Live), true);
+	AssetMap a = test_assets();
+	std::string wrong = "/k/" + std::string(64, 'f');
+	const std::string pages[] = {"/", "/overlay.html", "/chat.html", wrong + "/", wrong + "/chat.html"};
+	for (const std::string &p : pages) {
+		HttpResponse r = handle_request(req("GET", p, "127.0.0.1:5000"), 5000, a, hub, nullptr, kKey);
+		CHECK_EQ(r.status, 401);
+		CHECK_EQ(header_of(r, "Content-Type"), std::string("text/html; charset=utf-8"));
+		CHECK(r.body.find("omsc-key-notice") != std::string::npos);
+		CHECK(r.body.find("access key") != std::string::npos);
+		CHECK(r.body.find("<script") == std::string::npos);
+		CHECK(r.body.find("otiyyy") == std::string::npos);
+		CHECK(header_of(r, "Content-Security-Policy").find("script-src 'self'") != std::string::npos); // still no inline script
+	}
+	const std::string data[] = {"/state.json", "/events", "/overlay.js", "/icons/twitch.svg", wrong + "/state.json"};
+	for (const std::string &p : data) {
+		HttpResponse r = handle_request(req("GET", p, "127.0.0.1:5000"), 5000, a, hub, nullptr, kKey);
+		CHECK_EQ(r.status, 401);
+		CHECK_EQ(header_of(r, "Content-Type"), std::string("text/plain; charset=utf-8"));
+		CHECK_EQ(r.body, std::string("access key required\n"));
+	}
+}
+
 TEST(L3, server_with_access_key_refuses_requests_without_it_over_the_wire)
 {
 	StateHub hub;

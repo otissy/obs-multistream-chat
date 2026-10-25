@@ -1,6 +1,7 @@
 #include "tts.hpp"
 
 #include "voice.hpp"
+#include "voice_hub.hpp"
 #include "voice_player.hpp"
 #include "voice_process.hpp"
 
@@ -11,6 +12,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <sstream>
 
@@ -68,10 +70,35 @@ struct ChatSpeaker::Impl {
 	std::string log_file;
 	VoicePlayer player;
 	VoiceProcess proc;
+	VoiceHub *hub = nullptr;
 	uint32_t next_id = 1;
 	long long last_start_try = -100000;
-	mutable std::mutex mu; // problem
+	mutable std::mutex mu; // problem, metas
 	std::string problem;
+	std::map<uint32_t, SayMeta> metas; // request id -> who said it, until the helper's Done frame
+
+	// One spoken piece of a line: to the overlay page (VoiceHub) and/or the local device.
+	void on_audio(const voice::Frame &f)
+	{
+		SayMeta m;
+		{
+			std::lock_guard<std::mutex> lk(mu);
+			auto it = metas.find(f.id);
+			if (it != metas.end())
+				m = it->second;
+		}
+		VoiceRoute r = route_voice_clip(m.preview, hub);
+		if (r.page)
+			hub->push(m.author, m.platform, f.sample_rate, f.payload);
+		if (r.local)
+			player.play(f.payload, f.sample_rate);
+	}
+
+	void forget(uint32_t id)
+	{
+		std::lock_guard<std::mutex> lk(mu);
+		metas.erase(id);
+	}
 
 	void set_problem(const std::string &p)
 	{
@@ -97,7 +124,8 @@ struct ChatSpeaker::Impl {
 		bool ok = proc.start(node_path, js, packs, log_file,
 				     [this](const voice::Frame &f) {
 					     switch (f.type) {
-					     case voice::FrameType::Audio: player.play(f.payload, f.sample_rate); break;
+					     case voice::FrameType::Audio: on_audio(f); break;
+					     case voice::FrameType::Done: forget(f.id); break;
 					     case voice::FrameType::Error:
 						     blog(LOG_WARNING, "[obs-multistream-chat] voice: line %u: %s",
 							  static_cast<unsigned>(f.id), f.payload.substr(0, 300).c_str());
@@ -120,10 +148,11 @@ struct ChatSpeaker::Impl {
 	}
 };
 
-ChatSpeaker::ChatSpeaker(const std::string &node_path, const std::string &log_file) : impl_(new Impl)
+ChatSpeaker::ChatSpeaker(const std::string &node_path, const std::string &log_file, VoiceHub *hub) : impl_(new Impl)
 {
 	impl_->node_path = node_path;
 	impl_->log_file = log_file;
+	impl_->hub = hub;
 }
 
 ChatSpeaker::~ChatSpeaker()
@@ -154,7 +183,7 @@ std::vector<TtsVoice> ChatSpeaker::voices()
 	return out;
 }
 
-void ChatSpeaker::say(const std::string &utf8, const std::string &voice_id, int volume, int rate)
+void ChatSpeaker::say(const std::string &utf8, const std::string &voice_id, int volume, int rate, const SayMeta &meta)
 {
 	if (utf8.empty() || voice_id.empty())
 		return;
@@ -162,13 +191,22 @@ void ChatSpeaker::say(const std::string &utf8, const std::string &voice_id, int 
 		return;
 	impl_->player.set_volume(volume);
 	double speed = 1.0 + 0.1 * std::clamp(rate, -5, 5);
-	if (!impl_->proc.send(voice::say_request(impl_->next_id++, voice_id, utf8, speed)))
+	uint32_t id = impl_->next_id++;
+	{
+		std::lock_guard<std::mutex> lk(impl_->mu);
+		if (impl_->metas.size() > 256)
+			impl_->metas.clear(); // a helper that never answered: never grow without bound
+		impl_->metas[id] = meta;
+	}
+	if (!impl_->proc.send(voice::say_request(id, voice_id, utf8, speed)))
 		impl_->set_problem("The voice helper stopped; it restarts on the next line.");
 }
 
 void ChatSpeaker::interrupt()
 {
 	impl_->player.stop();
+	if (impl_->hub)
+		impl_->hub->flush(); // the overlay page stops the current line too
 	if (impl_->proc.running())
 		impl_->proc.send(voice::flush_request());
 }

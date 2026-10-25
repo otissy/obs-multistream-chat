@@ -16,6 +16,10 @@
     platforms=top|bottom (the live platform bar of overlay.html in this same source; off by default)
       with bar_size=16..256  bar_layout=h|v  names=1|0  hide_idle=1  accent=RRGGBB
     chat=0 (the bar alone, no chat lines)
+  Voice (chat-voice.js; off unless voice=1, so existing URLs behave exactly as before):
+    voice=1   vol=0..100   queue=1..50 (lines waiting)   drop=oldest|newest (which to drop when full)
+    local=0|1 (the plugin also plays on this PC's speakers)   skip=name,name (authors never read out)
+    controls=1 (show the voice settings button inside OBS too; outside OBS it is always there)
 -->
 <style>
   :root {
@@ -80,5 +84,6 @@
 <div id="chat" aria-live="polite"></div>
 <script src="chat.js"></script>
 <script src="overlay.js"></script>
+<script src="chat-voice.js"></script>
 </body>
 </html>

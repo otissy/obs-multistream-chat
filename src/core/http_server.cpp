@@ -365,8 +365,61 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 	return handle_request(req, port, assets, hub, chat, std::string());
 }
 
+namespace {
+
+// "name=1" in a query string -> true, "name=0" -> false, absent or anything else -> def
+bool query_flag(const std::string &query, const char *name, bool def)
+{
+	std::string key = std::string(name) + "=";
+	size_t at = 0;
+	while (at <= query.size()) {
+		size_t end = query.find('&', at);
+		std::string part = query.substr(at, end == std::string::npos ? std::string::npos : end - at);
+		if (part.compare(0, key.size(), key) == 0) {
+			std::string v = part.substr(key.size());
+			if (v == "1")
+				return true;
+			if (v == "0")
+				return false;
+			return def;
+		}
+		if (end == std::string::npos)
+			break;
+		at = end + 1;
+	}
+	return def;
+}
+
+// "/voice/clip/<digits>.wav" -> id
+bool voice_clip_id(const std::string &path, uint64_t &id)
+{
+	const std::string pre = "/voice/clip/", suf = ".wav";
+	if (path.size() <= pre.size() + suf.size() || path.compare(0, pre.size(), pre) != 0 ||
+	    path.compare(path.size() - suf.size(), suf.size(), suf) != 0)
+		return false;
+	std::string digits = path.substr(pre.size(), path.size() - pre.size() - suf.size());
+	if (digits.empty() || digits.size() > 15)
+		return false;
+	uint64_t v = 0;
+	for (char ch : digits) {
+		if (ch < '0' || ch > '9')
+			return false;
+		v = v * 10 + static_cast<uint64_t>(ch - '0');
+	}
+	id = v;
+	return v > 0;
+}
+
+} // namespace
+
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
 			    const std::string &access_key)
+{
+	return handle_request(req, port, assets, hub, chat, access_key, nullptr);
+}
+
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
+			    const std::string &access_key, VoiceHub *voice)
 {
 	if (chat && req.path == "/chat/ingest") {
 		HttpResponse early;
@@ -411,7 +464,9 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 		path = "/overlay.html";
 
 	bool is_chat_data = chat && (path == "/chat/events" || path == "/chat/status.json");
-	bool is_data = (path == "/state.json" || path == "/events" || is_chat_data);
+	uint64_t clip_id = 0;
+	bool is_voice_data = voice && (path == "/voice/events" || voice_clip_id(path, clip_id));
+	bool is_data = (path == "/state.json" || path == "/events" || is_chat_data || is_voice_data);
 	if (is_data && req.has_header("sec-fetch-site")) {
 		std::string site = lower(req.header("sec-fetch-site"));
 		if (site != "same-origin" && site != "none")
@@ -462,6 +517,31 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 		}
 		return r;
 	}
+	if (is_voice_data && path == "/voice/events") {
+		HttpResponse r;
+		add_common_headers(r);
+		r.headers.push_back(std::make_pair("Content-Type", "text/event-stream; charset=utf-8"));
+		r.headers.push_back(std::make_pair("X-Accel-Buffering", "no"));
+		r.sse = true;
+		r.sse_kind = 2;
+		r.voice_obs = query_flag(req.query, "obs", false);
+		r.voice_active = query_flag(req.query, "active", true);
+		r.voice_local = query_flag(req.query, "local", false);
+		size_t n = 0;
+		if (parse_length(req.header("last-event-id"), n) && n > 0) {
+			r.voice_resume = true;
+			r.voice_after = n;
+		}
+		return r;
+	}
+	if (is_voice_data && clip_id) {
+		HttpResponse r;
+		add_common_headers(r);
+		if (!voice->clip_wav(clip_id, r.body))
+			return make_error(404, "not found");
+		r.headers.push_back(std::make_pair("Content-Type", "audio/wav"));
+		return r;
+	}
 	AssetMap::const_iterator it = assets.find(path);
 	if (it == assets.end())
 		return make_error(404, "not found");
@@ -473,7 +553,7 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 			if (r.headers[i].first == "Content-Security-Policy")
 				r.headers[i].second = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src " +
 						      chat_img_src_csp() +
-						      "; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+						      "; connect-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 		}
 	}
 	r.headers.push_back(std::make_pair("Content-Type", it->second.content_type));
@@ -819,7 +899,7 @@ void HttpServer::serve_connection(int64_t sock)
 			}
 		}
 		if (!have_response)
-			r = handle_request(req, port_, assets_, hub_, chat_, opts_.access_key);
+			r = handle_request(req, port_, assets_, hub_, chat_, opts_.access_key, voice_);
 		if (r.sse) {
 			if (sse_clients_.load() >= opts_.max_sse) {
 				HttpResponse busy = make_error(503, "too many event streams");
@@ -828,6 +908,8 @@ void HttpServer::serve_connection(int64_t sock)
 				++sse_clients_;
 				if (r.sse_kind == 1)
 					serve_chat_sse(sock, r);
+				else if (r.sse_kind == 2)
+					serve_voice_sse(sock, r);
 				else
 					serve_sse(sock);
 				--sse_clients_;
@@ -852,6 +934,25 @@ void HttpServer::serve_connection(int64_t sock)
 		conn_cv_.notify_all();
 	}
 }
+
+namespace {
+
+// true when the peer has closed the connection (readable with nothing to read). Never blocks.
+bool peer_closed(int64_t sock)
+{
+	fd_set rf;
+	FD_ZERO(&rf);
+	FD_SET(to_native(sock), &rf);
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	if (select(static_cast<int>(sock) + 1, &rf, nullptr, nullptr, &tv) <= 0)
+		return false;
+	char c;
+	return recv(to_native(sock), &c, 1, MSG_PEEK) <= 0;
+}
+
+} // namespace
 
 void HttpServer::serve_chat_sse(int64_t sock, const HttpResponse &r)
 {
@@ -886,12 +987,72 @@ void HttpServer::serve_chat_sse(int64_t sock, const HttpResponse &r)
 					return;
 			}
 		} else {
+			if (peer_closed(sock))
+				return;
 			waited += 250;
 			if (waited >= opts_.heartbeat_ms) {
 				waited = 0;
 				if (!send_all(sock, ": hb\n\n"))
 					return;
 			}
+		}
+	}
+}
+
+// The voice stream of one overlay page: its role (leader speaks, standby stays quiet), a line per
+// spoken clip (the page then GETs voice/clip/<id>.wav), and "flush" when the dock cuts the voice off.
+// A fresh page starts with the next line; only an EventSource reconnect (Last-Event-ID) gets the held
+// lines it missed. The listener is removed as soon as the page goes away, so another page takes over.
+void HttpServer::serve_voice_sse(int64_t sock, const HttpResponse &r)
+{
+	if (!voice_ || !send_all(sock, "retry: 2000\n\n"))
+		return;
+	uint64_t me = voice_->add_listener(r.voice_obs, r.voice_active, r.voice_local);
+	struct Leave {
+		VoiceHub *v;
+		uint64_t me;
+		~Leave() { v->remove_listener(me); }
+	} leave{voice_, me};
+	uint64_t cursor = r.voice_resume ? r.voice_after : voice_->last_id();
+	if (r.voice_resume && cursor > voice_->last_id())
+		cursor = voice_->last_id(); // the plugin restarted: ids began again
+	uint64_t flush_gen = voice_->flush_generation();
+	int role = -1; // unknown, so the first pass sends it
+	int waited = 0;
+	while (running_ && !voice_->is_shutdown()) {
+		uint64_t seen = voice_->version();
+		int now_role = voice_->leader() == me ? 1 : 0;
+		if (now_role != role) {
+			role = now_role;
+			if (!send_all(sock, std::string("event: role\ndata: {\"role\":\"") + (role ? "leader" : "standby") + "\"}\n\n"))
+				return;
+		}
+		uint64_t fg = voice_->flush_generation();
+		if (fg != flush_gen) {
+			flush_gen = fg;
+			cursor = voice_->last_id();
+			if (!send_all(sock, "event: flush\ndata: {}\n\n"))
+				return;
+		}
+		std::vector<VoiceClip> next = voice_->since(cursor);
+		for (const VoiceClip &c : next) {
+			cursor = c.id;
+			if (!send_all(sock, "id: " + std::to_string(c.id) + "\nevent: clip\ndata: " + voice_clip_json(c) + "\n\n"))
+				return;
+		}
+		if (next.empty() && cursor < voice_->last_id())
+			cursor = voice_->last_id(); // clips already trimmed away
+		if (voice_->wait_for_change(seen, 250)) {
+			waited = 0;
+			continue;
+		}
+		if (peer_closed(sock))
+			return;
+		waited += 250;
+		if (waited >= 2000) {
+			waited = 0;
+			if (!send_all(sock, ": hb\n\n"))
+				return;
 		}
 	}
 }
@@ -914,6 +1075,8 @@ void HttpServer::serve_sse(int64_t sock)
 			if (!send_all(sock, "data: " + next + "\n\n"))
 				return;
 		} else {
+			if (peer_closed(sock))
+				return;
 			waited += 250;
 			if (waited >= opts_.heartbeat_ms) {
 				waited = 0;

@@ -11,6 +11,43 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## Unreleased (2026-10-25): chat voice on stream, through the chat overlay
+
+- **Audit (before):** the voice helper's PCM went only to `VoicePlayer` (waveOut, `WAVE_MAPPER` = the Windows
+  default output device). Nothing fed OBS. The stream heard the voice only if a Desktop Audio / audio capture
+  source happened to capture that same device; with a different default device, or no desktop capture, chat
+  voice never reached the stream.
+- **Now (owner's design: the voice lives in the SAME chat overlay browser source):** `chat.html?...&voice=1`
+  loads `chat-voice.js`, which plays each spoken line; with "Control audio via OBS" (browser source setting
+  `reroute_audio`) OBS mixes it on the source's own fader and the stream tracks. Without `voice=1` the page is
+  byte-for-byte the old behaviour (no element, no request; L1 + L4 check the layout is identical).
+  - Core `src/core/voice_hub.*`: bounded clip ring (32 clips / 32 MB, one clip <= 8 MB, zero-length and bad
+    rates refused), WAV framing, `choose_leader` (on program > inside OBS > newest), `local_wanted`,
+    `route_voice_clip`, `is_speaking_chat_url`.
+  - Server: `GET /k/<key>/voice/events` (SSE: `role`, `clip`, `flush`; query obs/active/local; Last-Event-ID
+    resume only on reconnect, a fresh page never replays) and `GET /k/<key>/voice/clip/<id>.wav`. Same key,
+    Host, Origin, fetch-site rules as chat/events. chat.html CSP gains `media-src 'self'` only (img-src unchanged).
+    Server limits raised to 16 connections / 12 SSE (a speaking page holds two streams); chat and state SSE
+    now notice a closed page at once (`peer_closed`) instead of at the 15 s heartbeat.
+  - Glue: `ChatSpeaker` tags each request with author/platform/preview; audio frames go through
+    `route_voice_clip`: dock Preview buttons -> local only; chat lines -> VoiceHub, plus waveOut when no voice
+    page listens (old behaviour kept) or the speaking page ticked "Also play on this PC's speakers" (default
+    off). Interrupt flushes the page too. `src/obs/voice_sources.*` counts speaking chat overlay sources whose
+    "Control audio via OBS" is off (read-only; never changes a user's source) and says so in the Chat tab.
+  - Overlay controls (no new Qt controls): speak on/off, volume, queue limit + drop oldest/skip new, also play
+    locally, never read out these authors, reset to URL settings. URL params are defaults, panel changes kept
+    in localStorage. Hidden inside OBS (Alt+Shift+V in Interact, or `controls=1`); visible in a normal browser,
+    which also gets "Click to enable sound" when autoplay is blocked.
+- Tests: core L2 17 + L3 2 voice cases; `.tests/chat-voice` L1 4, L2 2, L3 4, L4 26 (+1 real-voice proof gated by
+  `OMS_VOICE_LINE_WAV`), Playwright 1.64.1 / Chromium build 1248 headless with `--disable-audio-output
+  --mute-audio` (a fake sink: nothing reaches the speakers). "OBS" mode = a stand-in `window.obsstudio` +
+  `--autoplay-policy=no-user-gesture-required`; "browser" mode = `--autoplay-policy=user-gesture-required`.
+- Lessons (2026-10-25): headless Chromium opens the REAL default audio device unless started with
+  `--disable-audio-output`. Playwright's `evaluate` and locator calls count as a user gesture: an autoplay
+  test must not touch the page before the line arrives (wait on the server instead). Headless Chromium does
+  not hold AudioContext suspended under any autoplay policy; `HTMLMediaElement.play()` is the call that is
+  refused, so the page plays through a media element.
+
 ## Unreleased (2026-10-24): chat overlay ticks, overlay access key
 
 - **Chat overlay squish fixed.** Cause (measured, 800x400, 26 lines): `#chat` is a flex column with
@@ -287,8 +324,8 @@ docs/                security.md, limits.md
   and the config. No locks inside the core state machines.
 - **libobs signal threads** only push `OutputEvent{dest_id, kind, code, error}` onto a
   mutex-guarded vector. They never touch a Runtime.
-- **HTTP threads** (accept thread + one short-lived thread per connection, max 8 connections,
-  max 4 SSE) read only `StateHub` (mutex + condition variable, immutable JSON string per version).
+- **HTTP threads** (accept thread + one short-lived thread per connection, max 16 connections,
+  max 12 SSE since 2026-10-25; the old text said 8/4, the code had 8/8) read only `StateHub` (mutex + condition variable, immutable JSON string per version).
 - Frontend events (STREAMING_STARTED / STOPPING) arrive on the UI thread.
 - Stream keys are decrypted only on the UI thread, at output-create time, and held in an
   `obs_data_t` owned by the service; the plain copy in `Destination::key` is wiped (`secure_zero`)
@@ -562,7 +599,23 @@ eader). Chat/overlay ladders were not re-run (untouched; they start headless Chr
 - **2026-10-24** - known: an invalid `server.access_key` warning goes through the generic "destination(s) were
   skipped" notice path in plugin-main (pre-existing wording for all load warnings).
 
+- **2026-10-25** - unverified in a real OBS (never loaded; owner's OBS was live): the voice through CEF with
+  "Control audio via OBS" on 32.2.2 (CEF 127) and 33 (CEF 150); `obsSourceActiveChanged` is only dispatched on
+  a change, so a page does not know at load whether it is on program (counts as active; two speaking browser
+  sources both loaded off-program fall back to "newest wins", which may be the hidden one and so silent);
+  `obs_enum_sources` + `reroute_audio` read in `voice_sources.cpp`; whether OBS keeps localStorage for
+  127.0.0.1:<port> across restarts (the port is stable via `last_port`).
+- **2026-10-25** - known: a line cut by a page reload is not replayed (by design); a line whose clip was trimmed
+  from the 32-clip ring before the page fetched it is skipped (404, counted as an error).
+- **2026-10-25** - known: core L3 `server_refuses_dns_rebinding_over_the_wire` failed once in a full `oms_tests all`
+  run and passed 4/4 alone right after (flaky, first request of the test; not investigated).
+- **2026-10-25** - known: in a normal browser that allows media autoplay but holds the AudioContext suspended, the
+  page treats the silence as blocked and shows "Click to enable sound" (300 ms check); not reproducible headless.
+
 ## Dropped approaches
+
+- **2026-10-25** - native OBS audio source "Chat Voice" fed by `obs_source_output_audio` - dropped by the owner
+  before building: the voice must come from the chat overlay browser source itself, not a second source.
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.
 - **2026-10-13** - nlohmann/json or cpp-httplib as dependencies - dropped: network is restricted to OBS, obs-deps, Qt, icon sources, and a ~400-line parser plus a ~500-line server is smaller than the audit burden.

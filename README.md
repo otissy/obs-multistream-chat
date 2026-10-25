@@ -313,6 +313,37 @@ Welsh, Flemish, Mexican and Argentinian Spanish, and European and Brazilian Port
   **[non-commercial]** come under a non-commercial licence (do not use them on a monetised stream), and
   **[licence unclear]** means the voice's terms could not be confirmed. See NOTICE and `docs\voice-licences.md`.
 
+### The voice on stream (so chatters hear their own message)
+
+The voice can come out of the **chat overlay** you already have in your scene, so OBS mixes it into the
+stream like any other source. Nothing new to add: one page, one browser source.
+
+1. Add `&voice=1` to the end of your chat overlay's URL (browser source **Properties > URL**). Without it the
+   overlay stays silent and looks exactly as before.
+2. In the same Properties window tick **Control audio via OBS** and click OK. The source now shows up in the
+   Audio Mixer with its own fader. Without this tick OBS plays the browser's sound on your desktop speakers
+   and it never reaches the stream (the Chat tab tells you when a speaking overlay has it off).
+3. Right-click the source in the Audio Mixer > **Advanced Audio Properties**: make sure its stream tracks are
+   ticked (track 1 for a normal stream, and the track each extra destination uses, see the Audio tab).
+4. Check: send a chat line and watch the source's meter in the Audio Mixer move.
+
+By default the voice then plays **only** on stream and no longer on your speakers (no double voice when you
+also capture desktop audio). To hear it yourself, either set the source's monitoring to "Monitor and Output"
+in Advanced Audio Properties, or tick *Also play on this PC's speakers* in the overlay's voice settings.
+With no voice overlay open at all, the plugin keeps reading chat on your speakers as before.
+
+Voice settings live in the overlay: open it with **Alt+Shift+V** (right-click the source > Interact), or add
+`&controls=1` to show a settings button; outside OBS the button is always there. Settings: speak on/off,
+volume, how many lines may wait (and whether to drop the oldest or skip new ones), *Also play on this PC's
+speakers*, and names never to read out (your own channel, bots). The same can be set in the URL:
+`vol=0..100 queue=1..50 drop=oldest|newest local=0|1 skip=name,name`; what you change in the panel is
+remembered and wins over the URL until *Reset to the URL settings*.
+
+If the same overlay is in several scenes it is one source and speaks once. If two browser sources show it, only
+one speaks: the one on program, then the newest one. A preview in a normal browser never takes over from OBS;
+it shows "Click to enable sound" because browsers block sound until you click. The dock's **Preview** buttons
+play on your speakers only, never on stream.
+
 ## Troubleshooting
 
 - **Dock missing:** Docks > OBS Multistream Chat (older OBS: View > Docks), or Tools > OBS Multistream Chat. Check OBS's log (Help > Log Files) for lines starting

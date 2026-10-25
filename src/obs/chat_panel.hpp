@@ -63,7 +63,8 @@ private:
 	void reset_unread();
 	void load_voice_settings();
 	void save_voice_settings();
-	void play_tts(const std::string &author, const std::string &platform, const std::string &message);
+	// preview: the dock's own test buttons, heard locally only (never on stream through the overlay)
+	void play_tts(const std::string &author, const std::string &platform, const std::string &message, bool preview = false);
 	void play_alert_sound(const std::string &type);
 	void check_for_updates();
 	void save();

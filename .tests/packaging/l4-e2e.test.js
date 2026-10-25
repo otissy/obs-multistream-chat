@@ -31,7 +31,7 @@ test('package.ps1 makes a zip with the OBS plugin layout and a matching .sha256'
   const extract = path.join(scratch, 'x');
   const e = spawnSync('powershell.exe', ['-NoProfile', '-Command', `Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${extract}'`], { encoding: 'utf8', windowsHide: true });
   assert.strictEqual(e.status, 0, e.stderr);
-  for (const f of ['bin/64bit/obs-multistream-chat.dll', 'obs-multistream-chat.dll', 'data/locale/en-US.ini', 'data/overlay/overlay.html', 'data/overlay/overlay.js', 'data/overlay/icons/twitch.svg', 'data/overlay/icons/x.svg', 'data/overlay/chat.html', 'data/overlay/chat.js', 'data/reader/index.js', 'data/reader/lib/inject.js', 'data/reader/adapters/twitch.json', 'data/reader/adapters/x.json', 'NOTICE', 'LICENSE', 'README.md', 'docs/security.md'])
+  for (const f of ['bin/64bit/obs-multistream-chat.dll', 'obs-multistream-chat.dll', 'data/locale/en-US.ini', 'data/overlay/overlay.html', 'data/overlay/overlay.js', 'data/overlay/icons/twitch.svg', 'data/overlay/icons/x.svg', 'data/overlay/chat.html', 'data/overlay/chat.js', 'data/overlay/chat-voice.js', 'data/reader/index.js', 'data/reader/lib/inject.js', 'data/reader/adapters/twitch.json', 'data/reader/adapters/x.json', 'NOTICE', 'LICENSE', 'README.md', 'docs/security.md'])
     assert.ok(fs.existsSync(path.join(extract, 'obs-multistream-chat', f)), f);
   assert.ok(!fs.existsSync(path.join(extract, 'obs-multistream-chat', '.obs-sdk')));
 });

@@ -3,7 +3,7 @@
   #define MyAppName "OBS Multistream Chat"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion "0.5.1"
+  #define MyAppVersion "0.6.0"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "otissy"

@@ -36,7 +36,7 @@ Serves the overlay to the OBS browser source.
 
 - Binds `127.0.0.1` only, never `0.0.0.0` or `::`; the bound address is read back from the OS in
   tests, and every accepted peer address is checked again.
-- **Access key (unreleased, after 0.5.1).** Every page and stream is served only under `/k/<key>/` (for example
+- **Access key (since 0.6.0).** Every page and stream is served only under `/k/<key>/` (for example
   `http://127.0.0.1:<port>/k/<key>/chat.html`). The key is 32 bytes from the Windows CSPRNG
   (`BCryptGenRandom`), made on first start and kept in `config.json`; the dock's *Copy URL* buttons include
   it. The key is compared in constant time. A request without it, with a wrong one, or with a prefix of it

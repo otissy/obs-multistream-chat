@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-10-25
 
 - Fixed: the **chat overlay** squeezed every line once more lines arrived than fit the browser source; it now
   ticks upward: lines keep their height and the oldest whole lines drop out (align bottom and top).

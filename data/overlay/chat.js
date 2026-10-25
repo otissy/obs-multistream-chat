@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  // Merged chat overlay. Only talks to this page's own origin (/chat/events). Every string that
+  // Merged chat overlay. Only talks to this page's own origin (chat/events, relative: the URL carries the access key). Every string that
   // came from a web page is untrusted: it only ever goes through textContent / createTextNode,
   // never innerHTML. The platform id is matched against a fixed list before it is used in a URL,
   // the name colour must be #rrggbb, and an emote image must be https (the server has already
@@ -66,13 +66,31 @@
     img.title = name;
     img.draggable = false;
     img.referrerPolicy = 'no-referrer';
-    img.addEventListener('error', function () { if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(name), img); });
+    img.addEventListener('load', function () { trimToFit(); }); // an emote can make its line taller
+    img.addEventListener('error', function () { if (img.parentNode) img.parentNode.replaceChild(document.createTextNode(name), img); trimToFit(); });
     img.src = url;
     return img;
   }
 
   var lastSeq = 0;
   var lines = [];
+
+  // Hides the oldest lines until the rest fit the browser source, so the chat ticks: new lines
+  // push old ones out, whole lines only, with align=bottom and align=top alike. The newest line
+  // always stays, even when it alone is taller than the source. Lines are hidden, not removed
+  // (only `max` removes), so when a line gets shorter later (an emote image that failed and became
+  // its name, a wider source) older lines come back instead of leaving a gap. Offsets ignore the
+  // rise animation's transform, so a line still sliding in is measured where it will end up.
+  function trimToFit() {
+    for (var i = 0; i < lines.length; i++) if (lines[i].hidden) lines[i].hidden = false;
+    if (lines.length < 2) return;
+    var cs = getComputedStyle(chat);
+    var room = chat.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    if (!(room > 0)) return;
+    var last = lines[lines.length - 1];
+    for (var k = 0; k < lines.length - 1 && last.offsetTop + last.offsetHeight - lines[k].offsetTop > room + 0.5; k++)
+      lines[k].hidden = true;
+  }
 
   function add(m) {
     if (!m || typeof m !== 'object') return;
@@ -83,7 +101,7 @@
     el.setAttribute('data-platform', platform);
     var ico = document.createElement('span');
     ico.className = 'ico';
-    ico.style.setProperty('--mask', 'url("/icons/' + platform + '.svg")');
+    ico.style.setProperty('--mask', 'url("icons/' + platform + '.svg")');
     var name = document.createElement('span');
     name.className = 'name';
     name.textContent = String(m.author || '');
@@ -110,6 +128,7 @@
       var old = lines.shift();
       if (old.parentNode) old.parentNode.removeChild(old);
     }
+    trimToFit();
     if (fadeSec > 0) {
       setTimeout(function () { el.classList.add('fading'); }, fadeSec * 1000);
       setTimeout(function () {
@@ -122,7 +141,7 @@
 
   function connect() {
     if (typeof EventSource === 'undefined') return;
-    var es = new EventSource('/chat/events?backlog=' + backlog);
+    var es = new EventSource('chat/events?backlog=' + backlog);
     es.onmessage = function (ev) {
       var m;
       try { m = JSON.parse(ev.data); } catch (e) { return; }
@@ -134,6 +153,8 @@
     es.onerror = function () { /* EventSource reconnects by itself and sends Last-Event-ID */ };
   }
 
+  window.addEventListener('resize', trimToFit);
   window.__omsc = { add: add };   // test hook: renders a message object, nothing more than the feed already allows
-  if (params.get('static') !== '1') connect();
+  if (params.get('chat') === '0') body.setAttribute('data-chat', '0');      // the platform bar alone (overlay.js)
+  else if (params.get('static') !== '1') connect();
 })();

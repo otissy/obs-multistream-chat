@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 - 2026-10-25
+
+- Fixed: the **chat overlay** squeezed every line once more lines arrived than fit the browser source; it now
+  ticks upward: lines keep their height and the oldest whole lines drop out (align bottom and top).
+- Changed: the local overlay server answers only URLs that carry this install's **access key**
+  (`/k/<key>/chat.html`, `/k/<key>/overlay.html`). **After updating, copy the URLs again from the dock** into
+  your browser sources; the old keyless URLs get `401`. This is an access key on loopback, not encryption
+  (docs/security.md).
+- New: an old or wrong overlay URL shows a red notice in the source ("this link has no valid access key (401). Copy
+  the browser source URL again from the dock") instead of a blank page.
+- New: **one overlay**: `platforms=top` (or `bottom`) on the chat URL shows the live platform bar of the *Platform
+  icons* page above (below) the chat in the same browser source (`bar_size`, `bar_layout`, `names`, `hide_idle`,
+  `accent`); `chat=0` shows the bar alone. The old Platform icons URL keeps working unchanged.
+- Fixed: lines that no longer fit are hidden, not deleted, so a line that gets shorter later (a broken emote image
+  replaced by its name) lets the older line come back instead of leaving a gap; a long name stays next to its logo.
+
 ## 0.5.1 (2026-10-21): a dock you can follow from install to live, and neural chat voices
 
 Released as 0.5.1; 0.5.0 and 0.4.2 were never published on their own, everything below ships in this release.

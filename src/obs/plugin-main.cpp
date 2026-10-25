@@ -7,6 +7,7 @@
 #include "plugin.hpp"
 #include "random.hpp"
 #include "redact.hpp"
+#include "voice_sources.hpp"
 
 #include <obs-frontend-api.h>
 #include <obs-module.h>
@@ -76,6 +77,7 @@ AssetMap load_assets()
 				   {"/overlay.js", "overlay/overlay.js", "text/javascript; charset=utf-8"},
 				   {"/chat.html", "overlay/chat.html", "text/html; charset=utf-8"},
 				   {"/chat.js", "overlay/chat.js", "text/javascript; charset=utf-8"},
+				   {"/chat-voice.js", "overlay/chat-voice.js", "text/javascript; charset=utf-8"},
 				   {"/icons/generic.svg", "overlay/icons/generic.svg", "image/svg+xml"}};
 	static std::vector<std::string> urls; // keeps the c-strings below alive
 	urls.clear();
@@ -121,6 +123,22 @@ AssetMap load_assets()
 		m[urls[i]] = a;
 	}
 	return m;
+}
+
+// Chat overlay sources with voice=1 whose "Control audio via OBS" is off: counted (never the URL, it
+// holds the access key), logged, and said once in the Chat tab. The plugin does not change them.
+void report_voice_sources()
+{
+	if (!g_state)
+		return;
+	VoiceSourceReport r = check_voice_sources(g_state->cfg.server.access_key);
+	if (r.speaking == 0)
+		return;
+	log_safe(LOG_INFO, "chat voice: " + std::to_string(r.speaking) + " speaking chat overlay source(s), " +
+				   std::to_string(r.not_rerouted) + " without \"Control audio via OBS\"");
+	std::string say = describe_voice_sources(r);
+	if (!say.empty() && g_state->chat_notice.empty())
+		g_state->chat_notice = say;
 }
 
 void poll_reader()
@@ -301,6 +319,7 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 		g_state->reader_active = false;
 		g_state->chat_hub.set_token("");
 		g_state->chat_hub.shutdown();
+		g_state->voice_hub.shutdown();
 		if (g_state->server)
 			g_state->server->stop();
 		break;
@@ -310,6 +329,10 @@ void on_frontend_event(enum obs_frontend_event ev, void *)
 			create_dock("finished loading");
 		}
 		schedule_shots();
+		report_voice_sources();
+		break;
+	case OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED:
+		report_voice_sources();
 		break;
 	case OBS_FRONTEND_EVENT_PROFILE_CHANGED:
 		if (g_state && g_state->mgr) {
@@ -334,7 +357,7 @@ std::string plugin_chat_url()
 {
 	if (!g_state || !g_state->server || !g_state->server->running())
 		return std::string();
-	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/chat.html";
+	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/k/" + g_state->cfg.server.access_key + "/chat.html";
 }
 
 void plugin_apply_chat_filter()
@@ -460,7 +483,7 @@ std::string plugin_overlay_url()
 {
 	if (!g_state || !g_state->server || !g_state->server->running())
 		return std::string();
-	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/overlay.html";
+	return "http://127.0.0.1:" + std::to_string(g_state->server->port()) + "/k/" + g_state->cfg.server.access_key + "/overlay.html";
 }
 
 } // namespace oms
@@ -496,10 +519,21 @@ bool obs_module_load(void)
 
 	ServerOptions so;
 	so.preferred_port = st.cfg.server.port ? st.cfg.server.port : st.cfg.server.last_port;
+	// Every page and stream of the local server needs this per-install key in its URL (/k/<key>/...).
+	// Made once, kept in config.json, so browser source URLs survive restarts. No key, no server.
+	if (!access_key_valid(st.cfg.server.access_key)) {
+		st.cfg.server.access_key = random_token_hex(32);
+		lr.needs_save = true;
+	}
+	so.access_key = st.cfg.server.access_key;
 	plugin_apply_chat_filter();
 	st.server.reset(new HttpServer(st.hub, load_assets(), so, &st.chat_hub));
+	st.server->set_voice_hub(&st.voice_hub);
 	std::string err;
-	if (!st.server->start(err)) {
+	if (so.access_key.empty()) {
+		st.notice = "Overlay server not started: no secure random numbers for its access key.";
+		log_safe(LOG_ERROR, st.notice);
+	} else if (!st.server->start(err)) {
 		st.notice = "Overlay server could not start: " + err;
 		log_safe(LOG_ERROR, st.notice);
 	} else {
@@ -557,6 +591,7 @@ void obs_module_unload(void)
 	g_state->reader.stop_blocking();
 	g_state->chat_hub.set_token("");
 	g_state->chat_hub.shutdown();
+	g_state->voice_hub.shutdown();
 	g_state->hub.shutdown();
 	if (g_state->server)
 		g_state->server->stop();

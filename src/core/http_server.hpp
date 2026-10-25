@@ -3,11 +3,15 @@
 //   - GET/HEAD only, fixed allowlist: the asset map, /state.json, /events (SSE), "/" -> overlay.html
 //   - Host header must be 127.0.0.1:<port> or localhost:<port> (DNS-rebinding defence)
 //   - a present Origin must be the same origin; no Access-Control-Allow-* header is ever sent
+//   - with an access key set (the plugin always sets one), every GET/HEAD must name it as the first
+//     path segment, /k/<key>/..., compared in constant time; anything else gets 401 and no data.
+//     The pages use relative URLs, so their scripts, icons and event streams carry the key too.
 // The request handling (parse_request, handle_request, host_allowed...) is pure and unit tested
 // without sockets; HttpServer is the thin socket layer around it.
 #pragma once
 #include "chat_hub.hpp"
 #include "state_feed.hpp"
+#include "voice_hub.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -56,10 +60,16 @@ struct HttpResponse {
 	std::vector<std::pair<std::string, std::string> > headers;
 	std::string body;
 	bool sse = false; // headers only; the socket layer then streams /events
-	int sse_kind = 0; // 0: /events (overlay state), 1: /chat/events (chat messages)
+	int sse_kind = 0; // 0: /events (overlay state), 1: /chat/events (chat messages), 2: /voice/events
 	bool chat_resume = false; // chat SSE: Last-Event-ID given, resume after chat_after
 	uint64_t chat_after = 0;
 	size_t chat_backlog = 50; // chat SSE without Last-Event-ID: send this many recent messages first
+	// voice SSE (sse_kind 2): what the page said about itself in the query (obs=1 active=0 local=1)
+	bool voice_obs = false;
+	bool voice_active = true;
+	bool voice_local = false;
+	bool voice_resume = false; // Last-Event-ID given (EventSource reconnect): resend held clips after voice_after
+	uint64_t voice_after = 0;
 };
 
 bool is_loopback_ipv4(const std::string &dotted); // 127.0.0.0/8 only
@@ -70,6 +80,17 @@ HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &as
 // With chat != nullptr the server also answers GET /chat/events, GET /chat/status.json and
 // POST /chat/ingest (bearer token, JSON body, loopback only).
 HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat);
+// access_key non-empty: GET/HEAD paths must start with /k/<access_key>/ (see split_access_key).
+// POST /chat/ingest is unchanged: it has its own bearer token.
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
+			    const std::string &access_key);
+// With voice != nullptr also GET voice/events (SSE: role, clip announcements, flush) and
+// GET voice/clip/<id>.wav (the spoken line as WAV). Same key, Host, Origin and fetch-site rules as chat/events.
+HttpResponse handle_request(const HttpRequest &req, int port, const AssetMap &assets, StateHub &hub, ChatHub *chat,
+			    const std::string &access_key, VoiceHub *voice);
+// "/k/<key>/rest" with <key> == access_key -> true, rest = "/rest" ("/k/<key>/" -> "/").
+// Anything else (no prefix, wrong key, no slash after the key) -> false. Constant time in the key.
+bool split_access_key(const std::string &path, const std::string &access_key, std::string &rest);
 // Header-only checks for POST /chat/ingest, run BEFORE the body is read so an unauthenticated
 // client costs nothing. true: the body may be read (req.body must then hold exactly
 // Content-Length bytes). false: `early` is the final response.
@@ -78,10 +99,11 @@ std::string serialize_response(const HttpResponse &r, bool head_only);
 
 struct ServerOptions {
 	int preferred_port = 0;       // 0 = any free port. Tried first when non-zero.
-	int max_connections = 8;
-	int max_sse = 8;
+	int max_connections = 16; // a chat page with voice=1 holds two event streams
+	int max_sse = 12;
 	int read_timeout_ms = 5000;
 	int heartbeat_ms = 15000;
+	std::string access_key;       // "" = no key (tests of the plain routes); the plugin always sets one
 };
 
 class HttpServer {
@@ -100,6 +122,8 @@ public:
 
 	// Test hook: treat every accepted connection as coming from this IP (set before start()).
 	void set_peer_override_for_test(const std::string &ip) { peer_override_ = ip; }
+	// The chat voice (see voice_hub.hpp). Set before start(); nullptr = no voice routes (404).
+	void set_voice_hub(VoiceHub *voice) { voice_ = voice; }
 	size_t refused_peers() const { return refused_peers_; }
 
 private:
@@ -107,9 +131,11 @@ private:
 	void serve_connection(int64_t sock);
 	void serve_sse(int64_t sock);
 	void serve_chat_sse(int64_t sock, const HttpResponse &r);
+	void serve_voice_sse(int64_t sock, const HttpResponse &r);
 
 	StateHub &hub_;
 	ChatHub *chat_;
+	VoiceHub *voice_ = nullptr;
 	AssetMap assets_;
 	ServerOptions opts_;
 	std::string peer_override_;

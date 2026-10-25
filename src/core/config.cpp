@@ -88,6 +88,22 @@ void add_dest(const Destination &parsed, size_t index, LoadResult &r, std::set<s
 	r.config.destinations.push_back(d);
 }
 
+} // namespace
+
+bool access_key_valid(const std::string &key)
+{
+	if (key.size() != 64)
+		return false;
+	for (size_t i = 0; i < key.size(); ++i) {
+		char c = key[i];
+		if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+			return false;
+	}
+	return true;
+}
+
+namespace {
+
 void read_server(const json::Value &root, LoadResult &r)
 {
 	const json::Value *srv = root.find("server");
@@ -98,6 +114,11 @@ void read_server(const json::Value &root, LoadResult &r)
 	r.config.server.last_port = int_of(*srv, "last_port", 0, 0, 65535, &clamped);
 	if (clamped)
 		r.warnings.push_back("server port out of range: using automatic port");
+	std::string key = str_of(*srv, "access_key");
+	if (access_key_valid(key))
+		r.config.server.access_key = key;
+	else if (!key.empty())
+		r.warnings.push_back("overlay access key in config.json is not valid: a new one is made (update the browser source URLs)");
 }
 
 std::string clean_list_entry(const std::string &s)
@@ -519,6 +540,8 @@ bool serialize_config(const Config &cfg, std::string &out, std::string &err)
 	json::Value srv = json::Value::object();
 	srv.set("port", json::Value::number(cfg.server.port));
 	srv.set("last_port", json::Value::number(cfg.server.last_port));
+	if (access_key_valid(cfg.server.access_key))
+		srv.set("access_key", json::Value::string(cfg.server.access_key));
 	root.set("server", srv);
 	root.set("auto_start_with_stream", json::Value::boolean(cfg.auto_start_with_stream));
 	json::Value arr = json::Value::array();

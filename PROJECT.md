@@ -11,6 +11,69 @@ Only verified facts go in "Limits"; everything else is marked as design or unver
 > `obs-multistream-chat`. Rename only, no chat feature. C++ namespace `oms`, `OMS_*` CMake options and
 > test helper names keep the short form on purpose. Older log lines/commits mention the old name.
 
+## Unreleased (2026-10-25): chat voice on stream, through the chat overlay
+
+- **Audit (before):** the voice helper's PCM went only to `VoicePlayer` (waveOut, `WAVE_MAPPER` = the Windows
+  default output device). Nothing fed OBS. The stream heard the voice only if a Desktop Audio / audio capture
+  source happened to capture that same device; with a different default device, or no desktop capture, chat
+  voice never reached the stream.
+- **Now (owner's design: the voice lives in the SAME chat overlay browser source):** `chat.html?...&voice=1`
+  loads `chat-voice.js`, which plays each spoken line; with "Control audio via OBS" (browser source setting
+  `reroute_audio`) OBS mixes it on the source's own fader and the stream tracks. Without `voice=1` the page is
+  byte-for-byte the old behaviour (no element, no request; L1 + L4 check the layout is identical).
+  - Core `src/core/voice_hub.*`: bounded clip ring (32 clips / 32 MB, one clip <= 8 MB, zero-length and bad
+    rates refused), WAV framing, `choose_leader` (on program > inside OBS > newest), `local_wanted`,
+    `route_voice_clip`, `is_speaking_chat_url`.
+  - Server: `GET /k/<key>/voice/events` (SSE: `role`, `clip`, `flush`; query obs/active/local; Last-Event-ID
+    resume only on reconnect, a fresh page never replays) and `GET /k/<key>/voice/clip/<id>.wav`. Same key,
+    Host, Origin, fetch-site rules as chat/events. chat.html CSP gains `media-src 'self'` only (img-src unchanged).
+    Server limits raised to 16 connections / 12 SSE (a speaking page holds two streams); chat and state SSE
+    now notice a closed page at once (`peer_closed`) instead of at the 15 s heartbeat.
+  - Glue: `ChatSpeaker` tags each request with author/platform/preview; audio frames go through
+    `route_voice_clip`: dock Preview buttons -> local only; chat lines -> VoiceHub, plus waveOut when no voice
+    page listens (old behaviour kept) or the speaking page ticked "Also play on this PC's speakers" (default
+    off). Interrupt flushes the page too. `src/obs/voice_sources.*` counts speaking chat overlay sources whose
+    "Control audio via OBS" is off (read-only; never changes a user's source) and says so in the Chat tab.
+  - Overlay controls (no new Qt controls): speak on/off, volume, queue limit + drop oldest/skip new, also play
+    locally, never read out these authors, reset to URL settings. URL params are defaults, panel changes kept
+    in localStorage. Hidden inside OBS (Alt+Shift+V in Interact, or `controls=1`); visible in a normal browser,
+    which also gets "Click to enable sound" when autoplay is blocked.
+- Tests: core L2 17 + L3 2 voice cases; `.tests/chat-voice` L1 4, L2 2, L3 4, L4 26 (+1 real-voice proof gated by
+  `OMS_VOICE_LINE_WAV`), Playwright 1.64.1 / Chromium build 1248 headless with `--disable-audio-output
+  --mute-audio` (a fake sink: nothing reaches the speakers). "OBS" mode = a stand-in `window.obsstudio` +
+  `--autoplay-policy=no-user-gesture-required`; "browser" mode = `--autoplay-policy=user-gesture-required`.
+- Lessons (2026-10-25): headless Chromium opens the REAL default audio device unless started with
+  `--disable-audio-output`. Playwright's `evaluate` and locator calls count as a user gesture: an autoplay
+  test must not touch the page before the line arrives (wait on the server instead). Headless Chromium does
+  not hold AudioContext suspended under any autoplay policy; `HTMLMediaElement.play()` is the call that is
+  refused, so the page plays through a media element.
+
+## Unreleased (2026-10-24): chat overlay ticks, overlay access key
+
+- **Chat overlay squish fixed.** Cause (measured, 800x400, 26 lines): `#chat` is a flex column with
+  `overflow: hidden`, and each `.msg` had the default `flex-shrink: 1` plus `overflow: hidden`, which drops a flex
+  item's automatic minimum height; so instead of overflowing, all lines shrank (31 px -> 15 px). Fix: `.msg { flex:
+  none }` and `trimToFit()` in chat.js drops the oldest whole lines that no longer fit (align bottom and top; re-run
+  on emote load and resize; the newest line always stays). Test: chat L4 "a full chat ticks".
+- **Overlay access key.** Audit before the change: one HTTP server, bound to 127.0.0.1 only (peer re-checked),
+  Host/Origin/Sec-Fetch-Site checks, `POST /chat/ingest` behind a per-run bearer token, but every GET (`/`,
+  overlay.html/js, chat.html/js, icons, `/state.json`, `/events`, `/chat/events`, `/chat/status.json`) open to any
+  local process. No WebSocket on this server (the reader's headless Chrome has its own loopback DevTools port).
+  Now: per-install key `server.access_key` (32 bytes, `random_token_hex`, kept in config.json), every GET/HEAD must
+  be under `/k/<key>/` (`split_access_key`, `secret_equal` constant-time), else 401 before routing. Pages use
+  relative URLs so subresources keep the prefix. The plugin refuses to start the server without a key. Not TLS.
+  Existing browser sources must re-copy the URL after updating.
+- Lesson (2026-10-24): `D:` was full (0 bytes free, not caused by this work); a sandbox write failed with "No space
+  left on device". The work moved to a C: copy. Check free space before building under `D:\builds`.
+
+- **2026-10-25 audit (owner question).** Badges (mod/sub/VIP/...) are read by the reader as names and kept by the hub,
+  but NO page draws them: not the overlay in any version (git history of chat.js), not the dock. Emote images come
+  straight from the platforms' CDNs (absolute https URLs, page CSP `img-src 'self' data:` + `chat_img_src_csp()`
+  hosts), so the access key does not touch them; platform logos are plugin files under `/k/<key>/icons/` (relative
+  URLs, verified loading). The reader's own Chrome runs without images; it only copies the image URLs. The second
+  page, overlay.html (*Platform icons*), shows the live destinations as logos; it is now also available inside the
+  chat overlay (`platforms=top|bottom`), the old URL unchanged.
+
 ## 0.5.0 (2026-10-20): dock overhaul, first load in a real OBS
 
 - **First time the plugin ran inside OBS**: a throw-away portable OBS 32.2.2 (`D:\builds\obs-portable`, zip sha-256 as
@@ -190,6 +253,11 @@ long runs (see Limits), so the C++ suite was verified in pieces, not as one gree
 ## How to run and test
 
 - JS tests (overlay, packaging): `node ~/.claude/skills/plan/ladder.js .tests/<feature>`
+- Playwright (web pages: chat tick, access key, images, input; 2026-10-25): `node .tests/playwright/run.js [spec]`.
+  Needs Playwright 1.64.x (`PLAYWRIGHT_DIR`, else found in the npx cache) with its own Chromium, and
+  `oms_chat_fixture` from the core ladder (`OMSC_BUILD_ROOT`). Headless, one worker. Broken-build proofs use
+  `OMS_OVERLAY_DIR`, `OMS_FIXTURE_EXE`, `OMS_BROKEN_NO_KEY=1` (see harness.js). On this PC the repo's own
+  Chrome-launching node tests fail with "Chrome did not start" (also on 906cde2); the Playwright suite does not.
 - C++ tests (core, no OBS needed): `powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -Test`
   (needs MSVC; the ladder files under `.tests/core` call the same build and mark the layer
   SKIPPED, not passed, when no compiler is found)
@@ -256,8 +324,8 @@ docs/                security.md, limits.md
   and the config. No locks inside the core state machines.
 - **libobs signal threads** only push `OutputEvent{dest_id, kind, code, error}` onto a
   mutex-guarded vector. They never touch a Runtime.
-- **HTTP threads** (accept thread + one short-lived thread per connection, max 8 connections,
-  max 4 SSE) read only `StateHub` (mutex + condition variable, immutable JSON string per version).
+- **HTTP threads** (accept thread + one short-lived thread per connection, max 16 connections,
+  max 12 SSE since 2026-10-25; the old text said 8/4, the code had 8/8) read only `StateHub` (mutex + condition variable, immutable JSON string per version).
 - Frontend events (STREAMING_STARTED / STOPPING) arrive on the UI thread.
 - Stream keys are decrypted only on the UI thread, at output-create time, and held in an
   `obs_data_t` owned by the service; the plain copy in `Destination::key` is wiped (`secure_zero`)
@@ -301,7 +369,9 @@ per-destination fields; `encoder` is `shared|own`). The example below shows the 
   user can; DPAPI does not defend against that, and the doc says so.
 - Keys never in: logs (all log lines go through `redact`), the overlay page, `/state.json`, SSE,
   error strings, the dock table (masked, reveal button only in the edit dialog, blank-to-keep).
-- HTTP server: binds `127.0.0.1` only (never `0.0.0.0`/`::`), peer address re-checked on accept,
+- HTTP server: every GET/HEAD needs the per-install access key as `/k/<key>/` (since 2026-10-24, constant-time
+  compare, 401 otherwise; an access key, not encryption: plain HTTP on loopback);
+  binds `127.0.0.1` only (never `0.0.0.0`/`::`), peer address re-checked on accept,
   `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defence), a present
   `Origin` must match, GET/HEAD only, fixed allowlist of paths (no file paths from the request, no
   directory traversal surface), no `Access-Control-Allow-Origin`, CSP + nosniff + no-store, header
@@ -516,7 +586,36 @@ eader). Chat/overlay ladders were not re-run (untouched; they start headless Chr
 - **2026-10-20** - unverified: the Audio tab's meters with real audio (the portable OBS had no sources routed), and
   `peak_to_db` / `db_to_bar` have no unit test (they live in the OBS glue).
 
+- **2026-10-24** - known (pre-existing, not fixed): Chrome-based ladders are flaky on this PC under load. Seen on
+  unchanged code: `reader/lib/chrome.js` `launch()` reads `DevToolsActivePort` while Chrome still holds it open
+  (`EBUSY`), failing the chat L2 `before` hook and so every L2 case; the overlay helper's `Browser.close()` kills
+  only the launcher process, so headless Chromium processes outlive the test and the node test process can hang
+  idle. Workaround used: run layer files with `node --test --test-timeout`, TEMP pointed at a private folder, then
+  stop only the Chromes whose profile lives there.
+- **2026-10-24** - known: in read-only mode (config.json from a newer build) a missing access key cannot be saved,
+  so a new one is made on every OBS start and the browser source URLs change each time.
+- **2026-10-24** - known: the access key is visible in the dock's overlay URL fields and in OMSC_SHOTS pictures of
+  a real install; anyone who sees the dock (for example a screen share) learns it.
+- **2026-10-24** - known: an invalid `server.access_key` warning goes through the generic "destination(s) were
+  skipped" notice path in plugin-main (pre-existing wording for all load warnings).
+
+- **2026-10-25** - unverified in a real OBS (never loaded; owner's OBS was live): the voice through CEF with
+  "Control audio via OBS" on 32.2.2 (CEF 127) and 33 (CEF 150); `obsSourceActiveChanged` is only dispatched on
+  a change, so a page does not know at load whether it is on program (counts as active; two speaking browser
+  sources both loaded off-program fall back to "newest wins", which may be the hidden one and so silent);
+  `obs_enum_sources` + `reroute_audio` read in `voice_sources.cpp`; whether OBS keeps localStorage for
+  127.0.0.1:<port> across restarts (the port is stable via `last_port`).
+- **2026-10-25** - known: a line cut by a page reload is not replayed (by design); a line whose clip was trimmed
+  from the 32-clip ring before the page fetched it is skipped (404, counted as an error).
+- **2026-10-25** - known: core L3 `server_refuses_dns_rebinding_over_the_wire` failed once in a full `oms_tests all`
+  run and passed 4/4 alone right after (flaky, first request of the test; not investigated).
+- **2026-10-25** - known: in a normal browser that allows media autoplay but holds the AudioContext suspended, the
+  page treats the silence as blocked and shows "Click to enable sound" (300 ms check); not reproducible headless.
+
 ## Dropped approaches
+
+- **2026-10-25** - native OBS audio source "Chat Voice" fed by `obs_source_output_audio` - dropped by the owner
+  before building: the voice must come from the chat overlay browser source itself, not a second source.
 
 - **2026-10-13** - ffmpeg relay per destination (course C) - dropped at design time, reasons above.
 - **2026-10-13** - nlohmann/json or cpp-httplib as dependencies - dropped: network is restricted to OBS, obs-deps, Qt, icon sources, and a ~400-line parser plus a ~500-line server is smaller than the audit burden.

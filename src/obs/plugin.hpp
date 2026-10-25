@@ -28,6 +28,7 @@ struct PluginState {
 	ReaderProcess reader;             // the hidden node + Chrome child, only ever started by the user
 	bool reader_active = false;       // we started it and have not seen it end yet
 	std::string chat_notice;          // shown in the Chat tab
+	VoiceHub voice_hub;               // spoken chat lines for the chat overlay page (voice=1), see voice_hub.hpp
 	std::unique_ptr<HttpServer> server;
 	std::unique_ptr<OutputManager> mgr;
 	QTimer *timer = nullptr;

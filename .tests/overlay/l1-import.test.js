@@ -18,7 +18,7 @@ test('page contains no inline script and loads only same-origin script', () => {
   const html = read('overlay.html');
   const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
   assert.strictEqual(scripts.length, 1);
-  assert.match(scripts[0][1], /src="\/overlay\.js"/);
+  assert.match(scripts[0][1], /src="overlay\.js"/); // relative: keeps the /k/<key>/ prefix
   assert.strictEqual(scripts[0][2].trim(), '');
   assert.ok(!/\son\w+\s*=/i.test(html), 'inline event handler');
 });
@@ -37,7 +37,7 @@ test('overlay.js never uses dangerous sinks', () => {
     assert.ok(!src.includes(bad), bad);
   // only same-origin endpoints
   const urls = [...src.matchAll(/(?:fetch|EventSource)\(\s*'([^']+)'/g)].map(m => m[1]);
-  assert.deepStrictEqual(urls.sort(), ['/events', '/state.json']);
+  assert.deepStrictEqual(urls.sort(), ['events', 'state.json']); // relative to the page, never another origin
 });
 
 test('every platform preset has an icon file (or maps to generic)', () => {

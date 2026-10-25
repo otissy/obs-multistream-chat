@@ -70,7 +70,8 @@ test('overlay page and script exist, parse, and avoid HTML injection sinks', () 
   assert.ok(/textContent/.test(js) && /createTextNode/.test(js));
   assert.ok(!/<script(?![^>]*\bsrc=)/i.test(html), 'no inline script');
   assert.ok(!/\son\w+\s*=/i.test(html), 'no inline event handlers');
-  assert.ok(/<script src="\/chat\.js">/.test(html));
+  assert.ok(/<script src="chat\.js">/.test(html)); // relative: keeps the /k/<key>/ prefix
+  assert.ok(!/['"(]\/(chat|icons|events|state)/.test(js.replace(/\/\/.*$/gm, '')), 'chat.js uses only relative URLs');
 });
 
 test('platform icons for all five chat platforms are bundled', () => {

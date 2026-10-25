@@ -111,10 +111,12 @@ function findFixtureExe() {
   const c = [path.join(BUILD_ROOT, 'tests-vs', 'Release', 'oms_chat_fixture.exe'), path.join(BUILD_ROOT, 'windows-x64', 'Release', 'oms_chat_fixture.exe'), path.join(BUILD_ROOT, 'tests', 'oms_chat_fixture')];
   return c.find(p => fs.existsSync(p)) || null;
 }
-async function startCppChat(token = TOKEN) {
+async function startCppChat(token = TOKEN, accessKey = '') {
   const exe = findFixtureExe();
   if (!exe) throw new Error('oms_chat_fixture not built');
-  const proc = spawn(exe, [OVERLAY_DIR], { stdio: ['pipe', 'pipe', 'pipe'], env: Object.assign({}, process.env, { OMSC_CHAT_TOKEN: token }), windowsHide: true });
+  const env = Object.assign({}, process.env, { OMSC_CHAT_TOKEN: token });
+  if (accessKey) env.OMSC_ACCESS_KEY = accessKey; else delete env.OMSC_ACCESS_KEY;
+  const proc = spawn(exe, [OVERLAY_DIR], { stdio: ['pipe', 'pipe', 'pipe'], env, windowsHide: true });
   let buf = '';
   let err = '';
   const waiters = [];

@@ -3,7 +3,7 @@
   #define MyAppName "OBS Multistream Chat"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion "0.5.1"
+  #define MyAppVersion "0.6.0"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "otissy"
@@ -52,6 +52,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "{#SourceTree}\bin\64bit\obs-multistream-chat.dll"; DestDir: "{app}\bin\64bit"; Flags: ignoreversion restartreplace
+; OBS 33+ layout (https://obsproject.com/kb/legacy-plugin-locations): OBS 32 ignores this copy, OBS 33 loads it first
+; and skips bin\64bit, so one setup works on either side of an OBS upgrade
+Source: "{#SourceTree}\obs-multistream-chat.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
 Source: "{#SourceTree}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceTree}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceTree}\README.md"; DestDir: "{app}"; Flags: ignoreversion

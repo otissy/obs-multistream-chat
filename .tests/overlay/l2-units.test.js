@@ -37,7 +37,7 @@ if (!chromeAvailable()) {
 
   test('unknown platform falls back to the generic icon', async () => {
     await render([{ id: 'a', platform: 'nosuchsite', handle: 'x', state: 'live' }]);
-    assert.strictEqual(await q('document.querySelector(".glyph").style.getPropertyValue("--mask")'), 'url("/icons/generic.svg")');
+    assert.strictEqual(await q('document.querySelector(".glyph").style.getPropertyValue("--mask")'), 'url("icons/generic.svg")');
   });
 
   test('unknown state is shown as idle (dim), not lit', async () => {

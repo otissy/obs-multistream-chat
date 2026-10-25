@@ -688,7 +688,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 		QObject::connect(play, &QPushButton::clicked, [this, pid]() {
 			if (speaker_)
 				speaker_->interrupt();
-			play_tts("Viewer", pid, "This is how chat from " + ss(platform_name(pid)) + " sounds.");
+			play_tts("Viewer", pid, "This is how chat from " + ss(platform_name(pid)) + " sounds.", true);
 		});
 	}
 	vl->addWidget(pp_grp);
@@ -747,7 +747,7 @@ ChatPanel::ChatPanel(QWidget *parent) : QWidget(parent)
 	QObject::connect(tts_test_btn_, &QPushButton::clicked, [this]() {
 		if (speaker_)
 			speaker_->interrupt();
-		play_tts("Viewer", "", "Welcome to the stream! The voice reader is ready."); // "" = the main voice
+		play_tts("Viewer", "", "Welcome to the stream! The voice reader is ready.", true); // "" = the main voice
 		if (speaker_ && !speaker_->problem().empty())
 			QMessageBox::warning(this, "OBS Multistream Chat", qs(speaker_->problem()));
 	});
@@ -1369,7 +1369,7 @@ void ChatPanel::play_alert_sound(const std::string &type)
 #endif
 }
 
-void ChatPanel::play_tts(const std::string &author, const std::string &platform, const std::string &message)
+void ChatPanel::play_tts(const std::string &author, const std::string &platform, const std::string &message, bool preview)
 {
 #ifdef _WIN32
 	if (message.empty())
@@ -1400,13 +1400,18 @@ void ChatPanel::play_tts(const std::string &author, const std::string &platform,
 		const PluginState &st = plugin();
 		size_t slash = st.config_path.find_last_of("/\\");
 		std::string dir = slash == std::string::npos ? std::string() : st.config_path.substr(0, slash + 1);
-		speaker_ = std::make_unique<ChatSpeaker>(st.cfg.chat.node_path, dir + "voice-helper.log");
+		speaker_ = std::make_unique<ChatSpeaker>(st.cfg.chat.node_path, dir + "voice-helper.log", &plugin().voice_hub);
 	}
-	speaker_->say(text_to_say, voice, vol, rate);
+	SayMeta meta;
+	meta.author = author;
+	meta.platform = platform;
+	meta.preview = preview;
+	speaker_->say(text_to_say, voice, vol, rate, meta);
 #else
 	(void)author;
 	(void)platform;
 	(void)message;
+	(void)preview;
 #endif
 }
 

@@ -16,10 +16,21 @@ struct TtsVoice {
 	std::string name; // "English (British): Emma, female"
 };
 
+class VoiceHub;
+
+// Who said a line, so the chat overlay page can skip authors; preview = the dock's test buttons,
+// which are heard locally only and never go to the overlay (route_voice_clip in voice_hub.hpp).
+struct SayMeta {
+	std::string author;
+	std::string platform;
+	bool preview = false;
+};
+
 class ChatSpeaker {
 public:
 	// node_path: as for the chat reader ("" searches PATH); log_file: where the helper's stderr goes.
-	ChatSpeaker(const std::string &node_path, const std::string &log_file);
+	// hub: where spoken lines go for the chat overlay page (nullptr = local device only, as before).
+	ChatSpeaker(const std::string &node_path, const std::string &log_file, VoiceHub *hub = nullptr);
 	~ChatSpeaker(); // cuts off the current line and stops the helper
 	ChatSpeaker(const ChatSpeaker &) = delete;
 	ChatSpeaker &operator=(const ChatSpeaker &) = delete;
@@ -28,7 +39,8 @@ public:
 	static std::vector<TtsVoice> voices();
 
 	// volume 0..100, rate -5..5 (the dock's sliders); voice_id from voices().
-	void say(const std::string &utf8, const std::string &voice_id, int volume, int rate);
+	// volume applies to the local copy only; the overlay page has its own volume.
+	void say(const std::string &utf8, const std::string &voice_id, int volume, int rate, const SayMeta &meta = SayMeta());
 	// Drops the waiting lines and cuts off the one being spoken.
 	void interrupt();
 	// Why the last line could not be spoken ("" when the helper is running).

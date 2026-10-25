@@ -16,7 +16,13 @@ constexpr size_t kMaxChatListEntries = 200;
 struct ServerConfig {
 	int port = 0;      // 0 = pick a random free port once and remember it in last_port
 	int last_port = 0; // the port actually used last run
+	// Per-install key for the overlay pages (64 lower-case hex = 32 random bytes). Every page URL
+	// carries it (/k/<key>/chat.html). "" = none yet: the plugin creates one and saves it.
+	std::string access_key;
 };
+
+// true for exactly 64 lower-case hex characters (what random_token_hex(32) returns)
+bool access_key_valid(const std::string &key);
 
 // One chat page the reader watches. target is a bare channel / video / broadcast id (see
 // chat_targets.hpp), never a URL. No login, token or cookie is ever stored here.

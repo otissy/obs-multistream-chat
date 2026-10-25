@@ -5,7 +5,7 @@
  Default output: <build root>\dist and D:\build
 #>
 [CmdletBinding()]
-param([string]$Dll, [string]$OutDir, [string]$BuildRoot, [string]$Voices, [switch]$PushRelease, [switch]$SkipInstaller)
+param([string]$Dll, [string]$OutDir, [string]$BuildRoot, [string]$Voices, [switch]$PushRelease, [switch]$SkipInstaller, [switch]$NoAltCopy)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 . "$PSScriptRoot\vsenv.ps1"
@@ -22,6 +22,9 @@ $stage = Join-Path $env:TEMP ("oms-package-" + [guid]::NewGuid().ToString('N'))
 $tree = Join-Path $stage 'obs-multistream-chat'
 New-Item -ItemType Directory -Force (Join-Path $tree 'bin\64bit') | Out-Null
 Copy-Item $Dll (Join-Path $tree 'bin\64bit\obs-multistream-chat.dll')
+# OBS 33+ layout as well (https://obsproject.com/kb/legacy-plugin-locations): OBS 32 ignores this copy,
+# OBS 33 loads it and skips bin\64bit, so the same zip installs on either version
+Copy-Item $Dll (Join-Path $tree 'obs-multistream-chat.dll')
 Copy-Item (Join-Path $Root 'data') (Join-Path $tree 'data') -Recurse
 foreach ($f in 'README.md', 'LICENSE', 'NOTICE', 'CHANGELOG.md') { Copy-Item (Join-Path $Root $f) $tree }
 Copy-Item (Join-Path $Root 'docs') (Join-Path $tree 'docs') -Recurse
@@ -126,9 +129,9 @@ if (-not $SkipInstaller) {
   }
 }
 
-# Also copy artifacts to D:\build
+# Also copy artifacts to D:\build (-NoAltCopy: tests, so a fake package never lands next to real releases)
 $altDir = "D:\build"
-try {
+if (-not $NoAltCopy) { try {
   New-Item -ItemType Directory -Force $altDir -ErrorAction SilentlyContinue | Out-Null
   Copy-Item $zip (Join-Path $altDir (Split-Path $zip -Leaf)) -Force
   Copy-Item "$zip.sha256" (Join-Path $altDir (Split-Path "$zip.sha256" -Leaf)) -Force
@@ -139,6 +142,6 @@ try {
   Write-Host "Artifacts also copied to $altDir"
 } catch {
   Write-Warning "Could not copy to ${altDir}: $_"
-}
+} }
 
 Remove-Item $stage -Recurse -Force
